@@ -1,0 +1,15 @@
+catalog,metric,value
+sigil_gem,old_unique_hashes,284
+sigil_gem,community_rows,1350
+sigil_gem,final_rows,1392
+sigil_gem,matched_hashes,242
+sigil_gem,updated_by_community,0
+sigil_gem,added_from_community,1108
+sigil_gem,duplicate_names_disambiguated,491
+trait_skill,old_unique_hashes,217
+trait_skill,community_rows,219
+trait_skill,final_rows,217
+trait_skill,matched_hashes,219
+trait_skill,updated_by_community,3
+trait_skill,added_from_community,0
+trait_skill,duplicate_names_disambiguated,30

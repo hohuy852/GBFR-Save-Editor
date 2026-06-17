@@ -1,0 +1,314 @@
+category,id,name,source,aliases
+Quest/Stage,100000,Prologue - Game Intro,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,100001,Chapter 1 - Forest & Quakadile Fight,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,100002,Prologue - Repressed Memory,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,100003,Chapter 1 - Our Lives Are Linked,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,100005,Prologue - Ruffled Wings,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,100006,Prologue - Bahamut Fight,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,101000,Chapter 1 - Folka,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,101001,Chapter 2 - Skyboat Cutscene + The Hills,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,101002,Chapter 2 - Zeghard Fortress,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,101003,Chapter 3 - Tampeal Mines,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,101004,Chapter 3 - Furycane Boss Fight,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,101005,Chapter 3 - Mysterious Swordman/Id Fight,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,101F00,Chapter 2 - Skyboat Travel (Chapter 2 Start),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,102000,Chapter 4 - Initial Cutscene + Folca Church Cutscene,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,102002,Chapter 4 - Ship Chase,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,102F00,Chapter 4 - Grandcypher (Chapter 4 Start),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,103001,Chapter 5 - Mt. Neigelith,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,103F00,Chapter 5 - Grandcypher (Leutagne Airspace),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,104000,Chapter 6 - Seedhollow,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,104001,Chapter 6 - Dahli Island,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,104003,Chapter 6 - Id Memory Cutscene after Skyboat Travel,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,104F00,Chapter 6 - Grandcypher (Route to Seedhollow),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,104F01,Chapter 6 - Skyboat Travel with Zathba (Route to Dahli Island),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,105001,Chapter 7 - Phondam Isles,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,105002,Chapter 7 - Grandcypher Outro Cutscene + Avia Fight,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,105F00,Chapter 7 - Grandcypher (Intro),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,105F01,Chapter 7 - Grandcypher (Outro),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,106000,Chapter 8 - Seedhollow,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,106001,Chapter 8 - Seedhollow Castle,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,106002,Chapter 8 - Angra Mainyu,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,106F00,Chapter 8 - Grandcypher (Route to Seedhollow),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,107000,Chapter 9 - Seedhollow,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,707001,Chapter 9 - Pillar of Vayoi,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,107002,Chapter 9 - Pillar of Vayoi (Intro Cutscene),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,107F00,Chapter 9 - Grandcypher,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,108000,Final Chapter - Bahamut Versa,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,108001,Final Chapter - Credit Roll,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,108002,Final Chapter - After Bahamut Versa (on Grandcypher),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,108F00,Final Chapter - Grandcypher,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200000,A Lingering Regret,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200001,Save the Crustaceans,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200002,Miracle Mushrooms,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200003,Annoying Neighbors,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200100,Results Guaranteed,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200101,Pebbles of Perfection,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200102,Infested Skyways,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200103,Soaring Dream,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200104,Long Time No Fix,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200200,Memories on Ice,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200201,Vulnerable Nights,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200400,The Gourmet Way,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,200401,Fresh Material,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,201002,A Curious Charm,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,201005,Propeller Problems,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,201006,Support Our Troops,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,201007,On the Tip of My Chip,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,201102,En-Raptored,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,202002,Hands-On Research,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,202005,Forget Me Not,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,202006,Everything in Moderation,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,202007,Collecting Godstones,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,202010,Cleansing the Dead,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,203006,Securing the Homestead,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,203007,Stuffed Stocks,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,203011,Sculpting Fire,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,203111,Sculpting Ice,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,203211,Sculpting Earth,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,203311,Sculpting Wind,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,204005,An Eyeful,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,204006,Glory Days,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,204007,Help Your Fellow Farer,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,204011,Dubious Literature,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,204012,Oddly Specific Request,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,204013,Avenge the Dead,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,204106,Futureproof Trading,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,204107,Presentproof Investing,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,204113,Frozen Menace,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,205000,How Does Siero Do It?,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,205001,Astral Research Notes,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,205002,Be Legendary,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210220,The Forbidden Spirit,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210221,Icey Interior,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210223,To Whirl Again,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210225,Trowel and Error,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210227,Family Reporting,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210228,Wolves at the Door,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210229,Aid from Afar,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210420,Bug Hunt,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210421,A Barrold of My Own,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210423,Red-Hot Seller,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210425,Out of Serpentine Spite,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210427,Violent Requiem,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,210428,Wrath of the Sword Veil,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211021,"Eye for an Eye, Quake for a Dile",Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211023,Loathsome Wings,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211025,Smith Smarter,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211027,Cooling Bones,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211030,Magimorphosis,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211121,Sensitive Technology,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211123,Soul in the Machine,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211125,Goopy Research,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211130,Hidden Lesson,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211230,Into the Unknown,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211330,Classroom Science,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211430,Expecting the Expected,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,211530,Windy Memories,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212021,First Step is the Hardest,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212024,"Wreck, Reduce, Recycle",Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212026,Iced Water Supplies,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212030,Fiery Commerce,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212031,Nightmare of a Shadow,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212130,Light and Shadow,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212230,Study with Care,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212330,Mother Water,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212430,From the Soil,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212530,As the Wind Blows,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,212630,Squishy Lies the Crown,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,213021,"Try, Try Again",Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,213022,Strong as Hell,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,213024,A Vision of Gates,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,213026,A Vision of Vitality,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,213032,A Vision of Sequestration,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,213033,A Vision of Fortification,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,213034,A Vision of Dread,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214024,Degoop the Farm,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214026,An Eye for Business,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214027,Dynamic Design,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214030,Within the Flickering Flame,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214033,Symbol of the Hordes,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214034,Regret and Repentance,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214035,In Defense of the City,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214130,To Illuminate All Creation,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214135,Arts Long Lost,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214230,Voids Beyond,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214330,"Absolute, Absolute Zero",Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214430,Earth's Bounty,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214530,Shifting Winds,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,214630,Slime After Slime,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290002,Save the Crustaceans Part Deux,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290003,Save the Crustaceans the Third,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290004,Save the Crustaceans Reloaded,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290005,Save the Crustaceans Beyond,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290006,Save the Crustaceans Neo,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290007,Save the Crustaceans Returns,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290008,Save the Crustaceans Prime,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290009,Save the Crustaceans New Dawn,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290010,Save the Crustaceans Chronicles,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290011,Save the Crustaceans Origins,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290012,Save the Crustaceans Supremacy,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290013,Save the Crustaceans Infinity,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290014,Save the Crustaceans Rises,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,290015,Save the Crustaceans Finale,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300000,I've Got Your Back,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300002,Family Is Everything,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300003,"Down, but Not Out",Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300004,It's Just a Phase,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300005,Words Left Unspoken,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300006,Uninvited Guests,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300007,Warm Threads,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300008,Ludwin and Hans,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300009,Vane the Squire,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300010,Spark of Change,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300011,Seedhollow's Armed Forces,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300012,The Deceitful Nobleman,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300013,The Hottest Fishing Spot,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300014,Narmaya's Chosen Path,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300015,One-Man Army,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300016,A Modest Gift,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300017,The Woman Who Pines for Death,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300018,An Artist's Pain,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300019,Confronted by the Past,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300021,Wind,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300022,Ticking Time Bomb,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,300023,A Dragon in Sheep's Clothing,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301000,Pushing Forward,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301002,Wraithwing Eggs,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301003,Straighten Up and Fly Right,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301004,Change of Heart,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301005,So Long as We Draw Breath,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301006,Crystal of Fortification,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301007,Searching for Happiness,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301008,Learning Together,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301009,Lost Knight,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301010,The Corps's Biggest Test,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301011,A Little Help from the Shadows,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301012,Soupstock's Trap,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301013,The Votes Are In,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301014,A Greater Whole,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301015,A Duel for the Ages,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301016,Crimson and Ebony,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301017,Vestiges,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301018,Sibling Squabble,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301019,Day of Reckoning,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301021,Illusion,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301022,Righteous Execution,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,301023,A Clash of the Titans,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,401301,Make Our Skies Safe Again,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,401303,Worried about Papa,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,401305,Fort Fumigation,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,401306,Defeat-*wheeze*-Goblin Boss,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,401310,Bash the Goblin Hordes,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,401311,Guard Our Hometown,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,401315,Protect Our Woods,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,401316,Tomorrow's Prayers,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402301,Rilla Done Did It,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402302,Golemology 101: Desert Golems,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402304,On the Front Lines,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402306,I See a Bloody Vision,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402308,Sweep the Volcano,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402309,The Saga Continues: Fire,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402310,Dagger Really Done Did It,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402312,The Saga Continues: Ice,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402313,Saga Grande: The Beginning,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402314,"Spare the Rod, Spoil the Valley",Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402315,Eye Have a Problem,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,402316,Only You Can Prevent Forest Flyers,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403201,Delts of Our Lives,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403202,Hide and Chic,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403301,Rule the Skies,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403302,The Juice of Jealousy,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403303,Unthinning the Troops,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403307,Protect the Rep,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403308,Collector's Digest,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403309,"Looming Tower, Leering Eye",Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403311,I See a Flaming Vision,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,403312,Drumsticks au Griffin,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,404101,Wings of Antiquity,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,404204,Dark Refrain,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,404309,No One Likes Leftovers,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,404310,I See a Deathly Vision,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,404311,The Next Hot Topic,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,404313,Golemology 102: Volcanic Golems,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,404315,Seeds of Trouble,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,404316,A Bone to Peak,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,404317,Absolutely No Trespassers!,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405101,License to Thrill,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405201,Saga Illustrated: The Beginning,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405202,Learning from the Past,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405203,Saga Illustrated: Inferno,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405205,To Know the Unknowable,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405206,General Investigation: Gallanza,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405207,General Investigation: Maglielle,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405208,General Investigation: Id,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405302,Wings of Conflagration,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405303,Wings of Upheaval,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405304,Wings of the Storm,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405305,Wings of Rime,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405308,Gulp... So These Are the Rumored Monsters,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405309,Assault Formation!,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405310,Great Goblins of Fire,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,405311,Shedding Light on the Pillar,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406101,Back to the Fated Land (unused),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406323,I See a Chromatic Vision,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406324,Revenge of the Hordes,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406325,Hope in the Machine,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406327,Hallowed Be Thy Ground,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406330,The Saga Continues: Earth,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406331,The Saga Continues: Wind,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406332,Saga Illustrated: Crystal,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406333,Saga Illustrated: Hellfire,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406334,The Saga Continues: Silver,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406335,Saga Illustrated: Veil,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406337,Id Bears Repeating,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406338,Saga Grande: Happily Ever After,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406351,Roost and Reign,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406352,Boss Done Wants It Did,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406353,Know Your Enemy,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406354,Serenity Upon the Mount,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406355,Golemology 103: Forest Golems,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406356,A New Breed,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406357,"Death, Taxes, and Goblins",Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406358,Icy Eye on the Holy Prize,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406359,Rumble in the Desert,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406360,I See a Grim Vision,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406361,Slimepede,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406364,Throw a Smith a Bone,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406365,Armor Is Best Served Cold,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,406366,A Heated Rivalry,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407101,The Final Report,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407301,Blazing Trial,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407302,Grounded Trial,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407303,Stormy Trial,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407304,Frigid Trial,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407305,Worst Vacation Ever,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407306,Trade Barriers,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407307,Melting Pot of Hostility,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407308,Banquet of Ice and Corpses,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407309,For a Freer Folca,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407310,A Quest of Fire and Earth,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407311,A Quest of Frost and Storm,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407312,The Wolf and the Veil,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407313,Calamity Incarnate,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407314,As Fierce as the Silver Wolf,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407315,Memories of Fire,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407316,Thunderbolts and Lightning,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407317,Into the Abyss,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407318,The Tale of Bahamut's Rage,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407319,The Automagod Strikes Back,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407320,The Final Vision,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407321,Zero,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407322,Lock Horns,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407323,Dark Swordman's Nightmare,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407324,Pageant of Might and Magic,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,407325,Zathba's 'Volunteers',Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,500A00,Folka (endgame),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,501003,Seedhollow (endgame),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,5F0001,Grandcypher (endgame),Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,601000,Practice,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,602000,Score Attack,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,603000,Time Attack,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,710000,Days of Our Zegagrande - The Automagod Strikes Back,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,710001,Days of Our Zegagrande - The Final Vision,Community quest_id.csv,Quest IDs; Data Version 1.3.x
+Quest/Stage,720018,Lyria's Journal/Empty?,Community quest_id.csv,Quest IDs; Data Version 1.3.x

@@ -1,0 +1,61 @@
+category,topic,key,value,notes,source
+Rates/Gacha,Transmutation Level 1,Total Weight,10000,Level 1 transmutation selects Gem/Sigil 100% and Stone 0%.,Community gacha_rates.md
+Rates/Gacha,Transmutation Level 1,Unlock Requirement,Quest 00109002,Level 1 transmutation unlock requirement shown by Community.,Community gacha_rates.md
+Rates/Gacha,Transmutation Level 1,Gem Group #1,64% / weight 6400,Common Level III sigil pool; individual weights shown as 50 in the source table.,Community gacha_rates.md
+Rates/Gacha,Transmutation Level 1,Gem Group #2,29% / weight 2900,Common Level IV sigil pool; individual weights shown as 50 in the source table.,Community gacha_rates.md
+Rates/Gacha,Transmutation Level 1,Gem Group #3,7% / weight 700,Level IV/V mixed sigil pool with progression-gated Level V rows.,Community gacha_rates.md
+Rates/Curio,Quest Progress Group #1,Hard,Curio group selected when Hard progress tier applies.,Group selection depends on quest progress rather than just quest difficulty.,Community curio_loot_rates.md
+Rates/Curio,Quest Progress Group #2,Very Hard,Curio group selected when Very Hard progress tier applies.,Group selection depends on quest progress rather than just quest difficulty.,Community curio_loot_rates.md
+Rates/Curio,Quest Progress Group #3,Extreme,Curio group selected when Extreme progress tier applies.,Group selection depends on quest progress rather than just quest difficulty.,Community curio_loot_rates.md
+Rates/Curio,Quest Progress Group #4,Maniac,Curio group selected when Maniac progress tier applies.,Group selection depends on quest progress rather than just quest difficulty.,Community curio_loot_rates.md
+Rates/Curio,Quest Progress Group #5,Proud,Curio group selected when Proud progress tier applies.,Source notes that Proud being unlocked makes Group #5 selected regardless of quest difficulty.,Community curio_loot_rates.md
+Rates/Curio,Curio T1 Group #1,Total Weight,9944,Source table begins with Bizarre Wing/Bleak Bone/Purgatory Bone/Griffin Feather/Landbeast Claw at weight 400 each.,Community curio_loot_rates.md
+Rates/Enemy Parts,Quakadile EM0500,Right Arm body part,Rumbling Orb / Earth Shard / Earth Orb / Landbeast Plate,Enemy part rate table uses reward rank tags like R-1/R0/R2/R5/R6/R11.,Community enemy_break_part_rates.md
+Rates/Enemy Parts,Quakadile EM0500,Horn/Head body part,Landbeast Horn / Mirage Munition / Earth Shard / Earth Orb,Enemy part rate table is weight-only; exact percentage depends on reward rank pool.,Community enemy_break_part_rates.md
+Rates/Enemy Parts,Blizzadile EM0501,Right Arm body part,Water Shard / Water Orb / Frost Orb / Frostbeast Plate,Useful lookup for material hunting rather than save editing.,Community enemy_break_part_rates.md
+Rates/Enemy Parts,Infernadile EM0502,Right Arm body part,Fire Shard / Fire Orb / Inferno Orb / Flamebeast Plate,Useful lookup for material hunting rather than save editing.,Community enemy_break_part_rates.md
+Weapon Materials,Traveller's Sword,WEP_PL0000_01,Gran starter weapon upgrade material table available.,Uncap tiers include Standard Refinium and Landbeast materials in early tiers.,Community weapon_materials.md
+Weapon Materials,Sword of Eos,WEP_PL0000_03,Gran/Djeeta weapon has uncap and awakening material table.,"Awakening tiers use Exceptional Refinium, boss anima/materials, Silver Centrum, and Legendary Merit.",Community weapon_materials.md
+Weapon Materials,Sword of Eos Tier 10,Cost,150000,"Tier 10 listed with Exceptional Refinium, Frostbeast Horn, Heliotrope Urn, Demigod Feather, Silver Centrum, and Legendary Merit.",Community weapon_materials.md
+Mechanics/Quick Quest,Power Adjustment Formula,currentCharacterPWR > recommendedCombatPwr + maxPWRForLevelSync,true enables power adjustment,Level sync checks current character PWR against recommended quest PWR plus maxPWRForLevelSync.,Community quick_quest_power_scaling.md
+Mechanics/Quick Quest,Easy/Normal Extra PWR,1000,extra PWR before sync threshold,Extra PWR range before sync check exceeds the recommended quest PWR.,Community quick_quest_power_scaling.md
+Mechanics/Quick Quest,Hard Extra PWR,2000,extra PWR before sync threshold,Extra PWR range before sync check exceeds the recommended quest PWR.,Community quick_quest_power_scaling.md
+Mechanics/Quick Quest,Very Hard Extra PWR,2500,extra PWR before sync threshold,Extra PWR range before sync check exceeds the recommended quest PWR.,Community quick_quest_power_scaling.md
+Mechanics/Quick Quest,Extreme Extra PWR,3000,extra PWR before sync threshold,Extra PWR range before sync check exceeds the recommended quest PWR.,Community quick_quest_power_scaling.md
+Mechanics/Quick Quest,Maniac Extra PWR,4000,extra PWR before sync threshold,Extra PWR range before sync check exceeds the recommended quest PWR.,Community quick_quest_power_scaling.md
+Mechanics/Quick Quest,Proud Extra PWR,99000,effectively no realistic upper bound,Proud difficulty is described as essentially never scaled by this upper-bound check.,Community quick_quest_power_scaling.md
+Mechanics/Quick Quest,Limited attributes,Attack/Defense/Weapon masteries; HP; Attack; Character Level; Weapon Level; Awakening; Mirage Munitions; Overmastery; Fate Episode; Trait Level; PWR,These may be limited by Quick Quest scaling.,Source lists the attributes Quick Quest scaling can limit.,Community quick_quest_power_scaling.md
+Mechanics/Sigil Synthesis,Internal Name,Gem Mix,Sigil = Gem; Trait = Skill; Ticket = Knickknack Voucher,Internal terminology used by the source notes.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Default Result Level,11,Grand Success awards max possible level instead of default level.,Default non-grand-success level mentioned by source.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Total Level 44,45%,Grand Success chance for 4x level 11 sigil skills.,Chance list row.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Total Level 46,48%,Grand Success chance.,Chance list row.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Total Level 48,51%,Grand Success chance.,Chance list row.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Total Level 50,54%,Grand Success chance.,Chance list row.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Total Level 52,57%,Grand Success chance.,Chance list row.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Total Level 54,60%,Grand Success chance.,Chance list row.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Total Level 56,70%,Grand Success chance.,Chance list row.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Total Level 58,75%,Grand Success chance.,Chance list row.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Total Level 60,85%,Grand Success chance for 4x level 15 sigil skills.,Chance list row.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Siero Low Message,TXT_YOROZU_COMP_PROB_LOW,Some solid picks you got there. Ready whenever you are!,Siero low probability message key.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Siero Mid Message,TXT_YOROZU_COMP_PROB_MID,I've got a good feeling about this! Hope it turns out great!,1.3 threshold notes show 5400 / 54% for the mid message.,Community gem_mix.md
+Mechanics/Sigil Synthesis,Siero High Message,TXT_YOROZU_COMP_PROB_HIGH,Oh my! I think we've got a real winner here! I've got goosebumps!,1.3 threshold notes show 7000 / 70% for the high message.,Community gem_mix.md
+Mechanics/Special Emote,Try Your Luck SSR,3%,SSR crystal chance,DLC emote crystal chance.,Community emotes.md
+Mechanics/Special Emote,Try Your Luck SR,15%,SR crystal chance,DLC emote crystal chance.,Community emotes.md
+Mechanics/Special Emote,Try Your Luck R,82%,R crystal chance,DLC emote crystal chance.,Community emotes.md
+Mechanics/Special Emote,Try Your Luck Obj ID,0xF0319,SSR/SR/R crystal variants use this obj id per source notes.,Object ID reference from source.,Community emotes.md
+Reference/Docs,Resource category,Item IDs,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Resource category,Model IDs,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Resource category,Phase IDs,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Resource category,Quest IDs,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Resource category,Sigil/Gem IDs,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Resource category,Trait/Skill IDs,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Rates category,Enemy Parts Rates,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Rates category,Gacha Transmute Rates,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Rates category,Item Junk Curio Rates,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Rates category,Quest Drop Rates,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Rates category,Weapon Materials,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Player System,Action IDs,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Player System,Buff IDs,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Player System,Control Types,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Player System,Debuff/Ailment IDs,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml
+Reference/Docs,Player System,Motions,tracked source page,Included in Community docs navigation and editor source/download coverage.,Community mkdocs.yml

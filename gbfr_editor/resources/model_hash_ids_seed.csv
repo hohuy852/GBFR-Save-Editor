@@ -1,0 +1,315 @@
+id,name,hash,aliases
+BH0002,Merchant's Cargo,9F1F2C85,Model Breakable Prop; Breakable props; Community model_ids
+BH0003,Hallowed Ground,E4B1938E,Model Breakable Prop; Breakable props; Community model_ids
+BH0004,Barricade,2F0394EF,Model Breakable Prop; Breakable props; Community model_ids
+BH2002,20mm Ether Autocannon,D10A289B,Model Breakable Prop; Breakable props; Community model_ids
+BH2005,Control Unit,41B93B1F,Model Breakable Prop; Breakable props; Community model_ids
+EM0000,Goblin Stormer/Bandit/Striker/Gatherer/Trooper/Savage Carrion-Eater,3FBA2BF9,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0001,Goblin Witch Doctor/Hexer/Pyromancer,9F7B485C,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0002,Goblin Tanker/Mud-Covered Swordsman,50222387,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0003,Goblin Archer/Frenzied Archer,297E7359,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0004,Goblin Soldier/Gladiator/Rowdy Bord/Craver Janaf/Sandeater Gimza,78BFBC4B,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0005,Goblin Warrior/Greatshield Madbeat,3430642C,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0100,Skeleton/Mossy Skeleton,41C5D4AC,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0101,Frosty Bones/Withered Holy Knight/Icy Hexblade,FD5E32A9,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0102,Gerasene,92C616AF,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0103,Scarmiglione,A4B505AE,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0200,Timber Wolf/Sand Wolf/Ravenous Wolf,C8FFB06B,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0201,Goblin Wolfrider/Crimson Runner,0D7F71FF,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0300,Hornbird/Ominous Raptor/Crazed Crow/Minepecker,0EE16057,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0400,Wyvern,D8C3764B,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0500,Quakadile,D113B24B,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0501,Blizzadile,C619E058,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0502,Infernadile,A155F6E1,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0600,Slime,25F1F63C,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0601,Silverslime,70C7A922,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0602,Goldslime,6B62E6D7,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0603,King Silverslime,08B5C7BA,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0604,King Goldslime,2E6314CC,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0605,Prismatic Slime,F2D44D51,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0701,Cyaegha/Silent Watcher,21A74CD8,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0705,Ahriman,BC9BC892,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0706,Nazarbonju/Eternal Gaze,705293E1,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0800,Flame Gyre,89DC7A35,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0801,Aqua Gyre,7404AA2B,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0802,Earth Gyre,00AABE18,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0803,Wind Gyre,19E11D59,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0804,Light Gyre,803D76B6,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0805,Dark Gyre,AD7FA52F,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0900,Fire Spirit/Trialbeast Flame Elemental/Phondam Elemental/Vayoi Elemental/Torchlight Spirit/Crimson Phantom/Ruby Phantom/Shimmering Flame,9883E20B,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0901,Water Effigy,EBD8D09A,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0902,Water Spirit/Elemental/Phantom,4CB9018F,Model Enemy; Enemy bodies / parts; Community model_ids
+EM0903,Wind Effigy,DE5C89AE,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1000,Aviaeth Saber/Aviaeth Trooper,37BAFA96,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1001,Aviaeth Lancer,8734C466,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1002,Aviaeth Archer,4F4A302D,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1003,Aviaeth Flagbearer/Aviaeth Honor Guard,D77291B1,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1004,Inquisitor Rook/Aviaeth Dreadnaught/Galcia the Saved/Hardened Rynell,22363037,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1005,Reaper Avalan/Sinner Balgas/Aviaeth Avenger/Deluded Derleth,80303AFC,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1006,Aviaeth Crusader,2F948B2B,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1100,Sword Veil Fellowship,619988AF,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1200,Vaza'ite Raptor,83583DE7,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1300,Droita Sentinel,B96D3030,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1301,Droita Mother/Droita Mother (Assault)/Droita Cyclops Prototype,DA348ED2,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1303,Droita Balsam/Torpedo Balsam,702D0126,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1500,Rock Golem,97DC204E,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1600,Griffin/Wraithwing/Goblin Eater/Obsidian Raptor,A5650509,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1700,Behemoth,19E1BA69,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1800,Ancient Dragon/Frumious Bandersnatch/Ferocious Garamud,6976F170,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1801,Vrazarek Firewyrm,213247DE,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1802,Wilinus Icewyrm,7E4740F2,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1803,Corvell Earthwyrm,A1F7696E,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1804,Elusious Windwyrm,3FD5B90E,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1805,Radis Whitewyrm,402E1D5F,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1806,Evyl Blackwyrm,4F25288B,Model Enemy; Enemy bodies / parts; Community model_ids
+EM1900,Tayu'itar/Tayu'itar Mk II,AA8DD4B1,Model Enemy; Enemy bodies / parts; Community model_ids
+EM2000,Gallanza,C259AF77,Model Enemy; Enemy bodies / parts; Community model_ids
+EM2100,Maglielle/Mysterious Swordsman,AD041872,Model Enemy; Enemy bodies / parts; Community model_ids
+EM2300,Id (Dragonform),8E9CE32E,Model Enemy; Enemy bodies / parts; Community model_ids
+EM2400,Lilith,91CFE990,Model Enemy; Enemy bodies / parts; Community model_ids
+EM2500,Pincer,33A37BD1,Model Enemy; Enemy bodies / parts; Community model_ids
+EM2600,Cobra/Sand Reaper,8508963C,Model Enemy; Enemy bodies / parts; Community model_ids
+EM2700,Sir Barrold,C6DA8864,Model Enemy; Enemy bodies / parts; Community model_ids
+EM2800,Ominous Form/Vengeful Wraith/Calamitous Specter,7EE6F735,Model Enemy; Enemy bodies / parts; Community model_ids
+EM3100,Pyet-A,73E6CAC4,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7000,Proto Bahamut,C3935B71,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7100,Vulkan Bolla,A8A7B24D,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7110,Vulkan Bolla Nihilla,5BE81AF9,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7200,Furycane,AC7E3B9B,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7210,Furycane Nihilla,9F28B156,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7300,Managarmr,447264C8,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7310,Managarmr Nihilla,20F54A05,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7400,Excavallion,DE872BD5,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7401,Talus Reactor (Excavallion),0E250876,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7404,Spinal Core (Excavallion),9A58FED2,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7406,Atlas Plug/Bolt/Primal Cylinder (Excavallion),AB3D8FBA,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7407,Deltoid Reactor/Forearm Reactor (Excavallion),4CF90AE5,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7408,Coxa Reactor (Excavallion),0EB3818A,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7409,Chest Reactor (Excavallion),BA32BA54,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7410,Spinal Core (Excavallion),8610B99F,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7500,Angra Mainyu,7ABF996A,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7520,Daeva,2E25DBAE,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7530,Aka Manah,5CA49452,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7540,Aka Manah (Wires),16F4FE74,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7600,Bahamut Versa,99530ADA,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7603,Bahamut Core,55A8806A,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7610,Bahamut Versa Omega,E09D415C,Model Enemy; Enemy bodies / parts; Community model_ids
+EM7700,Lucilius,5DABD00A,Model Enemy; Enemy bodies / parts; Community model_ids
+BA0350,Cat,CEE564E0,Model Map Animated; Animated map objects; Community model_ids
+BA2103,Grapnel,16EDD1C9,Model Map Animated; Animated map objects; Community model_ids
+BA7200,Keeper,74622483,Model Map Animated; Animated map objects; Community model_ids
+BA7201,Watcher,4BB2CD57,Model Map Animated; Animated map objects; Community model_ids
+BA7210,Calamitous Vestiges,E958E9B0,Model Map Animated; Animated map objects; Community model_ids
+BA7211,Calamitous Gate,3F261424,Model Map Animated; Animated map objects; Community model_ids
+NP0000,Lyria,3529CC90,Model NPC; NPC bodies; Community model_ids
+NP0001,Lyria (Church of Avia),35564E3E,Model NPC; NPC bodies; Community model_ids
+NP0100,Vyrn,0E515648,Model NPC; NPC bodies; Community model_ids
+NP0200,Sierokarte,11C33FC2,Model NPC; NPC bodies; Community model_ids
+NP0300,Rolan,28A87C8A,Model NPC; NPC bodies; Community model_ids
+NP0301,Rolan (2),1052FA1F,Model NPC; NPC bodies; Community model_ids
+NP0400,Historiath,E9B9CD04,Model NPC; NPC bodies; Community model_ids
+NP0500,Lilith,80FABC9B,Model NPC; NPC bodies; Community model_ids
+NP0600,Zathba,D411E557,Model NPC; NPC bodies; Community model_ids
+NP0700,Human Man,79C639F7,Model NPC; NPC bodies; Community model_ids
+NP0702,Human Man (2),B6FFE594,Model NPC; NPC bodies; Community model_ids
+NP0800,Old Man with Cane,82A66287,Model NPC; NPC bodies; Community model_ids
+NP0900,Human Boy,CBF5A0BB,Model NPC; NPC bodies; Community model_ids
+NP1000,Human Woman,D2474765,Model NPC; NPC bodies; Community model_ids
+NP1002,Human Woman (2),D2D337C2,Model NPC; NPC bodies; Community model_ids
+NP1010,Human Woman (3),723F21FC,Model NPC; NPC bodies; Community model_ids
+NP1200,Erune Man,5355ED29,Model NPC; NPC bodies; Community model_ids
+NP1202,Dagger,D7E02927,Model NPC; NPC bodies; Community model_ids
+NP1300,Erune Woman,5CF978F1,Model NPC; NPC bodies; Community model_ids
+NP1400,Harvin Man,AAFA984D,Model NPC; NPC bodies; Community model_ids
+NP1402,Rilla,4895D5E2,Model NPC; NPC bodies; Community model_ids
+NP1500,Harvin Girl,112F673B,Model NPC; NPC bodies; Community model_ids
+NP1502,Harvin Woman,3D112F68,Model NPC; NPC bodies; Community model_ids
+NP1510,Harvin Girl (2),99483392,Model NPC; NPC bodies; Community model_ids
+NP1600,Draph Man,FDC00F6B,Model NPC; NPC bodies; Community model_ids
+NP1602,Pops,90915A62,Model NPC; NPC bodies; Community model_ids
+NP1700,Draph Woman,B158E28C,Model NPC; NPC bodies; Community model_ids
+NP1702,Draph Woman (2),D2A0E4C1,Model NPC; NPC bodies; Community model_ids
+NP1710,Draph Woman (3),3607087A,Model NPC; NPC bodies; Community model_ids
+NP1800,Mellose Acolyte,384FF707,Model NPC; NPC bodies; Community model_ids
+NP1900,Seedhollow Soldier,AD34CFCC,Model NPC; NPC bodies; Community model_ids
+NP2000,Boy,D1C847C5,Model NPC; NPC bodies; Community model_ids
+NP2100,Girl,56DD0B5C,Model NPC; NPC bodies; Community model_ids
+NP2200,Alliance Receptionist,EDA6F11E,Model NPC; NPC bodies; Community model_ids
+NP2201,Alliance Receptionist (2),26BD3138,Model NPC; NPC bodies; Community model_ids
+PL0000,Gran (Rebel),2A26B1B2,Model Player; Player bodies; Community model_ids
+PL0001,Gran (original),A651EFF4,Model Player; Player bodies; Community model_ids
+PL0100,Djeeta (Rebel),A4ACBA76,Model Player; Player bodies; Community model_ids
+PL0101,Djeeta (original),BAF91BF0,Model Player; Player bodies; Community model_ids
+PL0200,Katalina,18E2F9F9,Model Player; Player bodies; Community model_ids
+PL0300,Rackam,079DF0CC,Model Player; Player bodies; Community model_ids
+PL0400,Io,4D0A60C3,Model Player; Player bodies; Community model_ids
+PL0500,Eugen,DD7A151E,Model Player; Player bodies; Community model_ids
+PL0600,Rosetta,C8616284,Model Player; Player bodies; Community model_ids
+PL0700,Ferry,C3FFD418,Model Player; Player bodies; Community model_ids
+PL0800,Lancelot,22E437E5,Model Player; Player bodies; Community model_ids
+PL0900,Vane,2EBE91D5,Model Player; Player bodies; Community model_ids
+PL1000,Percival,BDEF7181,Model Player; Player bodies; site spelling sometimes Percivale; Community model_ids
+PL1100,Siegfried,627BCB0D,Model Player; Player bodies; Community model_ids
+PL1101,Siegfried (Open Helmet),14673D03,Model Player; Player bodies; Community model_ids
+PL1102,Siegfried (Closed Helmet),2F1A4F3B,Model Player; Player bodies; Community model_ids
+PL1200,Charlotta,FD3BE362,Model Player; Player bodies; Community model_ids
+PL1300,Yodarha,FC6CDF7B,Model Player; Player bodies; Community model_ids
+PL1400,Narmaya,E7053919,Model Player; Player bodies; Community model_ids
+PL1500,Ghandagoza,978E4B18,Model Player; Player bodies; Community model_ids
+PL1600,Zeta,0D21B430,Model Player; Player bodies; Community model_ids
+PL1700,Vaseraga,F0EB77EF,Model Player; Player bodies; Community model_ids
+PL1800,Cagliostro,AA66178A,Model Player; Player bodies; Community model_ids
+PL1900,Id,A3A3CB2F,Model Player; Player bodies; Community model_ids
+PL2000,Id (Transformation),F92C7821,Model Player; Player bodies; Community model_ids
+PL2100,Sandalphon,718E1A14,Model Player; Player bodies; 1.3.0; Community model_ids
+PL2200,Seofon,296471BE,Model Player; Player bodies; 1.2.0; Community model_ids
+PL2300,Tweyen,BAD16E3B,Model Player; Player bodies; 1.2.0; Community model_ids
+WP0000,Traveller's Sword,040202FF,Model Player Weapon; Player weapon models; Community model_ids
+WP0001,Durandal,1BEDCE4A,Model Player Weapon; Player weapon models; Community model_ids
+WP0002,"Sword of Eos (Sword of Eos, the Star Key)",1F5B365A,"Model Player Weapon; Player weapon models; Sword of Eos, the Star Key; Community model_ids"
+WP0003,Albacore Blade,6FD54F23,Model Player Weapon; Player weapon models; Community model_ids
+WP0004,Ultima Sword,AAE31B8E,Model Player Weapon; Player weapon models; Community model_ids
+WP0005,"Seven-Star Sword (Seven-Star Sword, Celestial)",E991343F,"Model Player Weapon; Player weapon models; Seven-Star Sword, Celestial; Community model_ids"
+WP0010,False Sword of the Apocalypse,10EF7CD8,Model Player Weapon; Player weapon models; Community model_ids
+WP0100,Partenza,40415EE6,Model Player Weapon; Player weapon models; Community model_ids
+WP0200,Rukalsa,3C21E8F4,Model Player Weapon; Player weapon models; Community model_ids
+WP0201,Flame Rapier,6BB38D5D,Model Player Weapon; Player weapon models; Community model_ids
+WP0202,"Murgleis (Murgleis, the Azure Oath)",04E5C52F,"Model Player Weapon; Player weapon models; Murgleis, the Azure Oath; Community model_ids"
+WP0203,Luminiera Sword Omega,1908617D,Model Player Weapon; Player weapon models; Community model_ids
+WP0204,Ephemeron,E931170C,Model Player Weapon; Player weapon models; Community model_ids
+WP0205,"Blutgang (Blutgang, Blade of Refuge)",EAD96331,"Model Player Weapon; Player weapon models; Blutgang, Blade of Refuge; Community model_ids"
+WP0290,Ares,7D638A13,Model Player Weapon; Player weapon models; Community model_ids
+WP0291,Ares Sword,C56B08BC,Model Player Weapon; Player weapon models; Community model_ids
+WP0292,Ares Shield,B851AF83,Model Player Weapon; Player weapon models; Community model_ids
+WP0300,Flintspike,3E53BCDF,Model Player Weapon; Player weapon models; Community model_ids
+WP0301,Wheellock Axe,90FAC26A,Model Player Weapon; Player weapon models; Community model_ids
+WP0302,"Benedia (Benedia, Azure Ammunition)",F86C733B,"Model Player Weapon; Player weapon models; Benedia, Azure Ammunition; Community model_ids"
+WP0303,Tiamat Bolt Omega,A12301A2,Model Player Weapon; Player weapon models; Community model_ids
+WP0304,Stormcloud,DA760737,Model Player Weapon; Player weapon models; Community model_ids
+WP0305,"Freikugel (Freikugel, the Purifier)",8533DEC9,"Model Player Weapon; Player weapon models; Freikugel, the Purifier; Community model_ids"
+WP0370,Shotgun,039EC7B9,Model Player Weapon; Player weapon models; Community model_ids
+WP0400,Little Witch Scepter,2CC00078,Model Player Weapon; Player weapon models; Community model_ids
+WP0401,Zhezl,DA78214C,Model Player Weapon; Player weapon models; Community model_ids
+WP0402,"Gambanteinn (Gambanteinn, Staff of Hope)",87F8D71C,"Model Player Weapon; Player weapon models; Gambanteinn, Staff of Hope; Community model_ids"
+WP0403,Colossus Cane Omega,7D73D33D,Model Player Weapon; Player weapon models; Community model_ids
+WP0404,Tupsimati,A3FE16B0,Model Player Weapon; Player weapon models; Community model_ids
+WP0405,"Caduceus (Caduceus, Immortal Coil)",7E333B40,"Model Player Weapon; Player weapon models; Caduceus, Immortal Coil; Community model_ids"
+WP0500,Dreyse,16E30653,Model Player Weapon; Player weapon models; Community model_ids
+WP0501,Matchlock,74360127,Model Player Weapon; Player weapon models; Community model_ids
+WP0502,"Ak-4A (AK-4A, the Suppressor)",9AD95DA5,"Model Player Weapon; Player weapon models; AK-4A, the Suppressor; Community model_ids"
+WP0503,Leviathan Muzzle,79F11B9A,Model Player Weapon; Player weapon models; Community model_ids
+WP0504,Clarion,07E4F4F0,Model Player Weapon; Player weapon models; Community model_ids
+WP0505,"Draconic Fire (Draconic Fire, Charring Breath)",7E33928A,"Model Player Weapon; Player weapon models; Draconic Fire, Charring Breath; Community model_ids"
+WP0590,Thrown Grenade,82DA4226,Model Player Weapon; Player weapon models; Community model_ids
+WP0600,Egoism,75085DE0,Model Player Weapon; Player weapon models; Community model_ids
+WP0601,Swordbreaker,5BC50B28,Model Player Weapon; Player weapon models; Community model_ids
+WP0602,"Love Eternal (Love Eternal, Forevermore)",F03385BB,"Model Player Weapon; Player weapon models; Love Eternal, Forevermore; Community model_ids"
+WP0603,Rose Crystal Knife,A91F774C,Model Player Weapon; Player weapon models; Community model_ids
+WP0604,Cortana,7821E196,Model Player Weapon; Player weapon models; Community model_ids
+WP0605,Dagger of Bahamut Coda (Primal Dagger of Bahamut Coda),6329C637,Model Player Weapon; Player weapon models; Primal Dagger of Bahamut Coda; Community model_ids
+WP0690,Large Rose Vine,3608B663,Model Player Weapon; Player weapon models; Community model_ids
+WP0691,Vine,C62C2A71,Model Player Weapon; Player weapon models; Community model_ids
+WP0692,Large Vine,C6AEF55D,Model Player Weapon; Player weapon models; Community model_ids
+WP0693,Large Rose,BC4D79BE,Model Player Weapon; Player weapon models; Community model_ids
+WP0694,Large Leafy Vine,BBF88FB9,Model Player Weapon; Player weapon models; Community model_ids
+WP0695,Round Vine?,6ED657A9,Model Player Weapon; Player weapon models; Community model_ids
+WP0700,Geisterpeitche,4887DD95,Model Player Weapon; Player weapon models; Community model_ids
+WP0701,Leather Belt,62038663,Model Player Weapon; Player weapon models; Community model_ids
+WP0702,"Ethereal Lasher (Ethereal Lasher, Fleeting End)",9258ED24,"Model Player Weapon; Player weapon models; Ethereal Lasher, Fleeting End; Community model_ids"
+WP0703,Flame Lit Curl,141E65B7,Model Player Weapon; Player weapon models; Community model_ids
+WP0704,Live Wire,390F1F39,Model Player Weapon; Player weapon models; Community model_ids
+WP0705,"Erinnerung (Erinnerung, From Beyond)",C194F6C9,"Model Player Weapon; Player weapon models; Erinnerung, From Beyond; Community model_ids"
+WP0790,Momo,B984216D,Model Player Weapon; Player weapon models; Community model_ids
+WP0791,Fugee,8449B45A,Model Player Weapon; Player weapon models; Community model_ids
+WP0792,Nicola,562C107A,Model Player Weapon; Player weapon models; Community model_ids
+WP0793,GeeGee,710B48FC,Model Player Weapon; Player weapon models; Community model_ids
+WP0794,Beppo,95628724,Model Player Weapon; Player weapon models; Community model_ids
+WP0800,Altachiara,2C5FA318,Model Player Weapon; Player weapon models; Community model_ids
+WP0801,Hoarfrost Blade Persius,599EB853,Model Player Weapon; Player weapon models; Community model_ids
+WP0802,Blanc Comme Neige,F5E7F22E,Model Player Weapon; Player weapon models; Community model_ids
+WP0803,Vegalta,2A7EAAD9,Model Player Weapon; Player weapon models; Community model_ids
+WP0804,"Knight of Ice (Knight of Ice, the Silver Blur)",1C5DFB04,"Model Player Weapon; Player weapon models; Knight of Ice, the Silver Blur; Community model_ids"
+WP0805,"Damascus Knife (Damascus Knife, the Unseen)",28E69BEA,"Model Player Weapon; Player weapon models; Damascus Knife, the Unseen; Community model_ids"
+WP0900,Alabarda,2F4A81F9,Model Player Weapon; Player weapon models; Community model_ids
+WP0901,Swan,5486C364,Model Player Weapon; Player weapon models; Community model_ids
+WP0902,"Treuer Krieger (Treuer Krieger, the Dauntless)",87B4EDA9,"Model Player Weapon; Player weapon models; Treuer Krieger, the Dauntless; Community model_ids"
+WP0903,Ukonvasara,33FA916B,Model Player Weapon; Player weapon models; Community model_ids
+WP0904,Blossom Axe,809CCC44,Model Player Weapon; Player weapon models; Community model_ids
+WP0905,"Mjolnir (Mjolnir, Thunderous Crusher)",525C5615,"Model Player Weapon; Player weapon models; Mjolnir, Thunderous Crusher; Community model_ids"
+WP1000,Flamberge,AE674B4F,Model Player Weapon; Player weapon models; Community model_ids
+WP1001,Lohengrin,F412D265,Model Player Weapon; Player weapon models; Community model_ids
+WP1002,Antwerp,7DDA3990,Model Player Weapon; Player weapon models; Community model_ids
+WP1003,Joyeuse,6A769801,Model Player Weapon; Player weapon models; Community model_ids
+WP1004,"Lord of Flames (Lord of Flames, Exalted Reign)",46708A84,"Model Player Weapon; Player weapon models; Lord of Flames, Exalted Reign; Community model_ids"
+WP1005,"Gottfried (Gottfried, the White Fang)",07BDD48F,"Model Player Weapon; Player weapon models; Gottfried, the White Fang; Community model_ids"
+WP1100,Integrity,A8575BCD,Model Player Weapon; Player weapon models; Community model_ids
+WP1101,Broadsword of Earth,DC919678,Model Player Weapon; Player weapon models; Community model_ids
+WP1102,"Ascalon (Ascalon, Dragon's Bane)",8BADB3CF,"Model Player Weapon; Player weapon models; Ascalon, Dragon's Bane; Community model_ids"
+WP1103,Hrunting,8B47AF43,Model Player Weapon; Player weapon models; Community model_ids
+WP1104,Windhose,581F7CE3,Model Player Weapon; Player weapon models; Community model_ids
+WP1105,"Balmung (Balmung, the Blue Blaze)",5A7CC6F9,"Model Player Weapon; Player weapon models; Balmung, the Blue Blaze; Community model_ids"
+WP1200,Claiomh Solais,E53EA12D,Model Player Weapon; Player weapon models; Community model_ids
+WP1201,Arondight,CBFE5998,Model Player Weapon; Player weapon models; Community model_ids
+WP1202,"Claidheamh Soluis (Claidheamh Soluis, the Radiant)",F96F95CB,"Model Player Weapon; Player weapon models; Claidheamh Soluis, the Radiant; Community model_ids"
+WP1203,Ushumgal,D9C27092,Model Player Weapon; Player weapon models; Community model_ids
+WP1204,Sahrivar,FC99E69F,Model Player Weapon; Player weapon models; Community model_ids
+WP1205,"Galatine (Galatine, Trinity's Wrath)",0ACFCC39,"Model Player Weapon; Player weapon models; Galatine, Trinity's Wrath; Community model_ids"
+WP1300,Kiku-Ichimonji,2EB959E9,Model Player Weapon; Player weapon models; Community model_ids
+WP1301,Asura,888DBAD5,Model Player Weapon; Player weapon models; Community model_ids
+WP1302,"Fudo-Kuniyuki (Fudo-Kuniyuki, Scarlet Glory)",A4D39938,"Model Player Weapon; Player weapon models; Fudo-Kuniyuki, Scarlet Glory; Community model_ids"
+WP1303,Higurashi,5971E8AC,Model Player Weapon; Player weapon models; Community model_ids
+WP1304,Xeno Phantom Demon Blade,61C8A5C4,Model Player Weapon; Player weapon models; Community model_ids
+WP1305,"Swordfish (Swordfish, Tipper of Scales)",E2BFC8DE,"Model Player Weapon; Player weapon models; Swordfish, Tipper of Scales; Community model_ids"
+WP1400,Nakamaki Nodachi,46C4103D,Model Player Weapon; Player weapon models; Community model_ids
+WP1401,Kotetsu,A01D6768,Model Player Weapon; Player weapon models; Community model_ids
+WP1402,"Venustas (Venustas, the Sacred Gift)",AEC79F5E,"Model Player Weapon; Player weapon models; Venustas, the Sacred Gift; Community model_ids"
+WP1403,Flourithium Blade,04E3A871,Model Player Weapon; Player weapon models; Community model_ids
+WP1404,Blade of Purification,B547B582,Model Player Weapon; Player weapon models; Community model_ids
+WP1405,"Ameno Habakiri (Ameno Habakiri, the Beheader)",9959450D,"Model Player Weapon; Player weapon models; Ameno Habakiri, the Beheader; Community model_ids"
+WP1470,Blue Stance Sword,8A873FE4,Model Player Weapon; Player weapon models; Community model_ids
+WP1500,Brahma Gauntlet,2114BB70,Model Player Weapon; Player weapon models; Community model_ids
+WP1501,Rope Knuckles,6229EA4F,Model Player Weapon; Player weapon models; Community model_ids
+WP1502,Crimson Finger,A3F26133,Model Player Weapon; Player weapon models; Community model_ids
+WP1503,"Golden Fists of Ura (Golden Fists of Ura, No Mercy)",D4DC8F78,"Model Player Weapon; Player weapon models; Golden Fists of Ura, No Mercy; Community model_ids"
+WP1504,Arkab,5C9CBCFE,Model Player Weapon; Player weapon models; Community model_ids
+WP1505,"Sky Piercer (Sky Piercer, the Apex Fist)",E273A67E,"Model Player Weapon; Player weapon models; Sky Piercer, the Apex Fist; Community model_ids"
+WP1600,Spear of Arvess,B166BC79,Model Player Weapon; Player weapon models; Community model_ids
+WP1601,Sunspot Spear,F9CE7717,Model Player Weapon; Player weapon models; Community model_ids
+WP1602,"Brionac (Brionac, the Dominant)",BAF28136,"Model Player Weapon; Player weapon models; Brionac, the Dominant; Community model_ids"
+WP1603,Gisla,FA48DD36,Model Player Weapon; Player weapon models; Community model_ids
+WP1604,Huanglong Spear,1A78D679,Model Player Weapon; Player weapon models; Community model_ids
+WP1605,"Gae Bulg (Gae Bulg, Impaler of Ruin)",9636471E,"Model Player Weapon; Player weapon models; Gae Bulg, Impaler of Ruin; Community model_ids"
+WP1690,Extra Spear,C53643DC,Model Player Weapon; Player weapon models; Community model_ids
+WP1700,Great Scythe Grynoth,6D8AEEDD,Model Player Weapon; Player weapon models; Community model_ids
+WP1701,Alsarav,6ADEF202,Model Player Weapon; Player weapon models; Community model_ids
+WP1702,"Wurtzite Scythe (Wurtzite Scythe, Reaper's Hand)",3B75FB31,"Model Player Weapon; Player weapon models; Wurtzite Scythe, Reaper's Hand; Community model_ids"
+WP1703,Soul Eater,91E54DB0,Model Player Weapon; Player weapon models; Community model_ids
+WP1704,Cosmic Scythe,4048A054,Model Player Weapon; Player weapon models; Community model_ids
+WP1705,"Ereshkigal (Ereshkigal, Impending Doom)",611A5E3A,"Model Player Weapon; Player weapon models; Ereshkigal, Impending Doom; Community model_ids"
+WP1800,Magnum Opus,3B08F56D,Model Player Weapon; Player weapon models; Community model_ids
+WP1801,Dream Atlas,76BCC45E,Model Player Weapon; Player weapon models; Community model_ids
+WP1802,"Transmigration Tome (Transmigration Tome, Infinity)",F35B6AA9,"Model Player Weapon; Player weapon models; Transmigration Tome, Infinity; Community model_ids"
+WP1803,Sacred Codex,2E726F0D,Model Player Weapon; Player weapon models; Community model_ids
+WP1804,Arshivelle,F6E13D5C,Model Player Weapon; Player weapon models; Community model_ids
+WP1805,"Zosimos (Zosimos, the Unabridged Truth)",5D9841E6,"Model Player Weapon; Player weapon models; Zosimos, the Unabridged Truth; Community model_ids"
+WP1890,Dash Dragon (Ouroboros),59068280,Model Player Weapon; Player weapon models; Ouroboros; Community model_ids
+WP1892,Statue Substitute,827FE7A1,Model Player Weapon; Player weapon models; Community model_ids
+WP1893,Small Ult Dagger,F0D1AB5D,Model Player Weapon; Player weapon models; Community model_ids
+WP1894,Ult Dagger,48A67DE9,Model Player Weapon; Player weapon models; Community model_ids
+WP1895,Spear,99963403,Model Player Weapon; Player weapon models; Community model_ids
+WP1896,Chakram,5864A3FC,Model Player Weapon; Player weapon models; Community model_ids
+WP1897,Blades,81BAEC15,Model Player Weapon; Player weapon models; Community model_ids
+WP1898,Torch Hammer,C35ACA3F,Model Player Weapon; Player weapon models; Community model_ids
+WP1900,Ragnarok,2764F5FE,Model Player Weapon; Player weapon models; Community model_ids
+WP1901,Aviaeth Faussart,000EBF9C,Model Player Weapon; Player weapon models; Community model_ids
+WP1902,"Susanoo (Susanoo, the Condemner)",2F3D0BEB,"Model Player Weapon; Player weapon models; Susanoo, the Condemner; Community model_ids"
+WP1903,Premium Sword,3295007C,Model Player Weapon; Player weapon models; Community model_ids
+WP1904,Ecke Sachs,2B87BD47,Model Player Weapon; Player weapon models; Community model_ids
+WP1905,Sword of Bahamut (Primal Sword of Bahamut),5F0B6844,Model Player Weapon; Player weapon models; Primal Sword of Bahamut; Community model_ids
+WP2100,Apprentice,FE4A9124,Model Player Weapon; Player weapon models; Community model_ids
+WP2106,"World Ender (World Ender, the Fated Edge)",299CD727,"Model Player Weapon; Player weapon models; World Ender, the Fated Edge; Community model_ids"
+WP2200,Sette di Spade,84BF2A65,Model Player Weapon; Player weapon models; Community model_ids
+WP2206,"Gateway-Star Sword, Seven Winks",2A13C322,Model Player Weapon; Player weapon models; Community model_ids
+WP2290,Seofon's Avatar,30A5D3A4,Model Player Weapon; Player weapon models; Community model_ids
+WP2300,Bow of Dismissal,04C09046,Model Player Weapon; Player weapon models; Community model_ids
+WP2306,Desolation-Crown Bow,7126CBAE,Model Player Weapon; Player weapon models; Community model_ids

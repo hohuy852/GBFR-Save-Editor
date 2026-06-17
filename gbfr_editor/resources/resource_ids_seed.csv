@@ -1,0 +1,989 @@
+category,id,name,decimal,source,aliases
+Action - Cagliostro,1000,Mimic Doll,1000,Community action_ids.md,
+Action - Cagliostro,1110,Mehen,1110,Community action_ids.md,
+Action - Cagliostro,1410,Disruption,1410,Community action_ids.md,
+Action - Cagliostro,1700,Alexandria,1700,Community action_ids.md,
+Action - Cagliostro,1800,Pain Train,1800,Community action_ids.md,
+Action - Captain,1001,Overdrive Surge (Arts I),1001,Community action_ids.md,
+Action - Captain,1002,Overdrive Surge (Arts II),1002,Community action_ids.md,
+Action - Captain,1003,Overdrive Surge (Arts III),1003,Community action_ids.md,
+Action - Captain,1004,Overdrive Surge (Arts IV),1004,Community action_ids.md,
+Action - Captain,1201,Decimate (Arts I),1201,Community action_ids.md,
+Action - Captain,1202,Decimate (Arts II),1202,Community action_ids.md,
+Action - Captain,1203,Decimate (Arts III),1203,Community action_ids.md,
+Action - Captain,1204,Decimate (Arts IV),1204,Community action_ids.md,
+Action - Captain,1301,Rain of Arrows (Arts I),1301,Community action_ids.md,
+Action - Captain,1302,Rain of Arrows (Arts II),1302,Community action_ids.md,
+Action - Captain,1303,Rain of Arrows (Arts III),1303,Community action_ids.md,
+Action - Captain,1304,Rain of Arrows (Arts IV),1304,Community action_ids.md,
+Action - Captain,1501,Armor Break (Arts I),1501,Community action_ids.md,
+Action - Captain,1502,Armor Break (Arts II),1502,Community action_ids.md,
+Action - Captain,1503,Armor Break (Arts III),1503,Community action_ids.md,
+Action - Captain,1504,Armor Break (Arts IV),1504,Community action_ids.md,
+Action - Captain,2001,Reginleiv (Arts I),2001,Community action_ids.md,
+Action - Captain,2002,Reginleiv (Arts II),2002,Community action_ids.md,
+Action - Captain,2003,Reginleiv (Arts III),2003,Community action_ids.md,
+Action - Captain,2004,Reginleiv (Arts IV),2004,Community action_ids.md,
+Action - Captain,2410,Dispel (Arts I),2410,Community action_ids.md,
+Action - Captain,2411,Dispel (Arts II),2411,Community action_ids.md,
+Action - Captain,2412,Dispel (Arts III),2412,Community action_ids.md,
+Action - Captain,2413,Dispel (Arts IV),2413,Community action_ids.md,
+Action - Charlotta,1100,Shining Onslaught,1100,Community action_ids.md,
+Action - Charlotta,1200,Rising Cut,1200,Community action_ids.md,
+Action - Charlotta,1600,Sword of Lumiel (Hold),1600,Community action_ids.md,
+Action - Charlotta,1610,Sword of Lumiel,1610,Community action_ids.md,
+Action - Charlotta,1700,Holy Ladder,1700,Community action_ids.md,
+Action - Eugen,1,Sumrak,1,Community action_ids.md,
+Action - Eugen,2,Detonator (No Charge),2,Community action_ids.md,
+Action - Eugen,22,Detonator (Half Charge),22,Community action_ids.md,
+Action - Eugen,3,Intercept,3,Community action_ids.md,
+Action - Eugen,32,Detonator (Full Charge),32,Community action_ids.md,
+Action - Eugen,4,Armor-Piercing Round,4,Community action_ids.md,
+Action - Eugen,5,Venom Grenade,5,Community action_ids.md,
+Action - Eugen,6,Paralyzing Bullet,6,Community action_ids.md,
+Action - Eugen,8,Disruptor,8,Community action_ids.md,
+Action - Ferry,1000,Purge Spirits,1000,Community action_ids.md,
+Action - Ferry,1100,Blaues Gespenst,1100,Community action_ids.md,
+Action - Ferry,1210,Sic Em Geegee,1210,Community action_ids.md,
+Action - Ferry,1340,Benediction,1340,Community action_ids.md,
+Action - Ferry,1400,Pendel,1400,Community action_ids.md,
+Action - Ferry,1500,Strafe,1500,Community action_ids.md,
+Action - Ferry,1640,Hinrichten,1640,Community action_ids.md,
+Action - Ferry,1700,Umlauf,1700,Community action_ids.md,
+Action - Ghandagoza,1000,Arhat Skybreaker,1000,Community action_ids.md,
+Action - Ghandagoza,1100,Branding Palm,1100,Community action_ids.md,
+Action - Ghandagoza,1200,Iron Shoulder,1200,Community action_ids.md,
+Action - Ghandagoza,1500,Infernal Stomp,1500,Community action_ids.md,
+Action - Id,1,Reginleiv Recidiv,1,Community action_ids.md,
+Action - Id,2,Unbound,2,Community action_ids.md,
+Action - Id,3,Atonement,3,Community action_ids.md,
+Action - Id,4,Ragnarok Form,4,Community action_ids.md,
+Action - Id,5,Scourge,5,Community action_ids.md,
+Action - Id,6,Fourfold Vengeance,6,Community action_ids.md,
+Action - Id,7,Never Enough,7,Community action_ids.md,
+Action - Id,8,Arcadia,8,Community action_ids.md,
+Action - Id,900,Transformation,900,Community action_ids.md,
+Action - Id Dragonform,0,Light Blast (Enter Dragonform),0,Community action_ids.md,
+Action - Id Dragonform,1000,Reginleiv Recidiv (Dragonform),1000,Community action_ids.md,
+Action - Id Dragonform,1100,Scourge (Dragonform),1100,Community action_ids.md,
+Action - Id Dragonform,1200,Never Enough (Dragonform),1200,Community action_ids.md,
+Action - Id Dragonform,1300,Arcadia (Dragonform),1300,Community action_ids.md,
+Action - Id Dragonform,4,Ragnarok Form,4,Community action_ids.md,
+Action - Id Dragonform,900,Transformation,900,Community action_ids.md,
+Action - Io,2000,Freeze,2000,Community action_ids.md,
+Action - Io,3000,Fire,3000,Community action_ids.md,
+Action - Io,4000,Flowery Seven,4000,Community action_ids.md,
+Action - Io,4001,Flowery Seven (Full Charge),4001,Community action_ids.md,
+Action - Io,7200,Gravity Well (Mystic Vortex 0),7200,Community action_ids.md,
+Action - Io,8200,Lightning (Mystic Vortex 0),8200,Community action_ids.md,
+Action - Katalina,1,Enchanted Lands,1,Community action_ids.md,
+Action - Katalina,2,Winter's Rain,2,Community action_ids.md,
+Action - Katalina,200,Oathsworn Blade 1,200,Community action_ids.md,
+Action - Katalina,201,Oathsworn Blade 2,201,Community action_ids.md,
+Action - Katalina,202,Oathsworn Blade 3,202,Community action_ids.md,
+Action - Katalina,4,Sacred Winds,4,Community action_ids.md,
+Action - Katalina,5,Azure Sword,5,Community action_ids.md,
+Action - Katalina,6,Light Wall,6,Community action_ids.md,
+Action - Katalina,7,Frost Blade,7,Community action_ids.md,
+Action - Lancelot,1000,Blade Impulse,1000,Community action_ids.md,
+Action - Lancelot,1100,Kaltzwinger,1100,Community action_ids.md,
+Action - Lancelot,1200,Lawinensturm,1200,Community action_ids.md,
+Action - Lancelot,1400,Turbulenz,1400,Community action_ids.md,
+Action - Lancelot,1500,Southern Cross,1500,Community action_ids.md,
+Action - Narmaya,1,Kyokasuigetsu,1,Community action_ids.md,
+Action - Narmaya,1000,Dawnfly Finisher,1000,Community action_ids.md,
+Action - Narmaya,1200,Freeflutter Stance,1200,Community action_ids.md,
+Action - Narmaya,2,Setsuna,2,Community action_ids.md,
+Action - Narmaya,2000,Freeflutter Finisher,2000,Community action_ids.md,
+Action - Narmaya,3,Apex of Nothingness (No Counter),3,Community action_ids.md,
+Action - Narmaya,4,Crescent Moon,4,Community action_ids.md,
+Action - Narmaya,5,Transient,5,Community action_ids.md,
+Action - Percival,1,Feuerangriff,1,Community action_ids.md,
+Action - Percival,4,Zerreissen,4,Community action_ids.md,
+Action - Percival,6,Macht,6,Community action_ids.md,
+Action - Percival,7,Royal Authority,7,Community action_ids.md,
+Action - Percival,8,Roter Wirbel,8,Community action_ids.md,
+Action - Rackam,1,Spitfire,1,Community action_ids.md,
+Action - Rackam,2,Bullet Hail,2,Community action_ids.md,
+Action - Rackam,200,Bulls Eye Blast,200,Community action_ids.md,
+Action - Rackam,201,Bulls Eye Blast II,201,Community action_ids.md,
+Action - Rackam,202,Bulls Eye Blast III,202,Community action_ids.md,
+Action - Rackam,203,Bulls Eye Blast IV,203,Community action_ids.md,
+Action - Rackam,204,Bulls Eye Blast V,204,Community action_ids.md,
+Action - Rackam,5,Coffinmaker,5,Community action_ids.md,
+Action - Rackam,7,Slag Shot,7,Community action_ids.md,
+Action - Rackam,8,Collateral Damage,8,Community action_ids.md,
+Action - Rosetta,0,Rose Palace,0,Community action_ids.md,
+Action - Rosetta,1,Sillage (Rose Attack),1,Community action_ids.md,
+Action - Rosetta,2,Rose Tycoon,2,Community action_ids.md,
+Action - Rosetta,4,Spiral Rose,4,Community action_ids.md,
+Action - Rosetta,6,Lost Love,6,Community action_ids.md,
+Action - Sandalphon,2100,No Way Out,2100,Community action_ids.md,
+Action - Sandalphon,2200,Ecliptica,2200,Community action_ids.md,
+Action - Sandalphon,2400,Revontulet,2400,Community action_ids.md,
+Action - Sandalphon,2500,Alone in Heaven (No Counter),2500,Community action_ids.md,
+Action - Sandalphon,2520,Alone in Heaven (Countered),2520,Community action_ids.md,
+Action - Sandalphon,2600,Talviyö (Initial),2600,Community action_ids.md,
+Action - Sandalphon,2700,Ethereal Prison,2700,Community action_ids.md,
+Action - Sandalphon,3100,No Way Out (Chromatic Wings),3100,Community action_ids.md,
+Action - Seofon,1000,Barrido,1000,Community action_ids.md,
+Action - Seofon,10000,Spirit Swords (Projectiles),10000,Community action_ids.md,
+Action - Seofon,1001,Barrido (Avatar),1001,Community action_ids.md,
+Action - Seofon,2000,Infinito Creare,2000,Community action_ids.md,
+Action - Seofon,2001,Infinito Creare (Avatar),2001,Community action_ids.md,
+Action - Seofon,3000,Rotura,3000,Community action_ids.md,
+Action - Seofon,3001,Rotura (Avatar),3001,Community action_ids.md,
+Action - Seofon,6000,Despedazar,6000,Community action_ids.md,
+Action - Seofon,6001,Despedazar (Avatar),6001,Community action_ids.md,
+Action - Siegfried,1000,Uwe,1000,Community action_ids.md,
+Action - Siegfried,1100,L'Ombre d'Hier,1100,Community action_ids.md,
+Action - Siegfried,1300,Nelah Nav,1300,Community action_ids.md,
+Action - Siegfried,1600,Vendrängen,1600,Community action_ids.md,
+Action - Siegfried,170,Perfect Execution,170,Community action_ids.md,
+Action - Tweyen,1100,Depravity,1100,Community action_ids.md,
+Action - Tweyen,1200,Clincher,1200,Community action_ids.md,
+Action - Tweyen,1300,Valiant Weave,1300,Community action_ids.md,
+Action - Tweyen,1400,Wheel of Death,1400,Community action_ids.md,
+Action - Tweyen,1510,Lethal Rain,1510,Community action_ids.md,
+Action - Tweyen,1700,Two-Crown's Strife 1,1700,Community action_ids.md,
+Action - Tweyen,1701,Two-Crown's Strife 2,1701,Community action_ids.md,
+Action - Vane,1100,Rift Divider,1100,Community action_ids.md,
+Action - Vane,1300,Arm Destruction,1300,Community action_ids.md,
+Action - Vane,1400,Heroic Beat,1400,Community action_ids.md,
+Action - Vane,1600,Energy Destruction,1600,Community action_ids.md,
+Action - Vaseraga,1000,Battalions of Fear,1000,Community action_ids.md,
+Action - Vaseraga,1100,Violent Shadows,1100,Community action_ids.md,
+Action - Vaseraga,1200,Great Scythe Grynoth,1200,Community action_ids.md,
+Action - Vaseraga,1500,Damnation,1500,Community action_ids.md,
+Action - Vaseraga,1600,Umbral Eclipse,1600,Community action_ids.md,
+Action - Vaseraga,1700,Netherwrath,1700,Community action_ids.md,
+Action - Yodarha,1,Awakening,1,Community action_ids.md,
+Action - Yodarha,2,Empty Mist,2,Community action_ids.md,
+Action - Yodarha,5,Tit for Tat,5,Community action_ids.md,
+Action - Yodarha,7,Flashing Void,7,Community action_ids.md,
+Action - Yodarha,8,Sky Shatter,8,Community action_ids.md,
+Action - Zeta,1000,Infinite Wonders,1000,Community action_ids.md,
+Action - Zeta,1100,Rain of Fury,1100,Community action_ids.md,
+Action - Zeta,1200,Spear of Arvess,1200,Community action_ids.md,
+Action - Zeta,1400,Wingclipper,1400,Community action_ids.md,
+Action - Zeta,1610,Thousand Flames,1610,Community action_ids.md,
+Action - Zeta,1700,Realm's Majesty (No Counter),1700,Community action_ids.md,
+Buff,-1,Unknown,,Community buff_ids.csv,0xF8C4E240
+Buff,0,Various,0,Community buff_ids.csv,0x3DF78A11
+Buff,1,Unknown,1,Community buff_ids.csv,0x74E366EA
+Buff,10,Mirror Image (Area)(3 Hits),10,Community buff_ids.csv,0x4630AB3C
+Buff,11,Mirror Image (Self),11,Community buff_ids.csv,0x2CB18EB5
+Buff,12,Stout Heart (Self),12,Community buff_ids.csv,0xF0C762F9
+Buff,13,Hostility (Self),13,Community buff_ids.csv,0xF690C192
+Buff,16,Heal (Self),16,Community buff_ids.csv,0xA65CE935
+Buff,18,Supplementary Damage (Self),18,Community buff_ids.csv,0x173C4A28
+Buff,19,Drain (Team),19,Community buff_ids.csv,0x5DAFEB78
+Buff,2,ATK UP (Party),2,Community buff_ids.csv,0x7EA3642C
+Buff,20,ATK DOWN (Enemy - Applied in Area),20,Community buff_ids.csv,0x8EBDD513
+Buff,21,DEF DOWN (Enemy - Applied in Area),21,Community buff_ids.csv,0xCC5CEBB6
+Buff,23,DEF DOWN (Enemy - Applied by AtkFlag=19),23,Community buff_ids.csv,0x0F00F2F8
+Buff,24,Drain (Self - Based on most recent attack),24,Community buff_ids.csv,0x994ABA62
+Buff,25,Dispel (Enemy - Applied by AtkFlag=19),25,Community buff_ids.csv,0x0A71753A
+Buff,26,Substitute (Area),26,Community buff_ids.csv,0xEC211E9C
+Buff,27,Debuff Immunity (Team),27,Community buff_ids.csv,0x93505ED4
+Buff,28,SBA Share,28,Community buff_ids.csv,0xE2893157
+Buff,29,Guts (Self),29,Community buff_ids.csv,0x15B7ACB7
+Buff,3,DEF UP (Party),3,Community buff_ids.csv,0x7279FD12
+Buff,30,Bugged Stout Heart (No Icon),30,Community buff_ids.csv,0x38E66DEF
+Buff,31,Strength,31,Community buff_ids.csv,0x4EFE6CF8
+Buff,32,Jammed,32,Community buff_ids.csv,0xCAD30AAD
+Buff,33,Critical Hit Chance (Team),33,Community buff_ids.csv,0x72F61986
+Buff,34,Critical Hit Chance (Self),34,Community buff_ids.csv,0x24B08E48
+Buff,4,Damage Cut (Area),4,Community buff_ids.csv,0xB9EE55DF
+Buff,5,Cleanse (Self),5,Community buff_ids.csv,0x385B2937
+Buff,6,Invulnerability (Area),6,Community buff_ids.csv,0x5D242D2D
+Buff,7,ATK UP (Self),7,Community buff_ids.csv,0x94356910
+Buff,8,DEF UP (Self),8,Community buff_ids.csv,0x04620443
+Buff,9,Invulnerability (Self),9,Community buff_ids.csv,0x8567C7C4
+Buff Hash,0x04620443,DEF UP (Self),,Community buff_ids.csv,8
+Buff Hash,0x0A71753A,Dispel (Enemy - Applied by AtkFlag=19),,Community buff_ids.csv,25
+Buff Hash,0x0F00F2F8,DEF DOWN (Enemy - Applied by AtkFlag=19),,Community buff_ids.csv,23
+Buff Hash,0x15B7ACB7,Guts (Self),,Community buff_ids.csv,29
+Buff Hash,0x173C4A28,Supplementary Damage (Self),,Community buff_ids.csv,18
+Buff Hash,0x24B08E48,Critical Hit Chance (Self),,Community buff_ids.csv,34
+Buff Hash,0x2CB18EB5,Mirror Image (Self),,Community buff_ids.csv,11
+Buff Hash,0x385B2937,Cleanse (Self),,Community buff_ids.csv,5
+Buff Hash,0x38E66DEF,Bugged Stout Heart (No Icon),,Community buff_ids.csv,30
+Buff Hash,0x3DF78A11,Various,,Community buff_ids.csv,0
+Buff Hash,0x4630AB3C,Mirror Image (Area)(3 Hits),,Community buff_ids.csv,10
+Buff Hash,0x4EFE6CF8,Strength,,Community buff_ids.csv,31
+Buff Hash,0x5D242D2D,Invulnerability (Area),,Community buff_ids.csv,6
+Buff Hash,0x5DAFEB78,Drain (Team),,Community buff_ids.csv,19
+Buff Hash,0x7279FD12,DEF UP (Party),,Community buff_ids.csv,3
+Buff Hash,0x72F61986,Critical Hit Chance (Team),,Community buff_ids.csv,33
+Buff Hash,0x74E366EA,Unknown,,Community buff_ids.csv,1
+Buff Hash,0x7EA3642C,ATK UP (Party),,Community buff_ids.csv,2
+Buff Hash,0x8567C7C4,Invulnerability (Self),,Community buff_ids.csv,9
+Buff Hash,0x8EBDD513,ATK DOWN (Enemy - Applied in Area),,Community buff_ids.csv,20
+Buff Hash,0x93505ED4,Debuff Immunity (Team),,Community buff_ids.csv,27
+Buff Hash,0x94356910,ATK UP (Self),,Community buff_ids.csv,7
+Buff Hash,0x994ABA62,Drain (Self - Based on most recent attack),,Community buff_ids.csv,24
+Buff Hash,0xA65CE935,Heal (Self),,Community buff_ids.csv,16
+Buff Hash,0xB9EE55DF,Damage Cut (Area),,Community buff_ids.csv,4
+Buff Hash,0xCAD30AAD,Jammed,,Community buff_ids.csv,32
+Buff Hash,0xCC5CEBB6,DEF DOWN (Enemy - Applied in Area),,Community buff_ids.csv,21
+Buff Hash,0xE2893157,SBA Share,,Community buff_ids.csv,28
+Buff Hash,0xEC211E9C,Substitute (Area),,Community buff_ids.csv,26
+Buff Hash,0xF0C762F9,Stout Heart (Self),,Community buff_ids.csv,12
+Buff Hash,0xF690C192,Hostility (Self),,Community buff_ids.csv,13
+Buff Hash,0xF8C4E240,Unknown,,Community buff_ids.csv,-1
+Buff Hash - Character Specific,0x01AE6CA0,Deadshot (Pl2300),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x035AE5D4,Breath of Life (Calls FSM) (Pl2100),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x05CA5D48,Thousand Flames (Adds Dispel properties and calls FSM) (Pl1600),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x1F52CBDF,Benediction Lvl 1 (Pl0700),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x2206919A,Stacks of Eternal Rage (Pl1500),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x2C52A4A2,Redistribute (Pl0100),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x33841980,Summon all Pets (Pl0700),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x351D334B,Full Heal + Cleanse (Self) (Pl0900),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x6B258477,Ethereal Prison (Calls FSM) (Pl2100),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x70FA1BE7,Draconic Release (Pl1100),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x7174941D,Full Avatar Gauge (Pl2200),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x71A4DF4E,Sic 'em Geegee (Calls FSM) (Pl0700),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x7935180E,Umlauf (Pl0700),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x7B2B42FC,10 Stacks of Eternal Rage (Pl1500),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x865B9A65,Benediction Lvl 2 (Pl0700),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x8D2324D6,Phantasmagoria (Pl1800),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x8D70C1B6,Melas Gauge Activation (Pl1700),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0x9234731A,Trice Blade (Pl1300),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xA35A1ACC,DMG Increase Based on SBA Gauge (Pl0900),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xA80061E9,Max SBA Gauge (Team) (Pl2200),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xAA8D483A,+1 Pet (Pl0700),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xB6B2FA0D,Valiant Stance (Pl1200),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xC8313227,Supplementary DMG (Self) (Pl0800),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xDAE7BCB5,Onslaught Pet Summon (Pl0700),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xE000D366,ATK UP + DEF UP (Self) (Pl1100),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xEFF8B87D,Mystic Vortex (3) (Pl0400),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xF15CAAF3,Benediction Lvl 3 (Pl0700),,Community buff_ids_specific.csv,
+Buff Hash - Character Specific,0xF858EDED,Health Loss (Self) (Pl1700),,Community buff_ids_specific.csv,
+Control Type,0,Default Control Type / ExActAtkSingle,0,Community control_types.md,0xF39CFDF5
+Control Type,1,Two motions in order / ExActAtkSingleConnection,1,Community control_types.md,0x4582EE4A
+Control Type,2,Charge control / ExActAtkCharge,2,Community control_types.md,0x6C507ED8
+Control Type,3,Stationary or multistage charging / ExActAtkChargeSimple,3,Community control_types.md,0xDF037954
+Control Type,4,Rapid control / ExActAtkRapid,4,Community control_types.md,0xAB6F341B
+Control Type Hash,0x4582EE4A,Two motions in order / ExActAtkSingleConnection,,Community control_types.md,1
+Control Type Hash,0x6C507ED8,Charge control / ExActAtkCharge,,Community control_types.md,2
+Control Type Hash,0xAB6F341B,Rapid control / ExActAtkRapid,,Community control_types.md,4
+Control Type Hash,0xDF037954,Stationary or multistage charging / ExActAtkChargeSimple,,Community control_types.md,3
+Control Type Hash,0xF39CFDF5,Default Control Type / ExActAtkSingle,,Community control_types.md,0
+Debuff/Ailment,0,?,0,Community debuff_ailment_ids.csv,hash=0x3A104097; status=?
+Debuff/Ailment,1,Burn,1,Community debuff_ailment_ids.csv,hash=0x10D25D5C; status=1001
+Debuff/Ailment,10,Slow,10,Community debuff_ailment_ids.csv,hash=0x70873185; status=1002
+Debuff/Ailment,11,Darkflame,11,Community debuff_ailment_ids.csv,hash=0x993235CA; status=1011
+Debuff/Ailment,15,Glaciate,15,Community debuff_ailment_ids.csv,hash=0x35ABCF81; status=1004
+Debuff/Ailment,16,Bound,16,Community debuff_ailment_ids.csv,hash=0x62375707; status=1012
+Debuff/Ailment,17,Skill Sealed,17,Community debuff_ailment_ids.csv,hash=0x29635228; status=1016
+Debuff/Ailment,18,SBA Sealed,18,Community debuff_ailment_ids.csv,hash=0x37E7BA96; status=1017
+Debuff/Ailment,19,Blight,19,Community debuff_ailment_ids.csv,hash=0x61B1700D; status=1018
+Debuff/Ailment,2,Dizzy,2,Community debuff_ailment_ids.csv,hash=0xB6F49156; status=1003
+Debuff/Ailment,20,Fear,20,Community debuff_ailment_ids.csv,hash=0xF67874A6; status=1019
+Debuff/Ailment,21,Arvess Fermare,21,Community debuff_ailment_ids.csv,hash=0xF816D1FD; status=1020
+Debuff/Ailment,22,Ethereal Prison,22,Community debuff_ailment_ids.csv,hash=0xC9932485; status=?
+Debuff/Ailment,23,Debuff Extension,23,Community debuff_ailment_ids.csv,hash=0x48841219; status=1022
+Debuff/Ailment,3,Held Under,3,Community debuff_ailment_ids.csv,hash=0xF6533F8E; status=1008
+Debuff/Ailment,4,Frostbite,4,Community debuff_ailment_ids.csv,hash=0xCE8AF003; status=1005
+Debuff/Ailment,5,Sandtomb,5,Community debuff_ailment_ids.csv,hash=0x47BB7C64; status=1006
+Debuff/Ailment,8,Paralysis,8,Community debuff_ailment_ids.csv,hash=0xB1508E3D; status=1007
+Debuff/Ailment,9,Poison,9,Community debuff_ailment_ids.csv,hash=0x5320CE6F; status=1000
+Debuff/Ailment Hash,0x10D25D5C,Burn,,Community debuff_ailment_ids.csv,id=1; status=1001
+Debuff/Ailment Hash,0x29635228,Skill Sealed,,Community debuff_ailment_ids.csv,id=17; status=1016
+Debuff/Ailment Hash,0x35ABCF81,Glaciate,,Community debuff_ailment_ids.csv,id=15; status=1004
+Debuff/Ailment Hash,0x37E7BA96,SBA Sealed,,Community debuff_ailment_ids.csv,id=18; status=1017
+Debuff/Ailment Hash,0x3A104097,?,,Community debuff_ailment_ids.csv,id=0; status=?
+Debuff/Ailment Hash,0x47BB7C64,Sandtomb,,Community debuff_ailment_ids.csv,id=5; status=1006
+Debuff/Ailment Hash,0x48841219,Debuff Extension,,Community debuff_ailment_ids.csv,id=23; status=1022
+Debuff/Ailment Hash,0x5320CE6F,Poison,,Community debuff_ailment_ids.csv,id=9; status=1000
+Debuff/Ailment Hash,0x61B1700D,Blight,,Community debuff_ailment_ids.csv,id=19; status=1018
+Debuff/Ailment Hash,0x62375707,Bound,,Community debuff_ailment_ids.csv,id=16; status=1012
+Debuff/Ailment Hash,0x6680BF9B,Max HP Down,,Community debuff_ailment_ids.csv,id=; status=
+Debuff/Ailment Hash,0x70873185,Slow,,Community debuff_ailment_ids.csv,id=10; status=1002
+Debuff/Ailment Hash,0x993235CA,Darkflame,,Community debuff_ailment_ids.csv,id=11; status=1011
+Debuff/Ailment Hash,0xB1508E3D,Paralysis,,Community debuff_ailment_ids.csv,id=8; status=1007
+Debuff/Ailment Hash,0xB6F49156,Dizzy,,Community debuff_ailment_ids.csv,id=2; status=1003
+Debuff/Ailment Hash,0xC9932485,Ethereal Prison,,Community debuff_ailment_ids.csv,id=22; status=?
+Debuff/Ailment Hash,0xCE8AF003,Frostbite,,Community debuff_ailment_ids.csv,id=4; status=1005
+Debuff/Ailment Hash,0xD21EADD5,ATK Down,,Community debuff_ailment_ids.csv,id=; status=
+Debuff/Ailment Hash,0xE7C92715,Def Down,,Community debuff_ailment_ids.csv,id=; status=
+Debuff/Ailment Hash,0xF493ECEE,Drain,,Community debuff_ailment_ids.csv,id=; status=
+Debuff/Ailment Hash,0xF6533F8E,Held Under,,Community debuff_ailment_ids.csv,id=3; status=1008
+Debuff/Ailment Hash,0xF67874A6,Fear,,Community debuff_ailment_ids.csv,id=20; status=1019
+Debuff/Ailment Hash,0xF70DC616,Dispel,,Community debuff_ailment_ids.csv,id=; status=
+Debuff/Ailment Hash,0xF816D1FD,Arvess Fermare,,Community debuff_ailment_ids.csv,id=21; status=1020
+Enemy Weapon,2110,Freikugel,2110,Community model_ids.md,
+Enemy Weapon,2111,Mjolnir,2111,Community model_ids.md,
+Enemy Weapon,2112,Caduceus,2112,Community model_ids.md,
+Enemy Weapon,2113,Gae Bulg,2113,Community model_ids.md,
+Enemy Weapon,3100,Firefly,3100,Community model_ids.md,
+Enemy Weapon,3101,Hutchison Generator,3101,Community model_ids.md,
+Enemy Weapon,7000,Skotadi,7000,Community model_ids.md,
+Enemy Weapon,7001,Fotia,7001,Community model_ids.md,
+Enemy Weapon,7002,Hydor,7002,Community model_ids.md,
+Enemy Weapon,7003,Edafos,7003,Community model_ids.md,
+Enemy Weapon,7004,Anemos,7004,Community model_ids.md,
+Enemy Weapon,7300,Nereid/Halimede,7300,Community model_ids.md,
+Model Breakable Prop,BH0002,Merchant's Cargo,,Community model_ids.md,
+Model Breakable Prop,BH0003,Hallowed Ground,,Community model_ids.md,
+Model Breakable Prop,BH0004,Barricade,,Community model_ids.md,
+Model Breakable Prop,BH2002,20mm Ether Autocannon,,Community model_ids.md,
+Model Breakable Prop,BH2005,Control Unit,,Community model_ids.md,
+Model Enemy,EM0000,Goblin Stormer/Bandit/Striker/Gatherer/Trooper/Savage Carrion-Eater,,Community model_ids.md,
+Model Enemy,EM0001,Goblin Witch Doctor/Hexer/Pyromancer,,Community model_ids.md,
+Model Enemy,EM0002,Goblin Tanker/Mud-Covered Swordsman,,Community model_ids.md,
+Model Enemy,EM0003,Goblin Archer/Frenzied Archer,,Community model_ids.md,
+Model Enemy,EM0004,Goblin Soldier/Gladiator/Rowdy Bord/Craver Janaf/Sandeater Gimza,,Community model_ids.md,
+Model Enemy,EM0005,Goblin Warrior/Greatshield Madbeat,,Community model_ids.md,
+Model Enemy,EM0100,Skeleton/Mossy Skeleton,,Community model_ids.md,
+Model Enemy,EM0101,Frosty Bones/Withered Holy Knight/Icy Hexblade,,Community model_ids.md,
+Model Enemy,EM0102,Gerasene,,Community model_ids.md,
+Model Enemy,EM0103,Scarmiglione,,Community model_ids.md,
+Model Enemy,EM0200,Timber Wolf/Sand Wolf/Ravenous Wolf,,Community model_ids.md,
+Model Enemy,EM0201,Goblin Wolfrider/Crimson Runner,,Community model_ids.md,
+Model Enemy,EM0300,Hornbird/Ominous Raptor/Crazed Crow/Minepecker,,Community model_ids.md,
+Model Enemy,EM0400,Wyvern,,Community model_ids.md,
+Model Enemy,EM0500,Quakadile,,Community model_ids.md,
+Model Enemy,EM0501,Blizzadile,,Community model_ids.md,
+Model Enemy,EM0502,Infernadile,,Community model_ids.md,
+Model Enemy,EM0600,Slime,,Community model_ids.md,
+Model Enemy,EM0601,Silverslime,,Community model_ids.md,
+Model Enemy,EM0602,Goldslime,,Community model_ids.md,
+Model Enemy,EM0603,King Silverslime,,Community model_ids.md,
+Model Enemy,EM0604,King Goldslime,,Community model_ids.md,
+Model Enemy,EM0605,Prismatic Slime,,Community model_ids.md,
+Model Enemy,EM0701,Cyaegha/Silent Watcher,,Community model_ids.md,
+Model Enemy,EM0705,Ahriman,,Community model_ids.md,
+Model Enemy,EM0706,Nazarbonju/Eternal Gaze,,Community model_ids.md,
+Model Enemy,EM0800,Flame Gyre,,Community model_ids.md,
+Model Enemy,EM0801,Aqua Gyre,,Community model_ids.md,
+Model Enemy,EM0802,Earth Gyre,,Community model_ids.md,
+Model Enemy,EM0803,Wind Gyre,,Community model_ids.md,
+Model Enemy,EM0804,Light Gyre,,Community model_ids.md,
+Model Enemy,EM0805,Dark Gyre,,Community model_ids.md,
+Model Enemy,EM0900,Fire Spirit/Trialbeast Flame Elemental/Phondam Elemental/Vayoi Elemental/Torchlight Spirit/Crimson Phantom/Ruby Phantom/Shimmering Flame,,Community model_ids.md,
+Model Enemy,EM0901,Water Effigy,,Community model_ids.md,
+Model Enemy,EM0902,Water Spirit/Elemental/Phantom,,Community model_ids.md,
+Model Enemy,EM0903,Wind Effigy,,Community model_ids.md,
+Model Enemy,EM1000,Aviaeth Saber/Aviaeth Trooper,,Community model_ids.md,
+Model Enemy,EM1001,Aviaeth Lancer,,Community model_ids.md,
+Model Enemy,EM1002,Aviaeth Archer,,Community model_ids.md,
+Model Enemy,EM1003,Aviaeth Flagbearer/Aviaeth Honor Guard,,Community model_ids.md,
+Model Enemy,EM1004,Inquisitor Rook/Aviaeth Dreadnaught/Galcia the Saved/Hardened Rynell,,Community model_ids.md,
+Model Enemy,EM1005,Reaper Avalan/Sinner Balgas/Aviaeth Avenger/Deluded Derleth,,Community model_ids.md,
+Model Enemy,EM1006,Aviaeth Crusader,,Community model_ids.md,
+Model Enemy,EM1100,Sword Veil Fellowship,,Community model_ids.md,
+Model Enemy,EM1200,Vaza'ite Raptor,,Community model_ids.md,
+Model Enemy,EM1300,Droita Sentinel,,Community model_ids.md,
+Model Enemy,EM1301,Droita Mother/Droita Mother (Assault)/Droita Cyclops Prototype,,Community model_ids.md,
+Model Enemy,EM1303,Droita Balsam/Torpedo Balsam,,Community model_ids.md,
+Model Enemy,EM1500,Rock Golem,,Community model_ids.md,
+Model Enemy,EM1600,Griffin/Wraithwing/Goblin Eater/Obsidian Raptor,,Community model_ids.md,
+Model Enemy,EM1700,Behemoth,,Community model_ids.md,
+Model Enemy,EM1800,Ancient Dragon/Frumious Bandersnatch/Ferocious Garamud,,Community model_ids.md,
+Model Enemy,EM1801,Vrazarek Firewyrm,,Community model_ids.md,
+Model Enemy,EM1802,Wilinus Icewyrm,,Community model_ids.md,
+Model Enemy,EM1803,Corvell Earthwyrm,,Community model_ids.md,
+Model Enemy,EM1804,Elusious Windwyrm,,Community model_ids.md,
+Model Enemy,EM1805,Radis Whitewyrm,,Community model_ids.md,
+Model Enemy,EM1806,Evyl Blackwyrm,,Community model_ids.md,
+Model Enemy,EM1900,Tayu'itar/Tayu'itar Mk II,,Community model_ids.md,
+Model Enemy,EM2000,Gallanza,,Community model_ids.md,
+Model Enemy,EM2100,Maglielle/Mysterious Swordsman,,Community model_ids.md,
+Model Enemy,EM2300,Id (Dragonform),,Community model_ids.md,
+Model Enemy,EM2400,Lilith,,Community model_ids.md,
+Model Enemy,EM2500,Pincer,,Community model_ids.md,
+Model Enemy,EM2600,Cobra/Sand Reaper,,Community model_ids.md,
+Model Enemy,EM2700,Sir Barrold,,Community model_ids.md,
+Model Enemy,EM2800,Ominous Form/Vengeful Wraith/Calamitous Specter,,Community model_ids.md,
+Model Enemy,EM3100,Pyet-A,,Community model_ids.md,
+Model Enemy,EM7000,Proto Bahamut,,Community model_ids.md,
+Model Enemy,EM7100,Vulkan Bolla,,Community model_ids.md,
+Model Enemy,EM7110,Vulkan Bolla Nihilla,,Community model_ids.md,
+Model Enemy,EM7200,Furycane,,Community model_ids.md,
+Model Enemy,EM7210,Furycane Nihilla,,Community model_ids.md,
+Model Enemy,EM7300,Managarmr,,Community model_ids.md,
+Model Enemy,EM7310,Managarmr Nihilla,,Community model_ids.md,
+Model Enemy,EM7400,Excavallion,,Community model_ids.md,
+Model Enemy,EM7401,Talus Reactor (Excavallion),,Community model_ids.md,
+Model Enemy,EM7404,Spinal Core (Excavallion),,Community model_ids.md,
+Model Enemy,EM7406,Atlas Plug/Bolt/Primal Cylinder (Excavallion),,Community model_ids.md,
+Model Enemy,EM7407,Deltoid Reactor/Forearm Reactor (Excavallion),,Community model_ids.md,
+Model Enemy,EM7408,Coxa Reactor (Excavallion),,Community model_ids.md,
+Model Enemy,EM7409,Chest Reactor (Excavallion),,Community model_ids.md,
+Model Enemy,EM7410,Spinal Core (Excavallion),,Community model_ids.md,
+Model Enemy,EM7500,Angra Mainyu,,Community model_ids.md,
+Model Enemy,EM7520,Daeva,,Community model_ids.md,
+Model Enemy,EM7530,Aka Manah,,Community model_ids.md,
+Model Enemy,EM7540,Aka Manah (Wires),,Community model_ids.md,
+Model Enemy,EM7600,Bahamut Versa,,Community model_ids.md,
+Model Enemy,EM7603,Bahamut Core,,Community model_ids.md,
+Model Enemy,EM7610,Bahamut Versa Omega,,Community model_ids.md,
+Model Enemy,EM7700,Lucilius,,Community model_ids.md,
+Model Map Animated,BA0350,Cat,,Community model_ids.md,
+Model Map Animated,BA2103,Grapnel,,Community model_ids.md,
+Model Map Animated,BA7200,Keeper,,Community model_ids.md,
+Model Map Animated,BA7201,Watcher,,Community model_ids.md,
+Model Map Animated,BA7210,Calamitous Vestiges,,Community model_ids.md,
+Model Map Animated,BA7211,Calamitous Gate,,Community model_ids.md,
+Model NPC,NP0000,Lyria,,Community model_ids.md,
+Model NPC,NP0001,Lyria (Church of Avia),,Community model_ids.md,
+Model NPC,NP0100,Vyrn,,Community model_ids.md,
+Model NPC,NP0200,Sierokarte,,Community model_ids.md,
+Model NPC,NP0300,Rolan,,Community model_ids.md,
+Model NPC,NP0301,Rolan (2),,Community model_ids.md,
+Model NPC,NP0400,Historiath,,Community model_ids.md,
+Model NPC,NP0500,Lilith,,Community model_ids.md,
+Model NPC,NP0600,Zathba,,Community model_ids.md,
+Model NPC,NP0700,Human Man,,Community model_ids.md,
+Model NPC,NP0702,Human Man (2),,Community model_ids.md,
+Model NPC,NP0800,Old Man with Cane,,Community model_ids.md,
+Model NPC,NP0900,Human Boy,,Community model_ids.md,
+Model NPC,NP1000,Human Woman,,Community model_ids.md,
+Model NPC,NP1002,Human Woman (2),,Community model_ids.md,
+Model NPC,NP1010,Human Woman (3),,Community model_ids.md,
+Model NPC,NP1200,Erune Man,,Community model_ids.md,
+Model NPC,NP1202,Dagger,,Community model_ids.md,
+Model NPC,NP1300,Erune Woman,,Community model_ids.md,
+Model NPC,NP1400,Harvin Man,,Community model_ids.md,
+Model NPC,NP1402,Rilla,,Community model_ids.md,
+Model NPC,NP1500,Harvin Girl,,Community model_ids.md,
+Model NPC,NP1502,Harvin Woman,,Community model_ids.md,
+Model NPC,NP1510,Harvin Girl (2),,Community model_ids.md,
+Model NPC,NP1600,Draph Man,,Community model_ids.md,
+Model NPC,NP1602,Pops,,Community model_ids.md,
+Model NPC,NP1700,Draph Woman,,Community model_ids.md,
+Model NPC,NP1702,Draph Woman (2),,Community model_ids.md,
+Model NPC,NP1710,Draph Woman (3),,Community model_ids.md,
+Model NPC,NP1800,Mellose Acolyte,,Community model_ids.md,
+Model NPC,NP1900,Seedhollow Soldier,,Community model_ids.md,
+Model NPC,NP2000,Boy,,Community model_ids.md,
+Model NPC,NP2100,Girl,,Community model_ids.md,
+Model NPC,NP2200,Alliance Receptionist,,Community model_ids.md,
+Model NPC,NP2201,Alliance Receptionist (2),,Community model_ids.md,
+Model Player,PL0000,Gran (Rebel),,Community model_ids.md,
+Model Player,PL0001,Gran (original),,Community model_ids.md,
+Model Player,PL0100,Djeeta (Rebel),,Community model_ids.md,
+Model Player,PL0101,Djeeta (original),,Community model_ids.md,
+Model Player,PL0200,Katalina,,Community model_ids.md,
+Model Player,PL0300,Rackam,,Community model_ids.md,
+Model Player,PL0400,Io,,Community model_ids.md,
+Model Player,PL0500,Eugen,,Community model_ids.md,
+Model Player,PL0600,Rosetta,,Community model_ids.md,
+Model Player,PL0700,Ferry,,Community model_ids.md,
+Model Player,PL0800,Lancelot,,Community model_ids.md,
+Model Player,PL0900,Vane,,Community model_ids.md,
+Model Player,PL1000,Percivale,,Community model_ids.md,
+Model Player,PL1100,Siegfried,,Community model_ids.md,
+Model Player,PL1101,Siegfried (Open Helmet),,Community model_ids.md,
+Model Player,PL1102,Siegfried (Closed Helmet),,Community model_ids.md,
+Model Player,PL1200,Charlotta,,Community model_ids.md,
+Model Player,PL1300,Yodarha,,Community model_ids.md,
+Model Player,PL1400,Narmaya,,Community model_ids.md,
+Model Player,PL1500,Ghandagoza,,Community model_ids.md,
+Model Player,PL1600,Zeta,,Community model_ids.md,
+Model Player,PL1700,Vaseraga,,Community model_ids.md,
+Model Player,PL1800,Cagliostro,,Community model_ids.md,
+Model Player,PL1900,Id,,Community model_ids.md,
+Model Player,PL2000,Id (Transformation),,Community model_ids.md,
+Model Player,PL2100,Sandalphon (1.3.0),,Community model_ids.md,
+Model Player,PL2200,Seofon (1.2.0),,Community model_ids.md,
+Model Player,PL2300,Tweyen (1.2.0),,Community model_ids.md,
+Model Player Weapon,WP0000,Traveller's Sword,,Community model_ids.md,
+Model Player Weapon,WP0001,Durandal,,Community model_ids.md,
+Model Player Weapon,WP0002,"Sword of Eos (Sword of Eos, the Star Key)",,Community model_ids.md,"Sword of Eos, the Star Key"
+Model Player Weapon,WP0003,Albacore Blade,,Community model_ids.md,
+Model Player Weapon,WP0004,Ultima Sword,,Community model_ids.md,
+Model Player Weapon,WP0005,"Seven-Star Sword (Seven-Star Sword, Celestial)",,Community model_ids.md,"Seven-Star Sword, Celestial"
+Model Player Weapon,WP0010,False Sword of the Apocalypse,,Community model_ids.md,
+Model Player Weapon,WP0100,Partenza,,Community model_ids.md,
+Model Player Weapon,WP0200,Rukalsa,,Community model_ids.md,
+Model Player Weapon,WP0201,Flame Rapier,,Community model_ids.md,
+Model Player Weapon,WP0202,"Murgleis (Murgleis, the Azure Oath)",,Community model_ids.md,"Murgleis, the Azure Oath"
+Model Player Weapon,WP0203,Luminiera Sword Omega,,Community model_ids.md,
+Model Player Weapon,WP0204,Ephemeron,,Community model_ids.md,
+Model Player Weapon,WP0205,"Blutgang (Blutgang, Blade of Refuge)",,Community model_ids.md,"Blutgang, Blade of Refuge"
+Model Player Weapon,WP0290,Ares,,Community model_ids.md,
+Model Player Weapon,WP0291,Ares Sword,,Community model_ids.md,
+Model Player Weapon,WP0292,Ares Shield,,Community model_ids.md,
+Model Player Weapon,WP0300,Flintspike,,Community model_ids.md,
+Model Player Weapon,WP0301,Wheellock Axe,,Community model_ids.md,
+Model Player Weapon,WP0302,"Benedia (Benedia, Azure Ammunition)",,Community model_ids.md,"Benedia, Azure Ammunition"
+Model Player Weapon,WP0303,Tiamat Bolt Omega,,Community model_ids.md,
+Model Player Weapon,WP0304,Stormcloud,,Community model_ids.md,
+Model Player Weapon,WP0305,"Freikugel (Freikugel, the Purifier)",,Community model_ids.md,"Freikugel, the Purifier"
+Model Player Weapon,WP0370,Shotgun,,Community model_ids.md,
+Model Player Weapon,WP0400,Little Witch Scepter,,Community model_ids.md,
+Model Player Weapon,WP0401,Zhezl,,Community model_ids.md,
+Model Player Weapon,WP0402,"Gambanteinn (Gambanteinn, Staff of Hope)",,Community model_ids.md,"Gambanteinn, Staff of Hope"
+Model Player Weapon,WP0403,Colossus Cane Omega,,Community model_ids.md,
+Model Player Weapon,WP0404,Tupsimati,,Community model_ids.md,
+Model Player Weapon,WP0405,"Caduceus (Caduceus, Immortal Coil)",,Community model_ids.md,"Caduceus, Immortal Coil"
+Model Player Weapon,WP0500,Dreyse,,Community model_ids.md,
+Model Player Weapon,WP0501,Matchlock,,Community model_ids.md,
+Model Player Weapon,WP0502,"Ak-4A (AK-4A, the Suppressor)",,Community model_ids.md,"AK-4A, the Suppressor"
+Model Player Weapon,WP0503,Leviathan Muzzle,,Community model_ids.md,
+Model Player Weapon,WP0504,Clarion,,Community model_ids.md,
+Model Player Weapon,WP0505,"Draconic Fire (Draconic Fire, Charring Breath)",,Community model_ids.md,"Draconic Fire, Charring Breath"
+Model Player Weapon,WP0590,Thrown Grenade,,Community model_ids.md,
+Model Player Weapon,WP0600,Egoism,,Community model_ids.md,
+Model Player Weapon,WP0601,Swordbreaker,,Community model_ids.md,
+Model Player Weapon,WP0602,"Love Eternal (Love Eternal, Forevermore)",,Community model_ids.md,"Love Eternal, Forevermore"
+Model Player Weapon,WP0603,Rose Crystal Knife,,Community model_ids.md,
+Model Player Weapon,WP0604,Cortana,,Community model_ids.md,
+Model Player Weapon,WP0605,Dagger of Bahamut Coda (Primal Dagger of Bahamut Coda),,Community model_ids.md,Primal Dagger of Bahamut Coda
+Model Player Weapon,WP0690,Large Rose Vine,,Community model_ids.md,
+Model Player Weapon,WP0691,Vine,,Community model_ids.md,
+Model Player Weapon,WP0692,Large Vine,,Community model_ids.md,
+Model Player Weapon,WP0693,Large Rose,,Community model_ids.md,
+Model Player Weapon,WP0694,Large Leafy Vine,,Community model_ids.md,
+Model Player Weapon,WP0695,Round Vine?,,Community model_ids.md,
+Model Player Weapon,WP0700,Geisterpeitche,,Community model_ids.md,
+Model Player Weapon,WP0701,Leather Belt,,Community model_ids.md,
+Model Player Weapon,WP0702,"Ethereal Lasher (Ethereal Lasher, Fleeting End)",,Community model_ids.md,"Ethereal Lasher, Fleeting End"
+Model Player Weapon,WP0703,Flame Lit Curl,,Community model_ids.md,
+Model Player Weapon,WP0704,Live Wire,,Community model_ids.md,
+Model Player Weapon,WP0705,"Erinnerung (Erinnerung, From Beyond)",,Community model_ids.md,"Erinnerung, From Beyond"
+Model Player Weapon,WP0790,Momo,,Community model_ids.md,
+Model Player Weapon,WP0791,Fugee,,Community model_ids.md,
+Model Player Weapon,WP0792,Nicola,,Community model_ids.md,
+Model Player Weapon,WP0793,GeeGee,,Community model_ids.md,
+Model Player Weapon,WP0794,Beppo,,Community model_ids.md,
+Model Player Weapon,WP0800,Altachiara,,Community model_ids.md,
+Model Player Weapon,WP0801,Hoarfrost Blade Persius,,Community model_ids.md,
+Model Player Weapon,WP0802,Blanc Comme Neige,,Community model_ids.md,
+Model Player Weapon,WP0803,Vegalta,,Community model_ids.md,
+Model Player Weapon,WP0804,"Knight of Ice (Knight of Ice, the Silver Blur)",,Community model_ids.md,"Knight of Ice, the Silver Blur"
+Model Player Weapon,WP0805,"Damascus Knife (Damascus Knife, the Unseen)",,Community model_ids.md,"Damascus Knife, the Unseen"
+Model Player Weapon,WP0900,Alabarda,,Community model_ids.md,
+Model Player Weapon,WP0901,Swan,,Community model_ids.md,
+Model Player Weapon,WP0902,"Treuer Krieger (Treuer Krieger, the Dauntless)",,Community model_ids.md,"Treuer Krieger, the Dauntless"
+Model Player Weapon,WP0903,Ukonvasara,,Community model_ids.md,
+Model Player Weapon,WP0904,Blossom Axe,,Community model_ids.md,
+Model Player Weapon,WP0905,"Mjolnir (Mjolnir, Thunderous Crusher)",,Community model_ids.md,"Mjolnir, Thunderous Crusher"
+Model Player Weapon,WP1000,Flamberge,,Community model_ids.md,
+Model Player Weapon,WP1001,Lohengrin,,Community model_ids.md,
+Model Player Weapon,WP1002,Antwerp,,Community model_ids.md,
+Model Player Weapon,WP1003,Joyeuse,,Community model_ids.md,
+Model Player Weapon,WP1004,"Lord of Flames (Lord of Flames, Exalted Reign)",,Community model_ids.md,"Lord of Flames, Exalted Reign"
+Model Player Weapon,WP1005,"Gottfried (Gottfried, the White Fang)",,Community model_ids.md,"Gottfried, the White Fang"
+Model Player Weapon,WP1100,Integrity,,Community model_ids.md,
+Model Player Weapon,WP1101,Broadsword of Earth,,Community model_ids.md,
+Model Player Weapon,WP1102,"Ascalon (Ascalon, Dragon's Bane)",,Community model_ids.md,"Ascalon, Dragon's Bane"
+Model Player Weapon,WP1103,Hrunting,,Community model_ids.md,
+Model Player Weapon,WP1104,Windhose,,Community model_ids.md,
+Model Player Weapon,WP1105,"Balmung (Balmung, the Blue Blaze)",,Community model_ids.md,"Balmung, the Blue Blaze"
+Model Player Weapon,WP1200,Claiomh Solais,,Community model_ids.md,
+Model Player Weapon,WP1201,Arondight,,Community model_ids.md,
+Model Player Weapon,WP1202,"Claidheamh Soluis (Claidheamh Soluis, the Radiant)",,Community model_ids.md,"Claidheamh Soluis, the Radiant"
+Model Player Weapon,WP1203,Ushumgal,,Community model_ids.md,
+Model Player Weapon,WP1204,Sahrivar,,Community model_ids.md,
+Model Player Weapon,WP1205,"Galatine (Galatine, Trinity's Wrath)",,Community model_ids.md,"Galatine, Trinity's Wrath"
+Model Player Weapon,WP1300,Kiku-Ichimonji,,Community model_ids.md,
+Model Player Weapon,WP1301,Asura,,Community model_ids.md,
+Model Player Weapon,WP1302,"Fudo-Kuniyuki (Fudo-Kuniyuki, Scarlet Glory)",,Community model_ids.md,"Fudo-Kuniyuki, Scarlet Glory"
+Model Player Weapon,WP1303,Higurashi,,Community model_ids.md,
+Model Player Weapon,WP1304,Xeno Phantom Demon Blade,,Community model_ids.md,
+Model Player Weapon,WP1305,"Swordfish (Swordfish, Tipper of Scales)",,Community model_ids.md,"Swordfish, Tipper of Scales"
+Model Player Weapon,WP1400,Nakamaki Nodachi,,Community model_ids.md,
+Model Player Weapon,WP1401,Kotetsu,,Community model_ids.md,
+Model Player Weapon,WP1402,"Venustas (Venustas, the Sacred Gift)",,Community model_ids.md,"Venustas, the Sacred Gift"
+Model Player Weapon,WP1403,Flourithium Blade,,Community model_ids.md,
+Model Player Weapon,WP1404,Blade of Purification,,Community model_ids.md,
+Model Player Weapon,WP1405,"Ameno Habakiri (Ameno Habakiri, the Beheader)",,Community model_ids.md,"Ameno Habakiri, the Beheader"
+Model Player Weapon,WP1470,Blue Stance Sword,,Community model_ids.md,
+Model Player Weapon,WP1500,Brahma Gauntlet,,Community model_ids.md,
+Model Player Weapon,WP1501,Rope Knuckles,,Community model_ids.md,
+Model Player Weapon,WP1502,Crimson Finger,,Community model_ids.md,
+Model Player Weapon,WP1503,"Golden Fists of Ura (Golden Fists of Ura, No Mercy)",,Community model_ids.md,"Golden Fists of Ura, No Mercy"
+Model Player Weapon,WP1504,Arkab,,Community model_ids.md,
+Model Player Weapon,WP1505,"Sky Piercer (Sky Piercer, the Apex Fist)",,Community model_ids.md,"Sky Piercer, the Apex Fist"
+Model Player Weapon,WP1600,Spear of Arvess,,Community model_ids.md,
+Model Player Weapon,WP1601,Sunspot Spear,,Community model_ids.md,
+Model Player Weapon,WP1602,"Brionac (Brionac, the Dominant)",,Community model_ids.md,"Brionac, the Dominant"
+Model Player Weapon,WP1603,Gisla,,Community model_ids.md,
+Model Player Weapon,WP1604,Huanglong Spear,,Community model_ids.md,
+Model Player Weapon,WP1605,"Gae Bulg (Gae Bulg, Impaler of Ruin)",,Community model_ids.md,"Gae Bulg, Impaler of Ruin"
+Model Player Weapon,WP1690,Extra Spear,,Community model_ids.md,
+Model Player Weapon,WP1700,Great Scythe Grynoth,,Community model_ids.md,
+Model Player Weapon,WP1701,Alsarav,,Community model_ids.md,
+Model Player Weapon,WP1702,"Wurtzite Scythe (Wurtzite Scythe, Reaper's Hand)",,Community model_ids.md,"Wurtzite Scythe, Reaper's Hand"
+Model Player Weapon,WP1703,Soul Eater,,Community model_ids.md,
+Model Player Weapon,WP1704,Cosmic Scythe,,Community model_ids.md,
+Model Player Weapon,WP1705,"Ereshkigal (Ereshkigal, Impending Doom)",,Community model_ids.md,"Ereshkigal, Impending Doom"
+Model Player Weapon,WP1800,Magnum Opus,,Community model_ids.md,
+Model Player Weapon,WP1801,Dream Atlas,,Community model_ids.md,
+Model Player Weapon,WP1802,"Transmigration Tome (Transmigration Tome, Infinity)",,Community model_ids.md,"Transmigration Tome, Infinity"
+Model Player Weapon,WP1803,Sacred Codex,,Community model_ids.md,
+Model Player Weapon,WP1804,Arshivelle,,Community model_ids.md,
+Model Player Weapon,WP1805,"Zosimos (Zosimos, the Unabridged Truth)",,Community model_ids.md,"Zosimos, the Unabridged Truth"
+Model Player Weapon,WP1890,Dash Dragon (Ouroboros),,Community model_ids.md,Ouroboros
+Model Player Weapon,WP1892,Statue Substitute,,Community model_ids.md,
+Model Player Weapon,WP1893,Small Ult Dagger,,Community model_ids.md,
+Model Player Weapon,WP1894,Ult Dagger,,Community model_ids.md,
+Model Player Weapon,WP1895,Spear,,Community model_ids.md,
+Model Player Weapon,WP1896,Chakram,,Community model_ids.md,
+Model Player Weapon,WP1897,Blades,,Community model_ids.md,
+Model Player Weapon,WP1898,Torch Hammer,,Community model_ids.md,
+Model Player Weapon,WP1900,Ragnarok,,Community model_ids.md,
+Model Player Weapon,WP1901,Aviaeth Faussart,,Community model_ids.md,
+Model Player Weapon,WP1902,"Susanoo (Susanoo, the Condemner)",,Community model_ids.md,"Susanoo, the Condemner"
+Model Player Weapon,WP1903,Premium Sword,,Community model_ids.md,
+Model Player Weapon,WP1904,Ecke Sachs,,Community model_ids.md,
+Model Player Weapon,WP1905,Sword of Bahamut (Primal Sword of Bahamut),,Community model_ids.md,Primal Sword of Bahamut
+Model Player Weapon,WP2100,Apprentice,,Community model_ids.md,
+Model Player Weapon,WP2106,"World Ender (World Ender, the Fated Edge)",,Community model_ids.md,"World Ender, the Fated Edge"
+Model Player Weapon,WP2200,Sette di Spade,,Community model_ids.md,
+Model Player Weapon,WP2206,"Gateway-Star Sword, Seven Winks",,Community model_ids.md,
+Model Player Weapon,WP2290,Seofon's Avatar,,Community model_ids.md,
+Model Player Weapon,WP2300,Bow of Dismissal,,Community model_ids.md,
+Model Player Weapon,WP2306,Desolation-Crown Bow,,Community model_ids.md,
+Motion Flag0 Bit,1,Allows walking to cancel current action,1,Community motions.md,
+Motion Flag0 Bit,1073741824,Closes follow-up attack window,1073741824,Community motions.md,
+Motion Flag0 Bit,131072,Significantly lowers gravity,131072,Community motions.md,
+Motion Flag0 Bit,134217728,Inherent Stout / knockback resistance,134217728,Community motions.md,
+Motion Flag0 Bit,16777216,Allows X inputs,16777216,Community motions.md,
+Motion Flag0 Bit,2,Allows chaining to next action,2,Community motions.md,
+Motion Flag0 Bit,2048,Gives i-Frames for duration,2048,Community motions.md,
+Motion Flag0 Bit,32,Allows additional hit,32,Community motions.md,
+Motion Flag0 Bit,4,Allows dodge,4,Community motions.md,
+Motion Flag0 Bit,4194304,Unholster/equip weapon,4194304,Community motions.md,
+Motion Flag0 Bit,524288,Allows branchAtkHit_ after hit,524288,Community motions.md,
+Motion Flag0 Bit,536870912,Allows turn during action,536870912,Community motions.md,
+Motion Flag0 Bit,64,Allows Y inputs,64,Community motions.md,
+Motion Flag0 Bit,65536,Re-enables gravity,65536,Community motions.md,
+Motion Flag0 Bit,8,Allows jumping cancel,8,Community motions.md,
+Motion Flag0 Bit,8192,Allows player to activate skills,8192,Community motions.md,
+Motion Flag1 Bit,1,May allow parry gapclosing interaction,1,Community motions.md,
+Motion Flag1 Bit,1048576,Activates Vane's Inherent Guard,1048576,Community motions.md,
+Motion Flag1 Bit,1073741824,Closes follow-up attack window,1073741824,Community motions.md,
+Motion Flag1 Bit,128,Consume Skill Charge,128,Community motions.md,
+Motion Flag1 Bit,131072,Hold Input branch,131072,Community motions.md,
+Motion Flag1 Bit,16,Calls FSM associated with move,16,Community motions.md,
+Motion Flag1 Bit,262144,Perfect Window,262144,Community motions.md,
+Motion Flag1 Bit,4,Cast Buff,4,Community motions.md,
+Motion Flag1 Bit,4194304,Allows blocking,4194304,Community motions.md,
+Motion Flag1 Bit,524288,Perfect Attack,524288,Community motions.md,
+Motion Flag1 Bit,8,Marks end of SBA action,8,Community motions.md,
+Motion Flag1 Bit,8388608,Parry Frames,8388608,Community motions.md,
+Obj ID Prefix,0x100xxxx,fp object range,,Community obj_id.md,
+Obj ID Prefix,0x101xxxx,fe object range,,Community obj_id.md,
+Obj ID Prefix,0x102xxxx,fn object range,,Community obj_id.md,
+Obj ID Prefix,0x103xxxx,we object range,,Community obj_id.md,
+Obj ID Prefix,0x104xxxx,wn object range,,Community obj_id.md,
+Obj ID Prefix,0x10Axxxx,np object range,,Community obj_id.md,
+Obj ID Prefix,0x10Bxxxx,tr object range,,Community obj_id.md,
+Obj ID Prefix,0x10Cxxxx,bt object range,,Community obj_id.md,
+Obj ID Prefix,0x1xxxx,pl object range,,Community obj_id.md,
+Obj ID Prefix,0x2xxxx,em object range,,Community obj_id.md,
+Obj ID Prefix,0x3xxxx,wp object range,,Community obj_id.md,
+Obj ID Prefix,0x4xxxx,et object range,,Community obj_id.md,
+Obj ID Prefix,0x5xxxx,ef object range,,Community obj_id.md,
+Obj ID Prefix,0x7xxxx,it object range,,Community obj_id.md,
+Obj ID Prefix,0x9xxxx,sc object range,,Community obj_id.md,
+Obj ID Prefix,0xCxxxx,bg object range,,Community obj_id.md,
+Obj ID Prefix,0xExxxx,bh object range,,Community obj_id.md,
+Obj ID Prefix,0xFxxxx,ba object range,,Community obj_id.md,
+Phase,p100,Tempeal,,Community phase_id.csv,
+Phase,p101,Zeghard Fortress,,Community phase_id.csv,
+Phase,p102,The Hills,,Community phase_id.csv,
+Phase,p103,Furycane Arena,,Community phase_id.csv,
+Phase,p104,"Furycane Arena (Foggy, Story Cutscene)",,Community phase_id.csv,
+Phase,p150,? Spawns to empty sky.,,Community phase_id.csv,
+Phase,p200,Grandcypher (Avia chase),,Community phase_id.csv,
+Phase,p201,Grandcypher (After avia chase?),,Community phase_id.csv,
+Phase,p202,Avia ship,,Community phase_id.csv,
+Phase,p203,"Grandcypher, avia ship to the right",,Community phase_id.csv,
+Phase,p300,Leautagne Island Mountain,,Community phase_id.csv,
+Phase,p400,Dahli Island Story Start,,Community phase_id.csv,
+Phase,p401,Dahli Island Center (Excavallion fight?),,Community phase_id.csv,
+Phase,p402,Dahli Island (Under?),,Community phase_id.csv,
+Phase,p500,Phondam Isles Story Start,,Community phase_id.csv,
+Phase,p501,Grandcypher,,Community phase_id.csv,
+Phase,p502,Vulkan Bolla Arena,,Community phase_id.csv,
+Phase,p503,Vulkan Bolla Arena (2),,Community phase_id.csv,
+Phase,p600,"Seedhollow (Arena 1, Bridge)",,Community phase_id.csv,
+Phase,p601,Angra Mainyu Arena,,Community phase_id.csv,
+Phase,p602,Seedhollow (?),,Community phase_id.csv,
+Phase,p700,Pillar of Vayoi Start,,Community phase_id.csv,
+Phase,p701,Bahamut Versa Sky Arena,,Community phase_id.csv,
+Phase,p702,Bahamut Versa (Bugged?),,Community phase_id.csv,
+Phase,p703,Pillar of Vayoi Arena?,,Community phase_id.csv,
+Phase,p704,Pillar of Vayoi (on Grandcypher),,Community phase_id.csv,
+Phase,p710,Versa vs Proto Purple Sky Arena,,Community phase_id.csv,
+Phase,p711,Grandcypher (?),,Community phase_id.csv,
+Phase,p720,Lucilius Arena,,Community phase_id.csv,
+Phase,p800,"Grandcypher (Story start, messy deck/obstacles)",,Community phase_id.csv,
+Phase,p801,Grandcypher (Bugged?),,Community phase_id.csv,
+Phase,p802,"Grandcypher (? deck only, obstacles)",,Community phase_id.csv,
+Phase,p803,Grandcypher (Proto fight sky),,Community phase_id.csv,
+Phase,p900,Sundappled Grove (story),,Community phase_id.csv,
+Phase,p901,Captain fall (?),,Community phase_id.csv,
+Phase,pA01,?,,Community phase_id.csv,
+Phase,pA10,?,,Community phase_id.csv,
+Phase,pB00,?,,Community phase_id.csv,
+Phase,pB01,Clouds (?),,Community phase_id.csv,
+Phase,pB06,Clouds (?),,Community phase_id.csv,
+Phase,pB20,Id Story Quest,,Community phase_id.csv,
+Phase,pB30,? Sir Barrold in the air,,Community phase_id.csv,
+Phase,pC00,Folca,,Community phase_id.csv,
+Phase,pD00,Seedhollow,,Community phase_id.csv,
+Phase,pD01,Seedhollow (night),,Community phase_id.csv,
+Phase,pD02,Seedhollow (night),,Community phase_id.csv,
+Phase,pE10,Rolan Ship,,Community phase_id.csv,
+Phase,pE20,Grandcypher,,Community phase_id.csv,
+Phase,pE30,Grandcypher (Snowy),,Community phase_id.csv,
+Phase,pE40,"Grandcypher (Night, not snowy)",,Community phase_id.csv,
+Phase,pE41,Rolan Ship,,Community phase_id.csv,
+Phase,pE50,Grandcypher (to Desert),,Community phase_id.csv,
+Phase,pE60,Grandcypher (Night),,Community phase_id.csv,
+Phase,pE70,Grandcypher (to Pillar),,Community phase_id.csv,
+Phase,pE80,"Grandcypher (sunset, to Versa?)",,Community phase_id.csv,
+Phase,pE90,Grandcypher (normal),,Community phase_id.csv,
+Phase,pE91,"Grandcypher (deck only, invisible walls)",,Community phase_id.csv,
+Phase,pE92,Grandcypher (?),,Community phase_id.csv,
+Phase,pE93,Grandcypher (? empty),,Community phase_id.csv,
+Phase,pEA0,Grandcypher (Sir Barrold),,Community phase_id.csv,
+Phase,pF00,Booting,,Community phase_id.csv,
+Phase,pF01,?,,Community phase_id.csv,
+Phase,pF02,?,,Community phase_id.csv,
+Phase,pF03,?,,Community phase_id.csv,
+Phase,pF04,?,,Community phase_id.csv,
+Phase,pF05,?,,Community phase_id.csv,
+Phase,pF06,Title Screen,,Community phase_id.csv,
+Phase,pF07,?,,Community phase_id.csv,
+Phase,pF10,Lyria's Journal,,Community phase_id.csv,
+Phase,pF11,Credits,,Community phase_id.csv,
+Phase,pFE0,?,,Community phase_id.csv,
+Phase,pFE1,?,,Community phase_id.csv,
+Phase,pFF0,?,,Community phase_id.csv,
+Phase,pFFF,?,,Community phase_id.csv,
+Quest,200000,A Lingering Regret,200000,Community Quest IDs,
+Quest,200001,Save the Crustaceans,200001,Community Quest IDs,
+Quest,200002,Miracle Mushrooms,200002,Community Quest IDs,
+Quest,200003,Annoying Neighbors,200003,Community Quest IDs,
+Quest,200100,Results Guaranteed,200100,Community Quest IDs,
+Quest,200101,Pebbles of Perfection,200101,Community Quest IDs,
+Quest,200102,Infested Skyways,200102,Community Quest IDs,
+Quest,200103,Soaring Dream,200103,Community Quest IDs,
+Quest,200104,Long Time No Fix,200104,Community Quest IDs,
+Quest,200200,Memories on Ice,200200,Community Quest IDs,
+Quest,200201,Vulnerable Nights,200201,Community Quest IDs,
+Quest,205000,How Does Siero Do It?,205000,Community Quest IDs,
+Quest,205001,Astral Research Notes,205001,Community Quest IDs,
+Quest,205002,Be Legendary,205002,Community Quest IDs,
+Quest,290002,Save the Crustaceans Part Deux,290002,Community Quest IDs,
+Quest,290003,Save the Crustaceans the Third,290003,Community Quest IDs,
+Quest/Stage,100000,Prologue - Game Intro,100000,Community quest_id.csv,
+Quest/Stage,100001,Chapter 1 - Forest & Quakadile Fight,100001,Community quest_id.csv,
+Quest/Stage,100002,Prologue - Repressed Memory,100002,Community quest_id.csv,
+Quest/Stage,100003,Chapter 1 - Our Lives Are Linked,100003,Community quest_id.csv,
+Quest/Stage,100005,Prologue - Ruffled Wings,100005,Community quest_id.csv,
+Quest/Stage,100006,Prologue - Bahamut Fight,100006,Community quest_id.csv,
+Quest/Stage,101000,Chapter 1 - Folka,101000,Community quest_id.csv,
+Quest/Stage,101001,Chapter 2 - Skyboat Cutscene + The Hills,101001,Community quest_id.csv,
+Quest/Stage,101002,Chapter 2 - Zeghard Fortress,101002,Community quest_id.csv,
+Quest/Stage,101003,Chapter 3 - Tampeal Mines,101003,Community quest_id.csv,
+Quest/Stage,101004,Chapter 3 - Furycane Boss Fight,101004,Community quest_id.csv,
+Quest/Stage,101005,Chapter 3 - Mysterious Swordman/Id Fight,101005,Community quest_id.csv,
+Quest/Stage,101F00,Chapter 2 - Skyboat Travel (Chapter 2 Start),,Community quest_id.csv,
+Quest/Stage,102000,Chapter 4 - Initial Cutscene + Folca Church Cutscene,102000,Community quest_id.csv,
+Quest/Stage,102002,Chapter 4 - Ship Chase,102002,Community quest_id.csv,
+Quest/Stage,102F00,Chapter 4 - Grandcypher (Chapter 4 Start),,Community quest_id.csv,
+Quest/Stage,103001,Chapter 5 - Mt. Neigelith,103001,Community quest_id.csv,
+Quest/Stage,103F00,Chapter 5 - Grandcypher (Leutagne Airspace),,Community quest_id.csv,
+Quest/Stage,104000,Chapter 6 - Seedhollow,104000,Community quest_id.csv,
+Quest/Stage,104001,Chapter 6 - Dahli Island,104001,Community quest_id.csv,
+Quest/Stage,104003,Chapter 6 - Id Memory Cutscene after Skyboat Travel,104003,Community quest_id.csv,
+Quest/Stage,104F00,Chapter 6 - Grandcypher (Route to Seedhollow),,Community quest_id.csv,
+Quest/Stage,104F01,Chapter 6 - Skyboat Travel with Zathba (Route to Dahli Island),,Community quest_id.csv,
+Quest/Stage,105001,Chapter 7 - Phondam Isles,105001,Community quest_id.csv,
+Quest/Stage,105002,Chapter 7 - Grandcypher Outro Cutscene + Avia Fight,105002,Community quest_id.csv,
+Quest/Stage,105F00,Chapter 7 - Grandcypher (Intro),,Community quest_id.csv,
+Quest/Stage,105F01,Chapter 7 - Grandcypher (Outro),,Community quest_id.csv,
+Quest/Stage,106000,Chapter 8 - Seedhollow,106000,Community quest_id.csv,
+Quest/Stage,106001,Chapter 8 - Seedhollow Castle,106001,Community quest_id.csv,
+Quest/Stage,106002,Chapter 8 - Angra Mainyu,106002,Community quest_id.csv,
+Quest/Stage,106F00,Chapter 8 - Grandcypher (Route to Seedhollow),,Community quest_id.csv,
+Quest/Stage,107000,Chapter 9 - Seedhollow,107000,Community quest_id.csv,
+Quest/Stage,107002,Chapter 9 - Pillar of Vayoi (Intro Cutscene),107002,Community quest_id.csv,
+Quest/Stage,107F00,Chapter 9 - Grandcypher,,Community quest_id.csv,
+Quest/Stage,108000,Final Chapter - Bahamut Versa,108000,Community quest_id.csv,
+Quest/Stage,108001,Final Chapter - Credit Roll,108001,Community quest_id.csv,
+Quest/Stage,108002,Final Chapter - After Bahamut Versa (on Grandcypher),108002,Community quest_id.csv,
+Quest/Stage,108F00,Final Chapter - Grandcypher,,Community quest_id.csv,
+Quest/Stage,210220,The Forbidden Spirit,210220,Community quest_id.csv,
+Quest/Stage,210221,Icey Interior,210221,Community quest_id.csv,
+Quest/Stage,210223,To Whirl Again,210223,Community quest_id.csv,
+Quest/Stage,210225,Trowel and Error,210225,Community quest_id.csv,
+Quest/Stage,210227,Family Reporting,210227,Community quest_id.csv,
+Quest/Stage,210228,Wolves at the Door,210228,Community quest_id.csv,
+Quest/Stage,210229,Aid from Afar,210229,Community quest_id.csv,
+Quest/Stage,214630,Slime After Slime,214630,Community quest_id.csv,
+Quest/Stage,290004,Save the Crustaceans Reloaded,290004,Community quest_id.csv,
+Quest/Stage,290005,Save the Crustaceans Beyond,290005,Community quest_id.csv,
+Quest/Stage,290006,Save the Crustaceans Neo,290006,Community quest_id.csv,
+Quest/Stage,290007,Save the Crustaceans Returns,290007,Community quest_id.csv,
+Quest/Stage,290008,Save the Crustaceans Prime,290008,Community quest_id.csv,
+Quest/Stage,290009,Save the Crustaceans New Dawn,290009,Community quest_id.csv,
+Quest/Stage,290010,Save the Crustaceans Chronicles,290010,Community quest_id.csv,
+Quest/Stage,290011,Save the Crustaceans Origins,290011,Community quest_id.csv,
+Quest/Stage,290012,Save the Crustaceans Supremacy,290012,Community quest_id.csv,
+Quest/Stage,290013,Save the Crustaceans Infinity,290013,Community quest_id.csv,
+Quest/Stage,290014,Save the Crustaceans Rises,290014,Community quest_id.csv,
+Quest/Stage,290015,Save the Crustaceans Finale,290015,Community quest_id.csv,
+Quest/Stage,407301,Blazing Trial,407301,Community quest_id.csv,
+Quest/Stage,407302,Grounded Trial,407302,Community quest_id.csv,
+Quest/Stage,407303,Stormy Trial,407303,Community quest_id.csv,
+Quest/Stage,407304,Frigid Trial,407304,Community quest_id.csv,
+Quest/Stage,407305,Worst Vacation Ever,407305,Community quest_id.csv,
+Quest/Stage,407306,Trade Barriers,407306,Community quest_id.csv,
+Quest/Stage,407307,Melting Pot of Hostility,407307,Community quest_id.csv,
+Quest/Stage,407308,Banquet of Ice and Corpses,407308,Community quest_id.csv,
+Quest/Stage,407309,For a Freer Folca,407309,Community quest_id.csv,
+Quest/Stage,407310,A Quest of Fire and Earth,407310,Community quest_id.csv,
+Quest/Stage,407311,A Quest of Frost and Storm,407311,Community quest_id.csv,
+Quest/Stage,407312,The Wolf and the Veil,407312,Community quest_id.csv,
+Quest/Stage,407313,Calamity Incarnate,407313,Community quest_id.csv,
+Quest/Stage,407314,As Fierce as the Silver Wolf,407314,Community quest_id.csv,
+Quest/Stage,407315,Memories of Fire,407315,Community quest_id.csv,
+Quest/Stage,407316,Thunderbolts and Lightning,407316,Community quest_id.csv,
+Quest/Stage,407317,Into the Abyss,407317,Community quest_id.csv,
+Quest/Stage,407318,The Tale of Bahamut's Rage,407318,Community quest_id.csv,
+Quest/Stage,407319,The Automagod Strikes Back,407319,Community quest_id.csv,
+Quest/Stage,407320,The Final Vision,407320,Community quest_id.csv,
+Quest/Stage,407321,Zero,407321,Community quest_id.csv,
+Quest/Stage,407322,Lock Horns,407322,Community quest_id.csv,
+Quest/Stage,407323,Dark Swordman's Nightmare,407323,Community quest_id.csv,
+Quest/Stage,407324,Pageant of Might and Magic,407324,Community quest_id.csv,
+Quest/Stage,407325,Zathba's 'Volunteers',407325,Community quest_id.csv,
+Quest/Stage,500A00,Folka (endgame),,Community quest_id.csv,
+Quest/Stage,501003,Seedhollow (endgame),501003,Community quest_id.csv,
+Quest/Stage,5F0001,Grandcypher (endgame),,Community quest_id.csv,
+Quest/Stage,601000,Practice,601000,Community quest_id.csv,
+Quest/Stage,602000,Score Attack,602000,Community quest_id.csv,
+Quest/Stage,603000,Time Attack,603000,Community quest_id.csv,
+Quest/Stage,707001,Chapter 9 - Pillar of Vayoi,707001,Community quest_id.csv,
+Quest/Stage,710000,Days of Our Zegagrande - The Automagod Strikes Back,710000,Community quest_id.csv,
+Quest/Stage,710001,Days of Our Zegagrande - The Final Vision,710001,Community quest_id.csv,
+Quest/Stage,720018,Lyria's Journal/Empty?,720018,Community quest_id.csv,
+User Attribute Blob Offset,0x00,Language (4 bytes),,Community user_attributes.md,
+User Attribute Blob Offset,0x04,Application version patch/minor/major,,Community user_attributes.md,
+User Attribute Blob Offset,0x08,Display version patch/minor/major,,Community user_attributes.md,
+User Attribute Blob Offset,0x0C,Number of granite tile sets to load,,Community user_attributes.md,
+Entity Prefix - Model,ba,Room animated object,,Community entity_prefixes,Animated room object models.
+Entity Prefix - Model,bg,Room static model prop,,Community entity_prefixes,Static room props; can be passthrough or non-passthrough.
+Entity Prefix - Model,bh,Room breakable/obstacle object,,Community entity_prefixes,"Breakables, obstacles, and similar room objects."
+Entity Prefix - Model,ef,Effect,,Community entity_prefixes,Effect model/entity prefix.
+Entity Prefix - Model,em,Enemy body,,Community entity_prefixes,Enemy model/entity prefix.
+Entity Prefix - Model,et,3D model viewer / miscellaneous entity,,Community entity_prefixes,Miscellaneous model-viewer entities and other objects.
+Entity Prefix - Model,fe,Enemy face/head,,Community entity_prefixes,Enemy face/head model prefix.
+Entity Prefix - Model,fn,NPC face/head,,Community entity_prefixes,NPC face/head model prefix.
+Entity Prefix - Model,fp,Player face/head,,Community entity_prefixes,Player face/head model prefix.
+Entity Prefix - Model,it,Miscellaneous/random model,,Community entity_prefixes,Miscellaneous item/random models.
+Entity Prefix - Model,np,NPC body,,Community entity_prefixes,NPC body model prefix.
+Entity Prefix - Model,pl,Player body,,Community entity_prefixes,Player body model prefix.
+Entity Prefix - Model,tr,Landscape/scenery model,,Community entity_prefixes,"Map walls, cliffs, landscape, and scenery models."
+Entity Prefix - Model,we,Enemy weapon,,Community entity_prefixes,Enemy weapon model prefix.
+Entity Prefix - Model,wn,NPC weapon,,Community entity_prefixes,NPC weapon model prefix.
+Entity Prefix - Model,wp,Player weapon,,Community entity_prefixes,Player weapon model prefix.
+Entity Prefix - Scripting,ph,Phase,,Community entity_prefixes,Controls what stages to load.
+Entity Prefix - Scripting,st,Stage/room/map,,Community entity_prefixes,"Stages, rooms, and maps."
+Quest Result Title,EVA_STABLE_BATTLE,Rock Steady,0,Community quest_evaluation,Max amount of time spent in high health >= 60.0s
+Quest Result Title,EVA_BACK_WATER,Fighting with Enmity,1,Community quest_evaluation,Time spent in low health <=25% >= 60.0s
+Quest Result Title,EVA_LIKE_GUARD,Guard Lover,2,Community quest_evaluation,Successful guards >= 5
+Quest Result Title,EVA_MASTER_OF_GUARD,Guard Master,3,Community quest_evaluation,Successful perfect guards >= 5
+Quest Result Title,EVA_GUARDIAN,Guardian,4,Community quest_evaluation,Rock Steady + Guard Lover conditions
+Quest Result Title,EVA_LIKE_DOUGE,Dodge Lover,5,Community quest_evaluation,Successful dodges >= 10
+Quest Result Title,EVA_PERFECT_DOUGE,Dodge Master,6,Community quest_evaluation,Successful perfect dodges >= 5
+Quest Result Title,EVA_BRILLIANT_STEP,Ninja,7,Community quest_evaluation,Rock Steady + Dodge Lover conditions
+Quest Result Title,EVA_SKY_ATTACK,Aerial Assaulter,8,Community quest_evaluation,Airborne attacks >= 20
+Quest Result Title,EVA_BACK_ATTACK,Backstabber,9,Community quest_evaluation,Back attacks >= 20
+Quest Result Title,EVA_CRITICAL_ATTACK,Lord of Crits,10,Community quest_evaluation,Critical attacks >= 20
+Quest Result Title,EVA_LINKATTACK_BIRTH,Link Starter,11,Community quest_evaluation,Link attack opportunities >= 5
+Quest Result Title,EVA_LINKATTACK_SUCCESS,Link Master,12,Community quest_evaluation,Times link attack landed >= 5
+Quest Result Title,EVA_LIKE_ABILITY,Skill Lover,13,Community quest_evaluation,Skills used >= 5
+Quest Result Title,EVA_LIKE_SPECIFIC_ABILITY,Specialist,14,Community quest_evaluation,Specific skill used >= 5
+Quest Result Title,EVA_SUPPORT_MASTER,Support Master,15,Community quest_evaluation,Buffs given to other characters >= 5
+Quest Result Title,EVA_RESCUE,Healer,16,Community quest_evaluation,Heals >= 10
+Quest Result Title,EVA_NO_DEAD,Helping Hand,17,Community quest_evaluation,Heals to low-health allies >= 2
+Quest Result Title,EVA_NEVER_GIVEUP,Paramedic,18,Community quest_evaluation,Revives >= 5
+Quest Result Title,EVA_START_SPARTS,SBA Trigger,19,Community quest_evaluation,Used SBA at least once
+Quest Result Title,EVA_NO_ESCAPE,Jamming Expert,20,Community quest_evaluation,Successful debuffs excluding ATK/DEF >= 5
+Quest Result Title,EVA_DEBUFF_MASTER,Debilitator,21,Community quest_evaluation,ATK/DEF debuffs >= 5
+Quest Result Title,EVA_DESTROYER,Destroyer,22,Community quest_evaluation,Parts destroyed >= 3
+Quest Result Title,EVA_LAST_ATTACK_ME,Last Hit,23,Community quest_evaluation,Dealt last attack
+Quest Result Title,EVA_ENEMY_BUSTER,Executioner,24,Community quest_evaluation,Enemies killed >= 5
+Quest Result Title,EVA_LIKE_JUMP,Bunny Hopper,25,Community quest_evaluation,Jumps >= 20
+Quest Result Title,EVA_RUNNER,Long-Distance Runner,26,Community quest_evaluation,Distance travelled >= 1000 units
+Quest Result Title,EVA_COMMU_MASTER,Sticker Lover,27,Community quest_evaluation,Stickers sent >= 5
+Quest Result Title,EVA_CHATTER,Chatterbox,28,Community quest_evaluation,Chat messages sent >= 5
+Quest Result Title,EVA_GOOD_EXPRESSION,Emotional Anchor,29,Community quest_evaluation,Gestures sent >= 5
+Quest Result Title,EVA_NO_CURE_DRAG,No Healing Needed,30,Community quest_evaluation,No healing used
+Quest Result Title,EVA_REAL_TIME_CURE,Resourceful,31,Community quest_evaluation,Picked healing items >= 5
+Quest Result Title,EVA_NICE_THROW,Star Pitcher,32,Community quest_evaluation,Thrown items >= 5
+Quest Result Title,EVA_ICE_CURE,Warming Hand,33,Community quest_evaluation,Glaciate breaks/dispels >= 2
+Quest Result Title,EVA_SAND_CURE,Excavator,34,Community quest_evaluation,Sandtomb breaks/dispels >= 2
+Quest Result Title,EVA_DEBUFF_CURE,Purifying Hand,35,Community quest_evaluation,Dispels >= 2
+Quest Result Title,EVA_WEAK_POINT,I Smell Weakness,36,Community quest_evaluation,Elemental weakpoint attacks >= 5
+Quest Result Title,EVA_FAST_ATTACK,Rusher,37,Community quest_evaluation,Attacked enemy first >= 5 enemies
+Quest Result Title,EVA_LINKTIME_ATTACK,Quick as Lightning,38,Community quest_evaluation,Attacks during link time >= 50
+Quest Result Title,EVA_NO_DAMAGE,Unscathed,39,Community quest_evaluation,No damage received
+Overmastery Bonus,OM_BONUS_01,Attack Power Up,1,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_02,Health Up,2,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_03,Critical Hit Rate Up,3,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_04,Stun Power Up,4,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_05,Skill Damage Up,5,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_06,Skybound Art Damage Up,6,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_07,Chain Burst Damage Up,7,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_08,Normal Attack Damage Cap Up,8,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_09,Skill Damage Cap Up,9,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_10,Skybound Art Damage Cap Up,10,Community overmasteries,Appears in overmastery tier pools
+Overmastery Bonus,OM_BONUS_11,Healing Cap Up,11,Community overmasteries,Appears in overmastery tier pools
+Overmastery Rank Chance,OM_RANK_01,1 star rank chance,1,Community overmasteries,Tier1=0%; Tier2=0%; Tier3=0%
+Overmastery Rank Chance,OM_RANK_02,2 star rank chance,2,Community overmasteries,Tier1=0%; Tier2=0%; Tier3=0%
+Overmastery Rank Chance,OM_RANK_03,3 star rank chance,3,Community overmasteries,Tier1=35%; Tier2=3%; Tier3=5%
+Overmastery Rank Chance,OM_RANK_04,4 star rank chance,4,Community overmasteries,Tier1=26%; Tier2=5%; Tier3=5%
+Overmastery Rank Chance,OM_RANK_05,5 star rank chance,5,Community overmasteries,Tier1=17%; Tier2=11%; Tier3=7%
+Overmastery Rank Chance,OM_RANK_06,6 star rank chance,6,Community overmasteries,Tier1=11%; Tier2=35%; Tier3=10%
+Overmastery Rank Chance,OM_RANK_07,7 star rank chance,7,Community overmasteries,Tier1=5%; Tier2=26%; Tier3=15%
+Overmastery Rank Chance,OM_RANK_08,8 star rank chance,8,Community overmasteries,Tier1=3%; Tier2=17%; Tier3=18%
+Overmastery Rank Chance,OM_RANK_09,9 star rank chance,9,Community overmasteries,Tier1=2%; Tier2=2%; Tier3=22%
+Overmastery Rank Chance,OM_RANK_10,10 star rank chance,10,Community overmasteries,Tier1=1%; Tier2=1%; Tier3=18%
+PWR Input Type,0,Base Value,0,Community pwr_power,chara_power_adjust[0]
+PWR Input Type,1,Level,1,Community pwr_power,player level * 10.0
+PWR Input Type,2,Weapon Level,2,Community pwr_power,weapon level * 5.0
+PWR Input Type,3,Weapon Awakening Level,3,Community pwr_power,weapon awakening level * 10.0
+PWR Input Type,4,Attack Display Value,4,Community pwr_power,attack value * 1.0 then attenuated
+PWR Input Type,5,HP Display Value,5,Community pwr_power,hp value * 1.0 then attenuated
+PWR Input Type,6,Total Trait Levels,6,Community pwr_power,total trait levels * 5.0; Sigil Booster excluded
+PWR Input Type,7,Masteries/MSP Spent,7,Community pwr_power,total MSP spent * 1.0 then attenuated
+PWR Input Type,8,Overmastery Rank Sum,8,Community pwr_power,sum of four overmastery ranks * 35.0
+PWR Input Type,9,Mirage Munitions,9,Community pwr_power,munition number * 10.0
+PWR Input Type,10,Final Multiplier,10,Community pwr_power,final PWR multiplier
+Roll of the Die Outcome,ROTD_4X,4x damage,4,Community rotd,Chance=1%; Ignores damage cap; max cap set to 999999
+Roll of the Die Outcome,ROTD_3X,3x damage,3,Community rotd,Chance=5%;
+Roll of the Die Outcome,ROTD_2X,2x damage,2,Community rotd,Chance=18%;
+Roll of the Die Outcome,ROTD_1X,1x damage,1,Community rotd,Chance=26%;
+Roll of the Die Outcome,ROTD_1_DAMAGE,1 damage,0,Community rotd,Chance=50%; 1 damage outcome
+Mechanic Key,SKILL_157_00,Roll of the Die skill status key,,Community rotd,Percentages depend on skill_status key
+Sigil Synthesis Grand Success,44,Total sigil level 44 grand success chance,44,Community gem_mix,Grand success chance=45%
+Sigil Synthesis Grand Success,46,Total sigil level 46 grand success chance,46,Community gem_mix,Grand success chance=48%
+Sigil Synthesis Grand Success,48,Total sigil level 48 grand success chance,48,Community gem_mix,Grand success chance=51%
+Sigil Synthesis Grand Success,50,Total sigil level 50 grand success chance,50,Community gem_mix,Grand success chance=54%
+Sigil Synthesis Grand Success,52,Total sigil level 52 grand success chance,52,Community gem_mix,Grand success chance=57%
+Sigil Synthesis Grand Success,54,Total sigil level 54 grand success chance,54,Community gem_mix,Grand success chance=60%
+Sigil Synthesis Grand Success,56,Total sigil level 56 grand success chance,56,Community gem_mix,Grand success chance=70%
+Sigil Synthesis Grand Success,58,Total sigil level 58 grand success chance,58,Community gem_mix,Grand success chance=75%
+Sigil Synthesis Grand Success,60,Total sigil level 60 grand success chance,60,Community gem_mix,Grand success chance=85%
+Terminus Reward Reference,407318,The Tale of Bahamut's Rage,,Community terminus,Quest that can drop Terminus weapons
+Terminus Reward Reference,RW_407318_400,Terminus Weapon Reward Chest,,Community terminus,Reward row/chest with Terminus weapon lot
+Terminus Reward Reference,RW_407318_401,Bahamut Rage Reward Chest 401,,Community terminus,Quest completion reward row
+Terminus Reward Reference,RW_407318_402,Bahamut Rage Reward Chest 402,,Community terminus,Quest completion reward row
+Terminus Reward Reference,RW_407318_403,Bahamut Rage Reward Chest 403,,Community terminus,Quest completion reward row
+Terminus Reward Reference,RW_407318_404,Bahamut Rage Reward Chest 404,,Community terminus,Quest completion reward row
+Terminus Reward Reference,1BF30AB2,Terminus Reward Lot Key,,Community terminus,Reward lot key containing Terminus weapons
+Text Key,TXT_YOROZU_COMP_PROB_LOW,Siero low synthesis probability line,,Community gem_mix,Sigil synthesis probability message
+Text Key,TXT_YOROZU_COMP_PROB_MID,Siero mid synthesis probability line,,Community gem_mix,Sigil synthesis probability message
+Text Key,TXT_YOROZU_COMP_PROB_HIGH,Siero high synthesis probability line,,Community gem_mix,Sigil synthesis probability message

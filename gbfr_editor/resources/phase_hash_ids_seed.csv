@@ -1,0 +1,149 @@
+id,name,hash,aliases
+p100,Tempeal [p100],60447D30,Phase ID; Tempeal / early story; Community phase_ids
+ph100,Tempeal [p100],BA913BD8,Phase Entity Code; p100; Tempeal / early story; Community phase_ids
+p101,Zeghard Fortress [p101],EB9EA157,Phase ID; Tempeal / early story; Community phase_ids
+ph101,Zeghard Fortress [p101],921454F6,Phase Entity Code; p101; Tempeal / early story; Community phase_ids
+p102,The Hills [p102],A81C4390,Phase ID; Tempeal / early story; Community phase_ids
+ph102,The Hills [p102],B48EA79A,Phase Entity Code; p102; Tempeal / early story; Community phase_ids
+p103,Furycane Arena [p103],53EB72BC,Phase ID; Tempeal / early story; Community phase_ids
+ph103,Furycane Arena [p103],4F14FD7A,Phase Entity Code; p103; Tempeal / early story; Community phase_ids
+p104,"Furycane Arena (Foggy, Story Cutscene) [p104]",AC3C5B90,Phase ID; Tempeal / early story; Community phase_ids
+ph104,"Furycane Arena (Foggy, Story Cutscene) [p104]",7319FA7C,Phase Entity Code; p104; Tempeal / early story; Community phase_ids
+p150,? Spawns to empty sky. [p150],7F8CC926,Phase ID; Tempeal / early story; Community phase_ids
+ph150,? Spawns to empty sky. [p150],4FFFDFD0,Phase Entity Code; p150; Tempeal / early story; Community phase_ids
+p200,Grandcypher (Avia chase) [p200],2513D57F,Phase ID; Grandcypher / Avia; Community phase_ids
+ph200,Grandcypher (Avia chase) [p200],4CCC94EB,Phase Entity Code; p200; Grandcypher / Avia; Community phase_ids
+p201,Grandcypher (After avia chase?) [p201],DAB22F61,Phase ID; Grandcypher / Avia; Community phase_ids
+ph201,Grandcypher (After avia chase?) [p201],FBBEB7CD,Phase Entity Code; p201; Grandcypher / Avia; Community phase_ids
+p202,Avia ship [p202],F2F42B27,Phase ID; Grandcypher / Avia; Community phase_ids
+ph202,Avia ship [p202],C2C370F9,Phase Entity Code; p202; Grandcypher / Avia; Community phase_ids
+p203,"Grandcypher, avia ship to the right [p203]",D443F5B6,Phase ID; Grandcypher / Avia; Community phase_ids
+ph203,"Grandcypher, avia ship to the right [p203]",ED903A15,Phase Entity Code; p203; Grandcypher / Avia; Community phase_ids
+p300,Leautagne Island Mountain [p300],065714C5,Phase ID; Leautagne Island; Community phase_ids
+ph300,Leautagne Island Mountain [p300],B97B6196,Phase Entity Code; p300; Leautagne Island; Community phase_ids
+p400,Dahli Island Story Start [p400],16CDD907,Phase ID; Dahli Island; Community phase_ids
+ph400,Dahli Island Story Start [p400],F3B4F74C,Phase Entity Code; p400; Dahli Island; Community phase_ids
+p401,Dahli Island Center (Excavallion fight?) [p401],9F0396F7,Phase ID; Dahli Island; Community phase_ids
+ph401,Dahli Island Center (Excavallion fight?) [p401],67F9EB53,Phase Entity Code; p401; Dahli Island; Community phase_ids
+p402,Dahli Island (Under?) [p402],5CB160FE,Phase ID; Dahli Island; Community phase_ids
+ph402,Dahli Island (Under?) [p402],2EC279A9,Phase Entity Code; p402; Dahli Island; Community phase_ids
+p500,Phondam Isles Story Start [p500],03919616,Phase ID; Phondam Isles / Vulkan Bolla; Community phase_ids
+ph500,Phondam Isles Story Start [p500],92A7591B,Phase Entity Code; p500; Phondam Isles / Vulkan Bolla; Community phase_ids
+p501,Grandcypher [p501],B07E02F4,Phase ID; Phondam Isles / Vulkan Bolla; Community phase_ids
+ph501,Grandcypher [p501],365C3522,Phase Entity Code; p501; Phondam Isles / Vulkan Bolla; Community phase_ids
+p502,Vulkan Bolla Arena [p502],59F39533,Phase ID; Phondam Isles / Vulkan Bolla; Community phase_ids
+ph502,Vulkan Bolla Arena [p502],086AFEEE,Phase Entity Code; p502; Phondam Isles / Vulkan Bolla; Community phase_ids
+p503,Vulkan Bolla Arena (2) [p503],75CD5E25,Phase ID; Phondam Isles / Vulkan Bolla; Community phase_ids
+ph503,Vulkan Bolla Arena (2) [p503],5FCD6346,Phase Entity Code; p503; Phondam Isles / Vulkan Bolla; Community phase_ids
+p600,"Seedhollow (Arena 1, Bridge) [p600]",790BA737,Phase ID; Seedhollow / Angra Mainyu; Community phase_ids
+ph600,"Seedhollow (Arena 1, Bridge) [p600]",D8A31CB0,Phase Entity Code; p600; Seedhollow / Angra Mainyu; Community phase_ids
+p601,Angra Mainyu Arena [p601],BF4ECDE2,Phase ID; Seedhollow / Angra Mainyu; Community phase_ids
+ph601,Angra Mainyu Arena [p601],DF29BC2A,Phase Entity Code; p601; Seedhollow / Angra Mainyu; Community phase_ids
+p602,Seedhollow (?) [p602],557746C6,Phase ID; Seedhollow / Angra Mainyu; Community phase_ids
+ph602,Seedhollow (?) [p602],DF43EBBF,Phase Entity Code; p602; Seedhollow / Angra Mainyu; Community phase_ids
+p700,Pillar of Vayoi Start [p700],676B7CAD,Phase ID; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+ph700,Pillar of Vayoi Start [p700],B73AA060,Phase Entity Code; p700; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+p701,Bahamut Versa Sky Arena [p701],8BAE786B,Phase ID; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+ph701,Bahamut Versa Sky Arena [p701],47C90C2B,Phase Entity Code; p701; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+p702,Bahamut Versa (Bugged?) [p702],3D8117E7,Phase ID; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+ph702,Bahamut Versa (Bugged?) [p702],5186D117,Phase Entity Code; p702; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+p703,Pillar of Vayoi Arena? [p703],B012C3D4,Phase ID; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+ph703,Pillar of Vayoi Arena? [p703],14F5772C,Phase Entity Code; p703; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+p704,Pillar of Vayoi (on Grandcypher) [p704],49B16EA2,Phase ID; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+ph704,Pillar of Vayoi (on Grandcypher) [p704],FBA1AA12,Phase Entity Code; p704; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+p710,Versa vs Proto Purple Sky Arena [p710],7A970FE4,Phase ID; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+ph710,Versa vs Proto Purple Sky Arena [p710],12D7A6B1,Phase Entity Code; p710; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+p711,Grandcypher (?) [p711],46ACAD07,Phase ID; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+ph711,Grandcypher (?) [p711],39A8CCB1,Phase Entity Code; p711; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+p720,Lucilius Arena [p720],55921E9C,Phase ID; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+ph720,Lucilius Arena [p720],84665F89,Phase Entity Code; p720; Pillar of Vayoi / Versa / Lucilius; Community phase_ids
+p800,"Grandcypher (Story start, messy deck/obstacles) [p800]",ECB28664,Phase ID; Grandcypher story/battle variants; Community phase_ids
+ph800,"Grandcypher (Story start, messy deck/obstacles) [p800]",4EFA78F6,Phase Entity Code; p800; Grandcypher story/battle variants; Community phase_ids
+p801,Grandcypher (Bugged?) [p801],8AA5C991,Phase ID; Grandcypher story/battle variants; Community phase_ids
+ph801,Grandcypher (Bugged?) [p801],271412A8,Phase Entity Code; p801; Grandcypher story/battle variants; Community phase_ids
+p802,"Grandcypher (? deck only, obstacles) [p802]",1173F684,Phase ID; Grandcypher story/battle variants; Community phase_ids
+ph802,"Grandcypher (? deck only, obstacles) [p802]",A81DB30C,Phase Entity Code; p802; Grandcypher story/battle variants; Community phase_ids
+p803,Grandcypher (Proto fight sky) [p803],A3839D3F,Phase ID; Grandcypher story/battle variants; Community phase_ids
+ph803,Grandcypher (Proto fight sky) [p803],D41A7DBD,Phase Entity Code; p803; Grandcypher story/battle variants; Community phase_ids
+p900,Sundappled Grove (story) [p900],D4F13F23,Phase ID; Sundappled Grove; Community phase_ids
+ph900,Sundappled Grove (story) [p900],85E20C28,Phase Entity Code; p900; Sundappled Grove; Community phase_ids
+p901,Captain fall (?) [p901],6A604E54,Phase ID; Sundappled Grove; Community phase_ids
+ph901,Captain fall (?) [p901],85075EAE,Phase Entity Code; p901; Sundappled Grove; Community phase_ids
+pA01,Unknown Phase pA01,7FB44A6D,Phase ID; Unknown A-series phases; Community phase_ids
+phA01,Unknown Phase pA01,B84ACABF,Phase Entity Code; pA01; Unknown A-series phases; Community phase_ids
+pA10,Unknown Phase pA10,16B6C015,Phase ID; Unknown A-series phases; Community phase_ids
+phA10,Unknown Phase pA10,46E2622C,Phase Entity Code; pA10; Unknown A-series phases; Community phase_ids
+pB00,Unknown Phase pB00,8E82683D,Phase ID; Clouds / Id / misc story; Community phase_ids
+phB00,Unknown Phase pB00,D641EE67,Phase Entity Code; pB00; Clouds / Id / misc story; Community phase_ids
+pB01,Clouds (?) [pB01],0DE10240,Phase ID; Clouds / Id / misc story; Community phase_ids
+phB01,Clouds (?) [pB01],73E155B6,Phase Entity Code; pB01; Clouds / Id / misc story; Community phase_ids
+pB06,Clouds (?) [pB06],FF10F29A,Phase ID; Clouds / Id / misc story; Community phase_ids
+phB06,Clouds (?) [pB06],50A5E74D,Phase Entity Code; pB06; Clouds / Id / misc story; Community phase_ids
+pB20,Id Story Quest [pB20],311EE615,Phase ID; Clouds / Id / misc story; Community phase_ids
+phB20,Id Story Quest [pB20],24E4B624,Phase Entity Code; pB20; Clouds / Id / misc story; Community phase_ids
+pB30,? Sir Barrold in the air [pB30],E266E262,Phase ID; Clouds / Id / misc story; Community phase_ids
+phB30,? Sir Barrold in the air [pB30],040C6987,Phase Entity Code; pB30; Clouds / Id / misc story; Community phase_ids
+pC00,Folca [pC00],4DAC56B5,Phase ID; Folca town; Community phase_ids
+phC00,Folca [pC00],D864D5C1,Phase Entity Code; pC00; Folca town; Community phase_ids
+pD00,Seedhollow [pD00],35974989,Phase ID; Seedhollow town; Community phase_ids
+phD00,Seedhollow [pD00],04661137,Phase Entity Code; pD00; Seedhollow town; Community phase_ids
+pD01,Seedhollow (night) [pD01],184B4892,Phase ID; Seedhollow town; Community phase_ids
+phD01,Seedhollow (night) [pD01],EC258816,Phase Entity Code; pD01; Seedhollow town; Community phase_ids
+pD02,Seedhollow (night) [pD02],48A5EC0B,Phase ID; Seedhollow town; Community phase_ids
+phD02,Seedhollow (night) [pD02],738F719C,Phase Entity Code; pD02; Seedhollow town; Community phase_ids
+pE10,Rolan Ship [pE10],D0338D3B,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE10,Rolan Ship [pE10],D9756846,Phase Entity Code; pE10; Grandcypher / travel / Rolan ship; Community phase_ids
+pE20,Grandcypher [pE20],A561075A,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE20,Grandcypher [pE20],DD55B05F,Phase Entity Code; pE20; Grandcypher / travel / Rolan ship; Community phase_ids
+pE30,Grandcypher (Snowy) [pE30],559F65AB,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE30,Grandcypher (Snowy) [pE30],2A120AB1,Phase Entity Code; pE30; Grandcypher / travel / Rolan ship; Community phase_ids
+pE40,"Grandcypher (Night, not snowy) [pE40]",096F3644,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE40,"Grandcypher (Night, not snowy) [pE40]",F7064E89,Phase Entity Code; pE40; Grandcypher / travel / Rolan ship; Community phase_ids
+pE41,Rolan Ship [pE41],5E9BDA69,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE41,Rolan Ship [pE41],033EE331,Phase Entity Code; pE41; Grandcypher / travel / Rolan ship; Community phase_ids
+pE50,Grandcypher (to Desert) [pE50],145C3A95,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE50,Grandcypher (to Desert) [pE50],D0BCBA8E,Phase Entity Code; pE50; Grandcypher / travel / Rolan ship; Community phase_ids
+pE60,Grandcypher (Night) [pE60],25911EE2,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE60,Grandcypher (Night) [pE60],D92C1F9A,Phase Entity Code; pE60; Grandcypher / travel / Rolan ship; Community phase_ids
+pE70,Grandcypher (to Pillar) [pE70],32F11B4C,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE70,Grandcypher (to Pillar) [pE70],24C02804,Phase Entity Code; pE70; Grandcypher / travel / Rolan ship; Community phase_ids
+pE80,"Grandcypher (sunset, to Versa?) [pE80]",38C62253,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE80,"Grandcypher (sunset, to Versa?) [pE80]",2E92A26F,Phase Entity Code; pE80; Grandcypher / travel / Rolan ship; Community phase_ids
+pE90,Grandcypher (normal) [pE90],4183A54C,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE90,Grandcypher (normal) [pE90],9BBBE96B,Phase Entity Code; pE90; Grandcypher / travel / Rolan ship; Community phase_ids
+pE91,"Grandcypher (deck only, invisible walls) [pE91]",B000CBAE,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE91,"Grandcypher (deck only, invisible walls) [pE91]",9F6EF4E5,Phase Entity Code; pE91; Grandcypher / travel / Rolan ship; Community phase_ids
+pE92,Grandcypher (?) [pE92],D89AADC7,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE92,Grandcypher (?) [pE92],2258CF91,Phase Entity Code; pE92; Grandcypher / travel / Rolan ship; Community phase_ids
+pE93,Grandcypher (? empty) [pE93],4C908E78,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phE93,Grandcypher (? empty) [pE93],345F1AD6,Phase Entity Code; pE93; Grandcypher / travel / Rolan ship; Community phase_ids
+pEA0,Grandcypher (Sir Barrold) [pEA0],70897EC5,Phase ID; Grandcypher / travel / Rolan ship; Community phase_ids
+phEA0,Grandcypher (Sir Barrold) [pEA0],B1F3AE4A,Phase Entity Code; pEA0; Grandcypher / travel / Rolan ship; Community phase_ids
+pF00,Booting [pF00],82DD85A1,Phase ID; System / menus / title / credits; Community phase_ids
+phF00,Booting [pF00],AAF0BF5F,Phase Entity Code; pF00; System / menus / title / credits; Community phase_ids
+pF01,Unknown Phase pF01,0DD18669,Phase ID; System / menus / title / credits; Community phase_ids
+phF01,Unknown Phase pF01,5AE121CF,Phase Entity Code; pF01; System / menus / title / credits; Community phase_ids
+pF02,Unknown Phase pF02,1FE54F0E,Phase ID; System / menus / title / credits; Community phase_ids
+phF02,Unknown Phase pF02,05302A22,Phase Entity Code; pF02; System / menus / title / credits; Community phase_ids
+pF03,Unknown Phase pF03,EB4FC9F5,Phase ID; System / menus / title / credits; Community phase_ids
+phF03,Unknown Phase pF03,76DC9F91,Phase Entity Code; pF03; System / menus / title / credits; Community phase_ids
+pF04,Unknown Phase pF04,995D67F5,Phase ID; System / menus / title / credits; Community phase_ids
+phF04,Unknown Phase pF04,ADF1F770,Phase Entity Code; pF04; System / menus / title / credits; Community phase_ids
+pF05,Unknown Phase pF05,C3C11C68,Phase ID; System / menus / title / credits; Community phase_ids
+phF05,Unknown Phase pF05,860E82B2,Phase Entity Code; pF05; System / menus / title / credits; Community phase_ids
+pF06,Title Screen [pF06],0D4EC61A,Phase ID; System / menus / title / credits; Community phase_ids
+phF06,Title Screen [pF06],94D63385,Phase Entity Code; pF06; System / menus / title / credits; Community phase_ids
+pF07,Unknown Phase pF07,213D70E5,Phase ID; System / menus / title / credits; Community phase_ids
+phF07,Unknown Phase pF07,23E84461,Phase Entity Code; pF07; System / menus / title / credits; Community phase_ids
+pF10,Lyria's Journal [pF10],5D747970,Phase ID; System / menus / title / credits; Community phase_ids
+phF10,Lyria's Journal [pF10],275D151C,Phase Entity Code; pF10; System / menus / title / credits; Community phase_ids
+pF11,Credits [pF11],02365BC9,Phase ID; System / menus / title / credits; Community phase_ids
+phF11,Credits [pF11],EAA09211,Phase Entity Code; pF11; System / menus / title / credits; Community phase_ids
+pFE0,Unknown Phase pFE0,161A9390,Phase ID; System / menus / title / credits; Community phase_ids
+phFE0,Unknown Phase pFE0,08C5B11A,Phase Entity Code; pFE0; System / menus / title / credits; Community phase_ids
+pFE1,Unknown Phase pFE1,512CAD8F,Phase ID; System / menus / title / credits; Community phase_ids
+phFE1,Unknown Phase pFE1,A3704C56,Phase Entity Code; pFE1; System / menus / title / credits; Community phase_ids
+pFF0,Unknown Phase pFF0,13275865,Phase ID; System / menus / title / credits; Community phase_ids
+phFF0,Unknown Phase pFF0,1EE5CDB5,Phase Entity Code; pFF0; System / menus / title / credits; Community phase_ids
+pFFF,Unknown Phase pFFF,7CFC5A98,Phase ID; System / menus / title / credits; Community phase_ids
+phFFF,Unknown Phase pFFF,85B85013,Phase Entity Code; pFFF; System / menus / title / credits; Community phase_ids

@@ -1,0 +1,32 @@
+id,name,hash,aliases
+PL0000,Gran,2A26B1B2,Character; PL0000; Player Parameter
+PL0100,Djeeta,A4ACBA76,Character; PL0100; Player Parameter
+PL0200,Katalina,18E2F9F9,Character; PL0200; Player Parameter
+PL0300,Rackam,079DF0CC,Character; PL0300; Player Parameter
+PL0400,Io,4D0A60C3,Character; PL0400; Player Parameter
+PL0500,Eugen,DD7A151E,Character; PL0500; Player Parameter
+PL0600,Rosetta,C8616284,Character; PL0600; Player Parameter
+PL0700,Ferry,C3FFD418,Character; PL0700; Player Parameter
+PL0800,Lancelot,22E437E5,Character; PL0800; Player Parameter
+PL0900,Vane,2EBE91D5,Character; PL0900; Player Parameter
+PL1000,Percival,BDEF7181,Character; PL1000; Player Parameter
+PL1100,Siegfried,627BCB0D,Character; PL1100; Player Parameter
+PL1200,Charlotta,FD3BE362,Character; PL1200; Player Parameter
+PL1300,Yodarha,FC6CDF7B,Character; PL1300; Player Parameter
+PL1400,Narmaya,E7053919,Character; PL1400; Player Parameter
+PL1500,Ghandagoza,978E4B18,Character; PL1500; Player Parameter
+PL1600,Zeta,0D21B430,Character; PL1600; Player Parameter
+PL1700,Vaseraga,F0EB77EF,Character; PL1700; Player Parameter
+PL1800,Cagliostro,AA66178A,Character; PL1800; Player Parameter
+PL1900,Id,A3A3CB2F,Character; PL1900; Player Parameter
+PL2000,Id / Dragon Form (PL2000),F92C7821,Character; PL2000; Player Parameter
+PL2100,Sandalphon,718E1A14,Character; PL2100; Player Parameter
+PL2200,Seofon,296471BE,Character; PL2200; Player Parameter
+PL2300,Tweyen,BAD16E3B,Character; PL2300; Player Parameter
+PL2400,Unknown / Extra Playable Slot (PL2400),1BB37EF0,Generated from save unknown hash; not named in public model list
+NP0000,Lyria,3529CC90,NPC; Model ID; Community model_ids
+NP0100,Vyrn,0E515648,NPC; Model ID; Community model_ids
+NP0200,Sierokarte,11C33FC2,NPC; Model ID; Community model_ids
+NP0300,Rolan,28A87C8A,NPC; Model ID; Community model_ids
+NP0400,Historiath,E9B9CD04,NPC; Model ID; Community model_ids
+NP0600,Zathba,D411E557,NPC; Model ID; Community model_ids
