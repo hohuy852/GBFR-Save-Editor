@@ -1,0 +1,11 @@
+area,check,result,details
+All database resources,Placeholder labels,PASS,"No display names/aliases match xxxx, Unknown, Unnamed / reserved, or Reserved / Dummy after cleanup."
+Items / Materials,Dragon database rows,PASS,"ITEM_22 materials categorized as Material; Dragon Scale, Dragon Wing, Blue/Brown/Black Dragon Scale resolve as database rows."
+Wrightstones,Trait lanes,PASS,"Wrightstones support Trait 1, Trait 2, and Trait 3 linked lanes."
+Progression,xxxxx labels,PASS,Visible progression group labels use readable names/series labels instead of xxxxx placeholders.
+Items / Materials active 1801 hashes,Loaded save coverage,REVIEW,"265/299 unique hashes named in loaded test save; 34 unmapped remain. Samples: 05D2CF79, 09370A3A, 0B8D0865, 11722A61, 11A0F065, 1544FB8A, 29A7EEC9, 2A2EA603, 3CD56070, 3E0269BD, 3F8F4EFD, 41E92F0A, 51355C28, 60FD93BD, 64473A6A, 740AB5AC, 7B600740, 84F84569, 8C44F0AB, 91CCBC0F, 9371081E, 98E75FCB, A9CBB5AF, B5EEEA35, B79139FB, "
+Sigils current 2703 hashes,Loaded save coverage,PASS,2/2 unique hashes named in loaded test save; 0 unmapped remain.
+Weapons current 2803 hashes,Loaded save coverage,PASS,25/25 unique hashes named in loaded test save; 0 unmapped remain.
+Characters current 1301 hashes,Loaded save coverage,REVIEW,"31/36 unique hashes named in loaded test save; 5 unmapped remain. Samples: 30EC0554, 33F34FC2, 88D67554, C7830128, DBD9A18D"
+Trait rows 1701 hashes,Loaded save coverage,PASS,2/2 unique hashes named in loaded test save; 0 unmapped remain.
+Wrightstone current 2102 hashes,Loaded save coverage,PASS,0/0 unique hashes named in loaded test save; 0 unmapped remain.

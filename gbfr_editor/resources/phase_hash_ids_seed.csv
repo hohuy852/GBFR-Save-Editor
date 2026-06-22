@@ -69,12 +69,12 @@ p900,Sundappled Grove (story) [p900],D4F13F23,Phase ID; Sundappled Grove; Commun
 ph900,Sundappled Grove (story) [p900],85E20C28,Phase Entity Code; p900; Sundappled Grove; Community phase_ids
 p901,Captain fall (?) [p901],6A604E54,Phase ID; Sundappled Grove; Community phase_ids
 ph901,Captain fall (?) [p901],85075EAE,Phase Entity Code; p901; Sundappled Grove; Community phase_ids
-pA01,Unknown Phase pA01,7FB44A6D,Phase ID; Unknown A-series phases; Community phase_ids
-phA01,Unknown Phase pA01,B84ACABF,Phase Entity Code; pA01; Unknown A-series phases; Community phase_ids
-pA10,Unknown Phase pA10,16B6C015,Phase ID; Unknown A-series phases; Community phase_ids
-phA10,Unknown Phase pA10,46E2622C,Phase Entity Code; pA10; Unknown A-series phases; Community phase_ids
-pB00,Unknown Phase pB00,8E82683D,Phase ID; Clouds / Id / misc story; Community phase_ids
-phB00,Unknown Phase pB00,D641EE67,Phase Entity Code; pB00; Clouds / Id / misc story; Community phase_ids
+pA01,Unmapped Phase pA01,7FB44A6D,Phase ID; Unmapped A-series phases; Community phase_ids
+phA01,Unmapped Phase pA01,B84ACABF,Phase Entity Code; pA01; Unmapped A-series phases; Community phase_ids
+pA10,Unmapped Phase pA10,16B6C015,Phase ID; Unmapped A-series phases; Community phase_ids
+phA10,Unmapped Phase pA10,46E2622C,Phase Entity Code; pA10; Unmapped A-series phases; Community phase_ids
+pB00,Unmapped Phase pB00,8E82683D,Phase ID; Clouds / Id / misc story; Community phase_ids
+phB00,Unmapped Phase pB00,D641EE67,Phase Entity Code; pB00; Clouds / Id / misc story; Community phase_ids
 pB01,Clouds (?) [pB01],0DE10240,Phase ID; Clouds / Id / misc story; Community phase_ids
 phB01,Clouds (?) [pB01],73E155B6,Phase Entity Code; pB01; Clouds / Id / misc story; Community phase_ids
 pB06,Clouds (?) [pB06],FF10F29A,Phase ID; Clouds / Id / misc story; Community phase_ids
@@ -121,29 +121,29 @@ pEA0,Grandcypher (Sir Barrold) [pEA0],70897EC5,Phase ID; Grandcypher / travel / 
 phEA0,Grandcypher (Sir Barrold) [pEA0],B1F3AE4A,Phase Entity Code; pEA0; Grandcypher / travel / Rolan ship; Community phase_ids
 pF00,Booting [pF00],82DD85A1,Phase ID; System / menus / title / credits; Community phase_ids
 phF00,Booting [pF00],AAF0BF5F,Phase Entity Code; pF00; System / menus / title / credits; Community phase_ids
-pF01,Unknown Phase pF01,0DD18669,Phase ID; System / menus / title / credits; Community phase_ids
-phF01,Unknown Phase pF01,5AE121CF,Phase Entity Code; pF01; System / menus / title / credits; Community phase_ids
-pF02,Unknown Phase pF02,1FE54F0E,Phase ID; System / menus / title / credits; Community phase_ids
-phF02,Unknown Phase pF02,05302A22,Phase Entity Code; pF02; System / menus / title / credits; Community phase_ids
-pF03,Unknown Phase pF03,EB4FC9F5,Phase ID; System / menus / title / credits; Community phase_ids
-phF03,Unknown Phase pF03,76DC9F91,Phase Entity Code; pF03; System / menus / title / credits; Community phase_ids
-pF04,Unknown Phase pF04,995D67F5,Phase ID; System / menus / title / credits; Community phase_ids
-phF04,Unknown Phase pF04,ADF1F770,Phase Entity Code; pF04; System / menus / title / credits; Community phase_ids
-pF05,Unknown Phase pF05,C3C11C68,Phase ID; System / menus / title / credits; Community phase_ids
-phF05,Unknown Phase pF05,860E82B2,Phase Entity Code; pF05; System / menus / title / credits; Community phase_ids
+pF01,Unmapped Phase pF01,0DD18669,Phase ID; System / menus / title / credits; Community phase_ids
+phF01,Unmapped Phase pF01,5AE121CF,Phase Entity Code; pF01; System / menus / title / credits; Community phase_ids
+pF02,Unmapped Phase pF02,1FE54F0E,Phase ID; System / menus / title / credits; Community phase_ids
+phF02,Unmapped Phase pF02,05302A22,Phase Entity Code; pF02; System / menus / title / credits; Community phase_ids
+pF03,Unmapped Phase pF03,EB4FC9F5,Phase ID; System / menus / title / credits; Community phase_ids
+phF03,Unmapped Phase pF03,76DC9F91,Phase Entity Code; pF03; System / menus / title / credits; Community phase_ids
+pF04,Unmapped Phase pF04,995D67F5,Phase ID; System / menus / title / credits; Community phase_ids
+phF04,Unmapped Phase pF04,ADF1F770,Phase Entity Code; pF04; System / menus / title / credits; Community phase_ids
+pF05,Unmapped Phase pF05,C3C11C68,Phase ID; System / menus / title / credits; Community phase_ids
+phF05,Unmapped Phase pF05,860E82B2,Phase Entity Code; pF05; System / menus / title / credits; Community phase_ids
 pF06,Title Screen [pF06],0D4EC61A,Phase ID; System / menus / title / credits; Community phase_ids
 phF06,Title Screen [pF06],94D63385,Phase Entity Code; pF06; System / menus / title / credits; Community phase_ids
-pF07,Unknown Phase pF07,213D70E5,Phase ID; System / menus / title / credits; Community phase_ids
-phF07,Unknown Phase pF07,23E84461,Phase Entity Code; pF07; System / menus / title / credits; Community phase_ids
+pF07,Unmapped Phase pF07,213D70E5,Phase ID; System / menus / title / credits; Community phase_ids
+phF07,Unmapped Phase pF07,23E84461,Phase Entity Code; pF07; System / menus / title / credits; Community phase_ids
 pF10,Lyria's Journal [pF10],5D747970,Phase ID; System / menus / title / credits; Community phase_ids
 phF10,Lyria's Journal [pF10],275D151C,Phase Entity Code; pF10; System / menus / title / credits; Community phase_ids
 pF11,Credits [pF11],02365BC9,Phase ID; System / menus / title / credits; Community phase_ids
 phF11,Credits [pF11],EAA09211,Phase Entity Code; pF11; System / menus / title / credits; Community phase_ids
-pFE0,Unknown Phase pFE0,161A9390,Phase ID; System / menus / title / credits; Community phase_ids
-phFE0,Unknown Phase pFE0,08C5B11A,Phase Entity Code; pFE0; System / menus / title / credits; Community phase_ids
-pFE1,Unknown Phase pFE1,512CAD8F,Phase ID; System / menus / title / credits; Community phase_ids
-phFE1,Unknown Phase pFE1,A3704C56,Phase Entity Code; pFE1; System / menus / title / credits; Community phase_ids
-pFF0,Unknown Phase pFF0,13275865,Phase ID; System / menus / title / credits; Community phase_ids
-phFF0,Unknown Phase pFF0,1EE5CDB5,Phase Entity Code; pFF0; System / menus / title / credits; Community phase_ids
-pFFF,Unknown Phase pFFF,7CFC5A98,Phase ID; System / menus / title / credits; Community phase_ids
-phFFF,Unknown Phase pFFF,85B85013,Phase Entity Code; pFFF; System / menus / title / credits; Community phase_ids
+pFE0,Unmapped Phase pFE0,161A9390,Phase ID; System / menus / title / credits; Community phase_ids
+phFE0,Unmapped Phase pFE0,08C5B11A,Phase Entity Code; pFE0; System / menus / title / credits; Community phase_ids
+pFE1,Unmapped Phase pFE1,512CAD8F,Phase ID; System / menus / title / credits; Community phase_ids
+phFE1,Unmapped Phase pFE1,A3704C56,Phase Entity Code; pFE1; System / menus / title / credits; Community phase_ids
+pFF0,Unmapped Phase pFF0,13275865,Phase ID; System / menus / title / credits; Community phase_ids
+phFF0,Unmapped Phase pFF0,1EE5CDB5,Phase Entity Code; pFF0; System / menus / title / credits; Community phase_ids
+pFFF,Unmapped Phase pFFF,7CFC5A98,Phase ID; System / menus / title / credits; Community phase_ids
+phFFF,Unmapped Phase pFFF,85B85013,Phase Entity Code; pFFF; System / menus / title / credits; Community phase_ids

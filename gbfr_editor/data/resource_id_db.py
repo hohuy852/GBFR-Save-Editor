@@ -8,41 +8,7 @@ import html
 import re
 import urllib.request
 
-DEFAULT_RESOURCE_URLS = [
-    # Core ID databases requested for editor lookup/labeling. Prefer raw CSV/MD
-    # where Community exposes it, then fall back to rendered GitHub Pages docs.
-    "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/model_ids.md",
-    "https://community.github.io/relink-modding/resources/model_ids/",
-    "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/phase_id.csv",
-    "https://community.github.io/relink-modding/resources/phase_ids/",
-    "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/quest_id.csv",
-    "https://community.github.io/relink-modding/resources/quest_ids/",
-    "https://community.github.io/relink-modding/resources/entity_prefixes/",
-    # Player-system pages live under /resources/player/ in the current docs.
-    "https://community.github.io/relink-modding/resources/player/action_ids/",
-    "https://community.github.io/relink-modding/resources/player/buff_ids/",
-    "https://community.github.io/relink-modding/resources/buff_ids.csv",
-    "https://community.github.io/relink-modding/resources/buff_ids_specific.csv",
-    "https://community.github.io/relink-modding/resources/player/control_types/",
-    "https://community.github.io/relink-modding/resources/player/debuff_ailment_ids/",
-    "https://community.github.io/relink-modding/resources/debuff_ailment_ids.csv",
-    "https://community.github.io/relink-modding/resources/player/motions/",
-    "https://community.github.io/relink-modding/resources/re/obj_ids/",
-    "https://community.github.io/relink-modding/resources/re/user_attributes/",
-    "https://community.github.io/relink-modding/resources/enemy_break_part_rates/",
-    "https://community.github.io/relink-modding/resources/gacha_rates/",
-    "https://community.github.io/relink-modding/resources/curio_loot_rates/",
-    "https://community.github.io/relink-modding/resources/quest_drop_rates/",
-    "https://community.github.io/relink-modding/resources/weapon_materials/",
-    "https://community.github.io/relink-modding/resources/re/mechanics/quest_evaluation/",
-    "https://community.github.io/relink-modding/resources/re/mechanics/quick_quest_power_scaling/",
-    "https://community.github.io/relink-modding/resources/re/mechanics/overmasteries/",
-    "https://community.github.io/relink-modding/resources/re/mechanics/pwr_power/",
-    "https://community.github.io/relink-modding/resources/re/mechanics/rotd/",
-    "https://community.github.io/relink-modding/resources/re/mechanics/gem_mix/",
-    "https://community.github.io/relink-modding/resources/re/mechanics/emotes/",
-    "https://community.github.io/relink-modding/resources/re/mechanics/terminus/",
-]
+DEFAULT_RESOURCE_URLS = []
 
 @dataclass(frozen=True)
 class ResourceEntry:

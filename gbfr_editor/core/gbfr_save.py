@@ -212,8 +212,16 @@ class GBFRSaveData:
     def __init__(self, container: SaveContainerInfo, file_bytes: bytearray):
         self.container = container
         self._file_bytes = file_bytes
+        if (
+            int(container.payload_offset) < 0
+            or int(container.payload_size) <= 0
+            or int(container.payload_offset) + int(container.payload_size) > len(file_bytes)
+        ):
+            raise FlatBufferError("Save payload points outside the file. The file may be encrypted, incomplete, or not a supported decrypted GBFR save.")
         self._payload = memoryview(self._file_bytes)[container.payload_offset:container.payload_offset + container.payload_size]
         self.root_table = self._read_u32(0)
+        if not self._payload_has(self.root_table, 4):
+            raise FlatBufferError("Save root table points outside the file. The file may be encrypted or not a decrypted GBFR save.")
         self.records: List[UnitRecord] = []
         self.records_by_key: Dict[str, UnitRecord] = {}
         self.records_by_id: Dict[Tuple[str, int, int], List[UnitRecord]] = {}
@@ -224,8 +232,14 @@ class GBFRSaveData:
     def open(cls, path: str | Path) -> "GBFRSaveData":
         p = Path(path)
         data = bytearray(p.read_bytes())
-        container = cls._detect_container(p, data)
-        return cls(container, data)
+        try:
+            container = cls._detect_container(p, data)
+            return cls(container, data)
+        except struct.error as exc:
+            raise FlatBufferError(
+                "This file looked like a possible GBFR save but ended early while reading it. "
+                "It may be encrypted, compressed, incomplete, or not the actual GameData/SaveData payload."
+            ) from exc
 
     @staticmethod
     def _detect_container(path: Path, data: bytearray) -> SaveContainerInfo:
@@ -272,75 +286,141 @@ class GBFRSaveData:
     def _abs(self, payload_offset: int) -> int:
         return self.container.payload_offset + payload_offset
 
+    def _payload_has(self, offset: int, size: int) -> bool:
+        try:
+            offset = int(offset)
+            size = int(size)
+        except Exception:
+            return False
+        return (
+            offset >= 0
+            and size >= 0
+            and offset + size <= int(self.container.payload_size)
+            and self._abs(offset) + size <= len(self._file_bytes)
+        )
+
+    def _require_payload(self, offset: int, size: int, label: str = "save data") -> None:
+        if not self._payload_has(offset, size):
+            raise FlatBufferError(
+                f"{label} is outside the readable save buffer. "
+                "The file may be encrypted, incomplete, or not a supported decrypted GBFR save."
+            )
+
     def _read_u16(self, offset: int) -> int:
+        self._require_payload(offset, 2, "u16 field")
         return _read_u16(self._file_bytes, self._abs(offset))
 
     def _read_u32(self, offset: int) -> int:
+        self._require_payload(offset, 4, "u32 field")
         return _read_u32(self._file_bytes, self._abs(offset))
 
     def _read_i32(self, offset: int) -> int:
+        self._require_payload(offset, 4, "i32 field")
         return _read_i32(self._file_bytes, self._abs(offset))
 
     def _table_field_pos(self, table_offset: int, field_index: int) -> Optional[int]:
-        vtable = table_offset - self._read_i32(table_offset)
-        vtable_size = self._read_u16(vtable)
-        field_entry = 4 + field_index * 2
-        if field_entry + 2 > vtable_size:
+        try:
+            if not self._payload_has(table_offset, 4):
+                return None
+            vtable = table_offset - self._read_i32(table_offset)
+            if not self._payload_has(vtable, 4):
+                return None
+            vtable_size = self._read_u16(vtable)
+            if vtable_size < 4 or vtable_size > 512 or not self._payload_has(vtable, vtable_size):
+                return None
+            field_entry = 4 + field_index * 2
+            if field_entry + 2 > vtable_size:
+                return None
+            rel = self._read_u16(vtable + field_entry)
+            if rel == 0:
+                return None
+            pos = table_offset + rel
+            if not self._payload_has(pos, 1):
+                return None
+            return pos
+        except (FlatBufferError, struct.error, ValueError):
             return None
-        rel = self._read_u16(vtable + field_entry)
-        if rel == 0:
-            return None
-        return table_offset + rel
 
     def _vector_from_field(self, table_offset: int, field_index: int) -> Optional[Tuple[int, int, int]]:
         field_pos = self._table_field_pos(table_offset, field_index)
         if field_pos is None:
             return None
-        vector_offset = field_pos + self._read_u32(field_pos)
-        count = self._read_u32(vector_offset)
-        data_offset = vector_offset + 4
-        return vector_offset, count, data_offset
+        try:
+            if not self._payload_has(field_pos, 4):
+                return None
+            vector_offset = field_pos + self._read_u32(field_pos)
+            if not self._payload_has(vector_offset, 4):
+                return None
+            count = self._read_u32(vector_offset)
+            data_offset = vector_offset + 4
+            if count < 0 or count > 5_000_000 or not self._payload_has(data_offset, 0):
+                return None
+            return vector_offset, count, data_offset
+        except (FlatBufferError, struct.error, ValueError):
+            return None
 
     def _parse(self) -> None:
         version_pos = self._table_field_pos(self.root_table, 0)
-        self.version_maybe = self._read_u32(version_pos) if version_pos is not None else None
+        try:
+            self.version_maybe = self._read_u32(version_pos) if version_pos is not None else None
+        except (FlatBufferError, struct.error):
+            self.version_maybe = None
 
         for kind, spec in SCALAR_SPECS.items():
             vector = self._vector_from_field(self.root_table, spec.table_field)
             if vector is None:
                 continue
             _, count, data_offset = vector
+            if not self._payload_has(data_offset, int(count) * 4):
+                continue
             for index in range(count):
-                slot = data_offset + index * 4
-                table_offset = slot + self._read_u32(slot)
-                id_pos = self._table_field_pos(table_offset, 0)
-                unit_pos = self._table_field_pos(table_offset, 1)
-                val_vector = self._vector_from_field(table_offset, 2)
-                if id_pos is None or val_vector is None:
+                try:
+                    slot = data_offset + index * 4
+                    if not self._payload_has(slot, 4):
+                        continue
+                    table_offset = slot + self._read_u32(slot)
+                    if not self._payload_has(table_offset, 4):
+                        continue
+                    id_pos = self._table_field_pos(table_offset, 0)
+                    unit_pos = self._table_field_pos(table_offset, 1)
+                    val_vector = self._vector_from_field(table_offset, 2)
+                    if id_pos is None or val_vector is None:
+                        continue
+                    value_vector_offset, value_count, value_data_offset = val_vector
+                    if value_count < 0 or not self._payload_has(value_data_offset, int(value_count) * int(spec.element_size)):
+                        continue
+                    id_type = self._read_u32(id_pos)
+                    unit_id = self._read_u32(unit_pos) if unit_pos is not None else 0
+                    rec = UnitRecord(
+                        kind=kind,
+                        index=index,
+                        table_offset=table_offset,
+                        id_type=id_type,
+                        unit_id=unit_id,
+                        value_vector_offset=value_vector_offset,
+                        value_count=value_count,
+                        value_data_offset=value_data_offset,
+                    )
+                    self.records.append(rec)
+                    self.records_by_key[rec.key] = rec
+                    self.records_by_id.setdefault((kind, id_type, unit_id), []).append(rec)
+                except (FlatBufferError, struct.error, ValueError, OverflowError):
                     continue
-                value_vector_offset, value_count, value_data_offset = val_vector
-                id_type = self._read_u32(id_pos)
-                unit_id = self._read_u32(unit_pos) if unit_pos is not None else 0
-                rec = UnitRecord(
-                    kind=kind,
-                    index=index,
-                    table_offset=table_offset,
-                    id_type=id_type,
-                    unit_id=unit_id,
-                    value_vector_offset=value_vector_offset,
-                    value_count=value_count,
-                    value_data_offset=value_data_offset,
-                )
-                self.records.append(rec)
-                self.records_by_key[rec.key] = rec
-                self.records_by_id.setdefault((kind, id_type, unit_id), []).append(rec)
+
+        if not self.records:
+            raise FlatBufferError(
+                "No editable GBFR value records were found. The selected file may be encrypted, compressed, incomplete, or not the decrypted GameData/SaveData payload."
+            )
 
     def get_values(self, rec: UnitRecord, limit: Optional[int] = None) -> List[Any]:
         spec = SCALAR_SPECS[rec.kind]
         total = rec.value_count if limit is None else min(rec.value_count, limit)
         values: List[Any] = []
         for i in range(total):
-            pos = self._abs(rec.value_data_offset + i * spec.element_size)
+            rel = rec.value_data_offset + i * spec.element_size
+            if not self._payload_has(rel, spec.element_size):
+                break
+            pos = self._abs(rel)
             if spec.is_bool:
                 values.append(bool(struct.unpack_from(spec.struct_format, self._file_bytes, pos)[0]))
             elif spec.is_float:
@@ -360,6 +440,8 @@ class GBFRSaveData:
         if rec is None or rec.value_count < 1:
             return default
         spec = SCALAR_SPECS[rec.kind]
+        if not self._payload_has(rec.value_data_offset, spec.element_size):
+            return default
         pos = self._abs(rec.value_data_offset)
         if spec.is_bool:
             return bool(struct.unpack_from(spec.struct_format, self._file_bytes, pos)[0])
@@ -372,6 +454,8 @@ class GBFRSaveData:
         if rec is None or rec.value_count < 1:
             raise ValueError("record has no scalar values to edit")
         spec = SCALAR_SPECS[rec.kind]
+        if not self._payload_has(rec.value_data_offset, spec.element_size):
+            raise FlatBufferError("Cannot write this row because its value offset is outside the save buffer.")
         pos = self._abs(rec.value_data_offset)
         value = self._coerce_scalar_for_pack(rec.kind, raw)
         struct.pack_into(spec.struct_format, self._file_bytes, pos, value)
@@ -413,6 +497,9 @@ class GBFRSaveData:
         if len(values) != rec.value_count:
             raise ValueError(f"Value count must stay {rec.value_count}; got {len(values)}.")
         spec = SCALAR_SPECS[rec.kind]
+        needed = int(rec.value_count) * int(spec.element_size)
+        if not self._payload_has(rec.value_data_offset, needed):
+            raise FlatBufferError("Cannot write this row because its value vector is outside the save buffer.")
         for i, raw in enumerate(values):
             pos = self._abs(rec.value_data_offset + i * spec.element_size)
             value = self._coerce_scalar_for_pack(rec.kind, raw)

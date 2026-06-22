@@ -9,15 +9,15 @@ import re
 import urllib.request
 from urllib.parse import parse_qs, urlparse
 
-# The GitHub Pages HTML is the most stable public endpoint from inside a normal
-# desktop runtime. The parser also accepts CSV exports from Community or user sheets.
-FALLBACK_ITEM_URL = "https://community.github.io/relink-modding/resources/item_ids/"
-RAW_ITEM_URL = "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/item_id.csv"
-RAW_TRAIT_SKILL_URL = "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/skill_id.csv"
-RAW_SIGIL_GEM_URL = "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/sigil_id.csv"
-FALLBACK_SIGIL_GEM_URL = "https://community.github.io/relink-modding/resources/sigil_gem_ids/"
+# Remote auto-download URLs are intentionally omitted from release builds.
+# The parser still accepts user-provided CSV/Google Sheet exports when pasted/imported.
+FALLBACK_ITEM_URL = ""
+RAW_ITEM_URL = ""
+RAW_TRAIT_SKILL_URL = ""
+RAW_SIGIL_GEM_URL = ""
+FALLBACK_SIGIL_GEM_URL = ""
 TRAIT_SKILL_URL = RAW_TRAIT_SKILL_URL
-FALLBACK_TRAIT_SKILL_URL = "https://community.github.io/relink-modding/resources/trait_skill_ids/"
+FALLBACK_TRAIT_SKILL_URL = ""
 DEFAULT_ITEM_URL = RAW_ITEM_URL
 GOOGLE_SHEET_EXPORT_RE = re.compile(r"docs\.google\.com/spreadsheets/d/([^/]+)")
 
@@ -41,7 +41,7 @@ class ItemEntry:
 
     @property
     def display_name(self) -> str:
-        return self.name or f"Unnamed / reserved {self.item_id}"
+        return self.name or f"Internal / unused {self.item_id}"
 
     @property
     def alias_text(self) -> str:
@@ -230,16 +230,9 @@ class ItemDatabase:
 
     @classmethod
     def download_community(cls, url: str = DEFAULT_ITEM_URL, timeout: int = 30) -> "ItemDatabase":
-        urls = [url]
-        if RAW_ITEM_URL not in urls:
-            urls.append(RAW_ITEM_URL)
-        if TRAIT_SKILL_URL not in urls:
-            urls.append(TRAIT_SKILL_URL)
-        if RAW_SIGIL_GEM_URL not in urls:
-            urls.append(RAW_SIGIL_GEM_URL)
-        for fallback in [FALLBACK_ITEM_URL, FALLBACK_TRAIT_SKILL_URL, FALLBACK_SIGIL_GEM_URL]:
-            if fallback not in urls:
-                urls.append(fallback)
+        urls = [u for u in [url, RAW_ITEM_URL, TRAIT_SKILL_URL, RAW_SIGIL_GEM_URL, FALLBACK_ITEM_URL, FALLBACK_TRAIT_SKILL_URL, FALLBACK_SIGIL_GEM_URL] if str(u or "").strip()]
+        if not urls:
+            raise RuntimeError("No bundled remote source URL is configured. Import a local CSV or paste a Google Sheet/CSV URL instead.")
         db, errors = cls.download_many(urls, timeout=timeout)
         if len(db):
             return db
@@ -320,7 +313,7 @@ def infer_category(item_id: str) -> str:
         return "Glitterstone"
     if ident.startswith("ITEM_36"):
         return "Ticket"
-    if re.match(r"ITEM_(0[1-9]|1[0-6]|30|31|32|33)_", ident):
+    if re.match(r"ITEM_(0[1-9]|1[0-8]|22|30|31|32|33)_", ident):
         return "Material"
     if ident.startswith("ITEM_"):
         return "Item"
@@ -335,12 +328,12 @@ def clean_item_name(name: str, item_id: str = "") -> str:
     n = (name or "").strip().strip('"')
     if n.lower() in _RESERVED_NAMES:
         if item_id:
-            return f"Unnamed / reserved {item_id.strip()}"
-        return "Unnamed / reserved"
+            return f"Internal / unused {item_id.strip()}"
+        return "Internal / unused"
     # Public data uses Dummy### for reserved/unused sigil rows. Make that obvious
     # instead of presenting it like a normal player-facing item name.
     if re.fullmatch(r"Dummy\d+\+?", n, flags=re.I):
-        return f"Reserved / {n}"
+        return f"Internal / reserved {n}"
     return n
 
 

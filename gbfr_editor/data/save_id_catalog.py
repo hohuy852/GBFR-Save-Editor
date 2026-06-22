@@ -14,7 +14,7 @@ class SaveIdCatalogRow:
     manager: str
     meaning: str
     editor_note: str = ""
-    source: str = "GBFRDataTools.SaveFile SaveIDType.cs"
+    source: str = "Local editor mapping"
 
     def searchable_text(self) -> str:
         return " ".join([
@@ -80,8 +80,8 @@ SAVE_ID_ROWS: List[SaveIdCatalogRow] = [
     SaveIdCatalogRow(1502, "CHARACTER_1502", "uint", "CharacterManager", "Character auxiliary/progression field"),
     SaveIdCatalogRow(1503, "CHARACTER_1503", "int[2]", "CharacterManager", "Character two-value auxiliary/progression field"),
 
-    SaveIdCatalogRow(1701, "EQUIPMENT_TRAIT_ID", "uint hash", "Shared Equipment Trait", "Trait/skill ID attached to sigils, wrightstones, weapons, and other slot objects. Community notes show FF A5 06 / A506 as the current trait field."),
-    SaveIdCatalogRow(1702, "EQUIPMENT_TRAIT_LEVEL", "int", "Shared Equipment Trait", "Trait level/value paired with 1701. Community notes show FF A6 06 / A606 as current trait level rows."),
+    SaveIdCatalogRow(1701, "EQUIPMENT_TRAIT_ID", "uint hash", "Shared Equipment Trait", "Trait/skill ID attached to sigils, wrightstones, weapons, and other slot objects. Anonymous save-unit notes show FF A5 06 / A506 as the current trait field."),
+    SaveIdCatalogRow(1702, "EQUIPMENT_TRAIT_LEVEL", "int", "Shared Equipment Trait", "Trait level/value paired with 1701. Anonymous save-unit notes show FF A6 06 / A606 as current trait level rows."),
 
     SaveIdCatalogRow(1801, "ITEMDATA_ITEM_ID", "uint hash", "ItemManager", "Item ID hash, e.g. ITEM_01_0000"),
     SaveIdCatalogRow(1802, "ITEMDATA_ITEM_COUNT", "int", "ItemManager", "Item count"),
@@ -98,9 +98,9 @@ SAVE_ID_ROWS: List[SaveIdCatalogRow] = [
     SaveIdCatalogRow(2002, "ITEMJUNK_CURIO_IDS", "uint hash", "ItemManager / Curio", "Curio item ID hash, e.g. ITEM_19_0001"),
     SaveIdCatalogRow(2003, "ITEMJUNK_CURIO_ITEM_SEEDS", "uint", "ItemManager / Curio", "Curio item seed"),
     SaveIdCatalogRow(2004, "ITEMJUNK_2004", "int", "ItemManager / Curio", "Curio/item bucket value"),
-    SaveIdCatalogRow(2101, "ITEM_UNK_MAX_SLOT_ID", "uint", "ItemManager", "Last/current 210x item/wrightstone slot id; community notes show FF3508 as Last Count"),
-    SaveIdCatalogRow(2102, "ITEM_UNK_ITEM_ID", "uint hash", "ItemManager", "Slot-style item/wrightstone ID hash; community notes show FF3608 as Current Wrightstone"),
-    SaveIdCatalogRow(2103, "ITEM_UNK_SLOT_IDS", "uint", "ItemManager", "Slot id/count for 210x item/wrightstone rows; community notes show FF3708 as Count"),
+    SaveIdCatalogRow(2101, "ITEM_UNK_MAX_SLOT_ID", "uint", "ItemManager", "Last/current 210x item/wrightstone slot id; anonymous save-unit notes show FF3508 as Last Count"),
+    SaveIdCatalogRow(2102, "ITEM_UNK_ITEM_ID", "uint hash", "ItemManager", "Slot-style item/wrightstone ID hash; anonymous save-unit notes show FF3608 as Current Wrightstone"),
+    SaveIdCatalogRow(2103, "ITEM_UNK_SLOT_IDS", "uint", "ItemManager", "Slot id/count for 210x item/wrightstone rows; anonymous save-unit notes show FF3708 as Count"),
     SaveIdCatalogRow(2104, "ITEM_UNK_2104", "bool", "ItemManager", "Item flag / active slot candidate"),
     SaveIdCatalogRow(2105, "ITEM_UNK_FLAGS", "uint", "ItemManager", "GBFRDataTools labels this flags; editor-observed stack edits treat it as quantity/type candidate", "Use Save As and verify for uncommon item families"),
 
@@ -117,10 +117,10 @@ SAVE_ID_ROWS: List[SaveIdCatalogRow] = [
     SaveIdCatalogRow(2576, "QUESTSYSTEM_QUEST_UNK6", "bool", "QuestSystem", "Quest state flag"),
     SaveIdCatalogRow(2577, "QUESTSYSTEM_QUEST_UNK7", "bool", "QuestSystem", "Quest state flag"),
 
-    SaveIdCatalogRow(2701, "GEMDATA_MAX_SLOT_ID", "uint", "GemManager", "Last/current sigil slot id; community notes show FF8D0A as Last Count"),
-    SaveIdCatalogRow(2702, "GEMDATA_SLOT_IDS", "uint", "GemManager", "Sigil slot id/count; community notes show FF8E0A as Count"),
+    SaveIdCatalogRow(2701, "GEMDATA_MAX_SLOT_ID", "uint", "GemManager", "Last/current sigil slot id; anonymous save-unit notes show FF8D0A as Last Count"),
+    SaveIdCatalogRow(2702, "GEMDATA_SLOT_IDS", "uint", "GemManager", "Sigil slot id/count; anonymous save-unit notes show FF8E0A as Count"),
     SaveIdCatalogRow(2703, "GEMDATA_GEM_ID", "uint hash", "GemManager", "Gem/Sigil ID hash, e.g. GEEN_140_00"),
-    SaveIdCatalogRow(2704, "GEMDATA_SKILL_1_LEVEL", "int", "GemManager", "Sigil primary skill level; community notes show FF900A as current sigil level"),
+    SaveIdCatalogRow(2704, "GEMDATA_SKILL_1_LEVEL", "int", "GemManager", "Sigil primary skill level; anonymous save-unit notes show FF900A as current sigil level"),
     SaveIdCatalogRow(2706, "GEMDATA_WORN_BY", "uint hash", "GemManager", "Worn-by character hash, e.g. PL0500"),
     SaveIdCatalogRow(2707, "GEMDATA_FLAGS", "uint", "GemManager", "Gem/Sigil flags; bit 0 = locked, bit 1 = unknown"),
     SaveIdCatalogRow(2708, "GEMDATA_2708", "uint", "GemManager", "Sigil extra field"),
@@ -129,12 +129,16 @@ SAVE_ID_ROWS: List[SaveIdCatalogRow] = [
     SaveIdCatalogRow(2802, "WEAPONDATA_SLOT_ID", "uint", "WeaponManager", "Weapon slot id"),
     SaveIdCatalogRow(2803, "WEAPONDATA_WEAPON_ID", "uint hash", "WeaponManager", "Weapon ID hash"),
     SaveIdCatalogRow(2804, "WEAPONDATA_WEAPON_XP", "uint", "WeaponManager", "Weapon XP / progress"),
-    SaveIdCatalogRow(2805, "WEAPONDATA_WEAPON_2805", "int", "WeaponManager", "Weapon state/stat field"),
-    SaveIdCatalogRow(2806, "WEAPONDATA_WEAPON_2806", "int", "WeaponManager", "Weapon state/stat field"),
-    SaveIdCatalogRow(2807, "WEAPONDATA_WEAPON_2807", "int", "WeaponManager", "Weapon state/stat field"),
-    SaveIdCatalogRow(2814, "WEAPONDATA_WEAPON_2814", "uint", "WeaponManager", "Weapon state field"),
-    SaveIdCatalogRow(2815, "WEAPONDATA_WEAPON_FLAGS", "uint", "WeaponManager", "Weapon flags"),
-    SaveIdCatalogRow(2816, "WEAPONDATA_WEAPON_STONE_ITEM_ID", "uint hash", "WeaponManager", "Imbued stone / item hash candidate"),
+    SaveIdCatalogRow(2805, "WEAPONDATA_WEAPON_UNCAP_STAGE", "int", "WeaponManager", "Weapon uncap/max-level stage candidate", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(2806, "WEAPONDATA_WEAPON_TRAIT_PLUS_CANDIDATE", "int", "WeaponManager", "Weapon trait + bonus candidate; still needs before/after confirmation", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(2807, "WEAPONDATA_WEAPON_2807", "int", "WeaponManager", "Weapon state/stat field candidate", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(2814, "WEAPONDATA_WEAPON_2814", "uint", "WeaponManager", "Weapon state hash/value candidate", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(2815, "WEAPONDATA_WEAPON_FLAGS", "uint", "WeaponManager", "Weapon owned/flags", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(2816, "WEAPONDATA_WEAPON_STONE_ITEM_ID", "uint hash", "WeaponManager", "Weapon stone/wrightstone item hash candidate", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(2813, "WEAPONDATA_WEAPON_2813", "uint", "WeaponManager", "Weapon state field listed in weapon loop; not editor-confirmed yet", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(7401, "WEAPON_AUX_7401", "unknown", "WeaponManager", "Weapon auxiliary loop field, units 0-511 candidate", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(7402, "WEAPON_AUX_7402", "unknown", "WeaponManager", "Weapon auxiliary loop field, units 0-511 candidate", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(7403, "WEAPON_AUX_7403", "unknown", "WeaponManager", "Weapon auxiliary loop field, units 0-511 candidate", source="Anonymous save-unit reference"),
 
     SaveIdCatalogRow(3903, "ABILITYDATA_ABILITY_ID", "uint hash", "AbilityManager", "Ability ID hash"),
     SaveIdCatalogRow(3904, "ABILITYDATA_ABILITY_FLAGS", "uint", "AbilityManager", "Ability flags"),
@@ -185,6 +189,20 @@ SAVE_ID_ROWS: List[SaveIdCatalogRow] = [
     SaveIdCatalogRow(4804, "MOST_USED_CHARACTERS_FOR_QUESTING", "unknown", "UINetworkManager", "Most-used characters for questing"),
     SaveIdCatalogRow(4901, "QUESTS_CLEARED", "unknown", "UINetworkManager", "Quests cleared"),
     SaveIdCatalogRow(7601, "RANDOM_STATE", "unknown", "Random", "cycle::utility::Random state"),
+    SaveIdCatalogRow(8901, "PLAYLOGMANAGER_8901", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8902, "PLAYLOGMANAGER_8902", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8903, "PLAYLOGMANAGER_8903", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8904, "PLAYLOGMANAGER_8904", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8905, "PLAYLOGMANAGER_8905", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8906, "PLAYLOGMANAGER_8906", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8907, "PLAYLOGMANAGER_8907", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8908, "PLAYLOGMANAGER_8908", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8909, "PLAYLOGMANAGER_8909", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8912, "PLAYLOGMANAGER_8912", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8913, "PLAYLOGMANAGER_8913", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8910, "PLAYLOGMANAGER_8910", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8911, "PLAYLOGMANAGER_8911", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
+    SaveIdCatalogRow(8914, "PLAYLOGMANAGER_8914", "unknown", "PlayLogManager", "Play log field listed in anonymous save-unit reference", source="Anonymous save-unit reference"),
 ]
 
 

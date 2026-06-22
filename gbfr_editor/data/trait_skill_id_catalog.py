@@ -8,8 +8,8 @@ import re
 
 from item_db import ItemDatabase, ItemEntry
 
-COMMUNITY_TRAIT_SKILL_ID_URL = "https://community.github.io/relink-modding/resources/trait_skill_ids/"
-COMMUNITY_TRAIT_SKILL_ID_CSV_URL = "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/skill_id.csv"
+COMMUNITY_TRAIT_SKILL_ID_URL = ""
+COMMUNITY_TRAIT_SKILL_ID_CSV_URL = ""
 COMMUNITY_TRAIT_SKILL_TARGET_ROWS = 219  # upstream docs/resources/skill_id.csv rows excluding header at the time this page was mapped
 COMMUNITY_TRAIT_SKILL_UNIQUE_HASH_TARGET = 217  # same source collapsed by unique hash/ID lookup aliases
 

@@ -9,7 +9,7 @@ import re
 from resource_id_db import ResourceIdDatabase, ResourceEntry
 from hashing import gbfr_hash_hex
 
-COMMUNITY_PHASE_ID_URL = "https://community.github.io/relink-modding/resources/phase_ids/"
+COMMUNITY_PHASE_ID_URL = ""
 
 PHASE_GROUPS = [
     (re.compile(r"^P1", re.I), "Tempeal / early story"),

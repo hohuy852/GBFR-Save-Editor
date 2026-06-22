@@ -1,13 +1,13 @@
 Hash,Name,Category,Notes,Source
-45C65767,Critical Rate,Overmastery,OP MOD IDS: Character ID Slot #3 Critical Rate,Google Sheets Cheats_Mods gid 1672697976
-C4925BD7,Attack Power Up,Overmastery,OP MOD IDS: Attack Power Up,Google Sheets Cheats_Mods gid 1672697976
-43B7581D,Normal Damage Cap Up,Overmastery,OP MOD IDS: Normal Damage Cap Up,Google Sheets Cheats_Mods gid 1672697976
-9C555433,Skill Damage Cap Up,Overmastery,OP MOD IDS: Skill Damage Cap Up,Google Sheets Cheats_Mods gid 1672697976
-9A97C049,Skill Damage Up,Overmastery,OP MOD IDS: Skill Damage Up,Google Sheets Cheats_Mods gid 1672697976
-52A207B5,Health Up,Overmastery,OP MOD IDS: Health Up,Google Sheets Cheats_Mods gid 1672697976
-6CB38EF3,Stun Power Up,Overmastery,OP MOD IDS: Stun Power Up,Google Sheets Cheats_Mods gid 1672697976
-4A4C093D,SBA Damage Cap Up,Overmastery,OP MOD IDS: SBA Damage Cap Up,Google Sheets Cheats_Mods gid 1672697976
-4E42646B,SBA Damage Up,Overmastery,OP MOD IDS: SBA Damage Up,Google Sheets Cheats_Mods gid 1672697976
+45C65767,Critical Rate,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+C4925BD7,Attack Power Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+43B7581D,Normal Damage Cap Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+9C555433,Skill Damage Cap Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+9A97C049,Skill Damage Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+52A207B5,Health Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+6CB38EF3,Stun Power Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+4A4C093D,SBA Damage Cap Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+4E42646B,SBA Damage Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
 CB63BE55,Attack Power Up Variant 2,Overmastery / MED_EFF,Discovered from uploaded hashlist MED_EFF labels,Uploaded hashlist.7z
 DCBD8423,Attack Power Up Variant 3,Overmastery / MED_EFF,Discovered from uploaded hashlist MED_EFF labels,Uploaded hashlist.7z
 59DCE1E8,Attack Power Up Variant 4,Overmastery / MED_EFF,Discovered from uploaded hashlist MED_EFF labels,Uploaded hashlist.7z
@@ -20,5 +20,17 @@ C4B86ED7,Critical Rate Variant 2,Overmastery / MED_EFF,Discovered from uploaded 
 CEB0DBD2,Critical Rate Variant 3,Overmastery / MED_EFF,Discovered from uploaded hashlist MED_EFF labels,Uploaded hashlist.7z
 A3545CA1,Stun Power Up Variant 2,Overmastery / MED_EFF,Discovered from uploaded hashlist MED_EFF labels,Uploaded hashlist.7z
 59FBB7D8,Stun Power Up Variant 3,Overmastery / MED_EFF,Discovered from uploaded hashlist MED_EFF labels,Uploaded hashlist.7z
-54929589,Recovery Cap Up,Overmastery / MED_EFF,Discovered from uploaded hashlist MED_EFF labels,Uploaded hashlist.7z
-68B39018,Link/Burst Damage Up,Overmastery / MED_EFF,Discovered from uploaded hashlist MED_EFF labels,Uploaded hashlist.7z
+54929589,Healing Cap Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+68B39018,Chain Burst Damage Up,Overmastery,Pasted Masteries sheet gid 1099533 OP MOD IDS,Pasted Masteries sheet gid 1099533
+7B727910,Sigil Slot Add / Restore (danger: >13 slots breaks game),Layout Safety,Pasted Masteries sheet gid 1099533 warns more than 13 sigil slots breaks game,Pasted Masteries sheet gid 1099533
+D75B92C4,Attack Power Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+1890B368,Chain Burst Damage Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+6757C645,Critical Rate (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+89959254,Healing Cap Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+B507A252,Health Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+1D58B743,Normal Damage Cap Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+3D094C4A,SBA Damage Cap Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+6B64424E,SBA Damage Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+3354559C,Skill Damage Cap Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+49C0979A,Skill Damage Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533
+F38EB36C,Stun Power Up (OP right-table variant),Overmastery Variant,Pasted Masteries sheet gid 1099533 OP Amounts/MOD right-table variant,Pasted Masteries sheet gid 1099533

@@ -1,0 +1,6 @@
+Area,Status,Mapping,Notes
+Four stat lanes,Corrected,unit = 10000000 + character_index * 1000 + lane 0-3,Matches current editor mapping and pasted 40-group/4-slot code pattern.
+1606,Confirmed,Effect/stat hash,Sheet marker FF460600.
+1607,Corrected labels,Amount/value,"Sheet marker FF470600; 0x0200=20%, 0x03FF=80%."
+Sigil Slot Add,Guarded label,0x7B727910,More than 13 sigil slots can break game; label warns accordingly.
+Right-table variants,Named,D75B92C4 etc.,Added as OP right-table variants from pasted notes.

@@ -75,10 +75,10 @@ BUILTIN_SAVE_WIZARD_CHEATS: tuple[SaveWizardCheat, ...] = (
     ),
     SaveWizardCheat(
         key="sw-max-current-sigils",
-        name="Max Current Known Sigils + Lock",
+        name="Max Current Known Sigils + Traits + Lock",
         category="Sigils",
         action="max_sigils",
-        description="Sets known sigils already in the save to the current max sigil level and locks them.",
+        description="Sets known sigils already in the save to the current max sigil level, updates linked 120M trait-level rows where present, and normalizes assignment/lock flags.",
     ),
     SaveWizardCheat(
         key="sw-add-basic-v-sigils",
@@ -139,7 +139,7 @@ BUILTIN_SAVE_WIZARD_CHEATS: tuple[SaveWizardCheat, ...] = (
         category="Progression",
         action="complete_progression_group",
         target="1",
-        description="Completes mapped 1xxxxx Main Quest rows using QuestSystem key/status vectors.",
+        description="Completes mapped 100000-series Main Quest rows using QuestSystem key/status vectors.",
     ),
     SaveWizardCheat(
         key="sw-complete-side-quests",
@@ -147,7 +147,7 @@ BUILTIN_SAVE_WIZARD_CHEATS: tuple[SaveWizardCheat, ...] = (
         category="Progression",
         action="complete_progression_group",
         target="2",
-        description="Completes mapped 2xxxxx Challenge/Side Quest rows using the 2550/2551/2554/2555 vectors.",
+        description="Completes mapped 200000-series Challenge/Side Quest rows using the 2550/2551/2554/2555 vectors.",
     ),
     SaveWizardCheat(
         key="sw-complete-fate-episodes",
@@ -155,7 +155,7 @@ BUILTIN_SAVE_WIZARD_CHEATS: tuple[SaveWizardCheat, ...] = (
         category="Progression",
         action="complete_progression_group",
         target="3",
-        description="Completes mapped 3xxxxx Fate Episode rows using the 2560/2561 vector.",
+        description="Completes mapped 300000-series Fate Episode rows using the 2560/2561 vector.",
     ),
     SaveWizardCheat(
         key="sw-complete-multiplayer-quests",
@@ -163,7 +163,7 @@ BUILTIN_SAVE_WIZARD_CHEATS: tuple[SaveWizardCheat, ...] = (
         category="Progression",
         action="complete_progression_group",
         target="4",
-        description="Completes mapped 4xxxxx multiplayer/quest-counter rows and raises known rank candidates.",
+        description="Completes mapped 400000-series multiplayer/quest-counter rows and raises known rank candidates.",
     ),
     SaveWizardCheat(
         key="sw-complete-town-lobby-misc",
@@ -171,7 +171,7 @@ BUILTIN_SAVE_WIZARD_CHEATS: tuple[SaveWizardCheat, ...] = (
         category="Progression",
         action="complete_progression_group",
         target="5",
-        description="Completes mapped 5xxxxx town/lobby rows that exist in the loaded save vector.",
+        description="Completes mapped 500000-series town/lobby rows that exist in the loaded save vector.",
     ),
     SaveWizardCheat(
         key="sw-unlock-title-archive-candidates",

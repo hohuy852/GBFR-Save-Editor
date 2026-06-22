@@ -23,7 +23,7 @@ PL2000,Id / Dragon Form (PL2000),F92C7821,Character; PL2000; Player Parameter
 PL2100,Sandalphon,718E1A14,Character; PL2100; Player Parameter
 PL2200,Seofon,296471BE,Character; PL2200; Player Parameter
 PL2300,Tweyen,BAD16E3B,Character; PL2300; Player Parameter
-PL2400,Unknown / Extra Playable Slot (PL2400),1BB37EF0,Generated from save unknown hash; not named in public model list
+PL2400,Extra Playable Slot (PL2400),1BB37EF0,Generated from save hash; public name not confirmed
 NP0000,Lyria,3529CC90,NPC; Model ID; Community model_ids
 NP0100,Vyrn,0E515648,NPC; Model ID; Community model_ids
 NP0200,Sierokarte,11C33FC2,NPC; Model ID; Community model_ids

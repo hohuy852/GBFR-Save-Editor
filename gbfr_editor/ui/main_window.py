@@ -64,11 +64,15 @@ I32_MAX = 2_147_483_647
 SIGIL_MAX_EQUIPPED_PER_OWNER = 13
 SIGIL_LEVEL_MAX = I32_MAX
 SIGIL_LEVEL_TEST_MAX = SIGIL_LEVEL_MAX
+# Wrightstones use 50000-series inventory slots and 140000000-series linked trait lanes.
+# 120000000-series rows are sigil/gem trait lanes, not Wrightstones.
+SIGIL_TRAIT_UNIT_BASE = 120_000_000
+WRIGHTSTONE_TRAIT_UNIT_BASE = 140_000_000
 WEAPON_XP_MAX = 999_999_999
 CHARACTER_VALUE_MAX = 999_999_999
-# The visible 2706 / FF920A-style owner field is not enough by itself for a valid in-game equip.
-# Keep equip writes disabled until a known-good before/after equipped save maps the full relation.
-SIGIL_EQUIP_WRITES_ENABLED = False
+# In-game equipped sigil rows use 2706 / FF920A as the assigned character hash.
+# Equip writes also repair the sigil serial and active flag before assigning the owner.
+SIGIL_EQUIP_WRITES_ENABLED = True
 
 # 1607 is the mastery amount/value field. The Save Wizard notes include an
 # extreme 0x7FFFFFFF test preset, but that path has been reported to crash
@@ -76,6 +80,24 @@ SIGIL_EQUIP_WRITES_ENABLED = False
 # used in codes, and sanitize older edited saves before writing.
 MASTERY_1607_SAFE_MAX = I32_MAX  # signed 32-bit max for FF470600 mastery value tests
 MASTERY_1607_MORE_VALUE = 0x05F5E0FF  # 99,999,999 / "MORE than normal"
+
+# Confirmed Save Wizard mastery/overmastery pairing:
+#   FF460600 -> SaveData field 1606 -> selected mastery/overmastery effect ID
+#   FF470600 -> SaveData field 1607 -> paired mastery/overmastery amount/value
+# Overmastery is a fixed 40 character/group x 4 lane block.  Each lane has a
+# 1606 effect row and a paired 1607 amount row at the same concrete save unit.
+MASTERY_EFFECT_FIELD_ID = 1606
+MASTERY_VALUE_FIELD_ID = 1607
+OVERMASTERY_GROUP_COUNT = 0x28
+OVERMASTERY_LANE_COUNT = 4
+OVERMASTERY_UNIT_BASE = 10_000_000
+OVERMASTERY_UNIT_GROUP_STRIDE = 1000
+OVERMASTERY_SAVEWIZARD_ROW_STRIDE = 0x18
+OVERMASTERY_SAVEWIZARD_GROUP_STRIDE = 0x60
+OVERMASTERY_VALUE_NORMAL = 0x0200
+OVERMASTERY_VALUE_MAX = 0x03FF
+BASIC_MASTERY_SW_SLOT_COUNT = 0x258
+BASIC_MASTERY_SW_ROW_STRIDE = 0x18
 
 # Mastery should treat the community sheet's ID/Search column as the
 # authoritative 1606 write value.  QMX-style cells are kept only as labels /
@@ -655,22 +677,28 @@ class MainWindow(QMainWindow):
         self.unit_map_model = SimpleRowsModel(["Group", "Slot", "Name", "Source", "Hash", "GBID", "Fields"])
         self.save_finder_model = SimpleRowsModel(["Save", "Type", "Folder", "Modified"])
         self.save_finder_rows_meta: List[Dict[str, Any]] = []
-        self.sigil_model = SimpleRowsModel(["Unit", "Slot", "Sigil", "GBID", "Hash", "Lv", "Equipped To", "Equipped GBID", "Lock / Flags"])
-        self.sigil_model.editable_columns = {2, 3, 4, 5, 6, 7, 8}
+        self.sigil_model = SimpleRowsModel(["Unit", "Slot", "Sigil", "GBID", "Hash", "Lv", "Trait 1", "Trait 2", "Character", "Flags", "T1 Lv", "T2 Lv", "Char GBID"])
+        self.sigil_model.editable_columns = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
         self.sigil_model.set_data_handler = self.apply_sigil_table_cell_edit
         self.sigil_database_model = SimpleRowsModel(["Status", "Name", "GBID", "Hash", "Grade", "Owned", "Empty Slots", "Action"])
         self.sigil_empty_model = SimpleRowsModel(["Unit", "Slot", "Level", "Owner", "Flags", "Notes"])
-        self.weapon_model = SimpleRowsModel(["Slot", "Weapon", "GBID", "Hash", "XP", "2805", "2806", "2807", "2814", "Flags", "Stone"])
+        self.weapon_model = SimpleRowsModel(["Slot", "Weapon", "GBID", "Hash", "XP", "Uncap", "Trait +", "2807", "2814", "Owned", "Stone / Wrightstone"])
         self.weapon_model.editable_columns = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
         self.weapon_model.set_data_handler = self.apply_weapon_table_cell_edit
         self.weapon_database_model = SimpleRowsModel(["Status", "Weapon", "GBID", "Hash", "Owner", "Owned", "Empty Slots", "Action"])
         self.weapon_empty_model = SimpleRowsModel(["Unit", "Hash", "XP", "Flags", "Stone", "Notes"])
+        self.wrightstone_model = SimpleRowsModel(["Slot", "Wrightstone", "GBID", "Hash", "Value", "Trait 1", "T1 Lv", "Trait 2", "T2 Lv", "Trait 3", "T3 Lv", "Flags", "Unit"])
+        self.wrightstone_model.editable_columns = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
+        self.wrightstone_model.set_data_handler = self.apply_wrightstone_table_cell_edit
+        self.wrightstone_rows_meta: List[Dict[str, Any]] = []
         self.character_model = SimpleRowsModel(["Slot", "Character", "GBID", "Hash", "Level", "EXP", "MSP?", "Unlock?", "Unit"])
         self.character_model.editable_columns = {1, 2, 3, 4, 5, 6, 7}
         self.character_model.set_data_handler = self.apply_character_table_cell_edit
-        self.mastery_slot_model = SimpleRowsModel(["Slot #", "Socket #", "1606 Effect Label", "Row Type", "Active", "1607 Amount / State", "1601 Slot Key Label", "1606 Hash", "Save Unit"])
+        self.mastery_slot_model = SimpleRowsModel(["Slot / Lane", "Socket", "1606 Effect / Stat", "Row Type", "State / Lane", "1607 Amount", "1601 Slot Key", "1606 Hash", "Save Unit"])
         self.mastery_slot_rows_meta: List[Dict[str, Any]] = []
         self.mastery_mod_model = SimpleRowsModel(["Row", "Kind", "Current Effect", "Hidden Type", "Value / Amount", "Hidden Hash", "Hidden Unit", "Hidden Pair"])
+        self.mastery_overmastery_matrix_model = SimpleRowsModel(["Lane", "Save Unit", "1606 Stat / Effect", "1606 Row", "1607 Amount", "1607 Row", "SW Lane"])
+        self.mastery_overmastery_matrix_rows_meta: List[Dict[str, Any]] = []
         # Current rows deliberately keep a few hidden columns in the backing
         # model because older helper code updates by column index. The visible
         # editor only shows Row / Kind / Effect / Value.
@@ -686,6 +714,10 @@ class MainWindow(QMainWindow):
         self.mastery_mod_preset_rows_meta: List[Dict[str, Any]] = []
         self.mastery_mod_value_rows_meta: List[Dict[str, Any]] = []
         self.mastery_mod_choices_cache: Optional[List[Dict[str, Any]]] = None
+        self.wrightstone_choices_cache: Optional[List[Dict[str, Any]]] = None
+        self.weapon_trait_choices_cache: Optional[List[Dict[str, Any]]] = None
+        self._wrightstone_trait_grouped_cache: Optional[Dict[int, Dict[int, UnitRecord]]] = None
+        self._wrightstone_slot_grouped_cache: Optional[Dict[int, Dict[int, UnitRecord]]] = None
         self._mastery_mod_cache_key: Optional[tuple] = None
         self._mastery_mod_grouped_cache: Optional[Dict[int, Dict[int, UnitRecord]]] = None
         self._mastery_mod_anchor_cache_key: Optional[tuple] = None
@@ -790,6 +822,18 @@ class MainWindow(QMainWindow):
         self._io_guard_depth = 0
         self._save_thread = None
         self._save_worker = None
+        self._sigil_auto_apply_timer = None
+        self._sigil_field_auto_timers: Dict[int, QTimer] = {}
+        self._sigil_auto_apply_in_progress = False
+        self._item_qty_auto_apply_timer = None
+        self._item_qty_auto_apply_in_progress = False
+        self._weapon_inline_auto_apply_timer = None
+        self._wrightstone_auto_apply_timer = None
+        self._general_value_timers: Dict[int, QTimer] = {}
+        self._general_values_loading = False
+        self._general_party_auto_apply_timer = None
+        self._general_party_loading = False
+
 
         self._load_ui_settings()
         self._build_ui()
@@ -862,6 +906,11 @@ class MainWindow(QMainWindow):
             elif label == "Cheats":
                 self.refresh_preset_rows()
                 self.update_preset_detail()
+            elif label == "General":
+                self.update_edit_hub_summary()
+                self.update_status_text()
+                self.refresh_general_character_controls()
+                self.refresh_general_synced_values()
             elif label == "Progression":
                 self.refresh_progression_rows()
             elif label == "Items / Materials":
@@ -870,6 +919,8 @@ class MainWindow(QMainWindow):
                 self.refresh_sigil_rows()
             elif label == "Weapons":
                 self.refresh_weapon_rows()
+            elif label == "Wrightstones":
+                self.refresh_wrightstone_rows()
             elif label == "Characters":
                 self.refresh_character_rows()
             elif label == "Masteries":
@@ -928,7 +979,7 @@ class MainWindow(QMainWindow):
         for widget in getattr(self, "advanced_nav_widgets", []):
             widget.setVisible(False)
         if hasattr(self, "stack"):
-            visible_pages = {"Welcome", "Cheats", "Progression", "Items / Materials", "Sigils", "Weapons", "Characters", "Mastery", "Save Health", "About"}
+            visible_pages = {"Welcome", "Cheats", "General", "Progression", "Items / Materials", "Sigils", "Weapons", "Wrightstones", "Characters", "Mastery", "Save Health", "Settings", "About"}
             current_label = self._current_page_label()
             if current_label and current_label not in visible_pages:
                 self._show_page("Welcome")
@@ -940,9 +991,9 @@ class MainWindow(QMainWindow):
         idx = self.stack.addWidget(page_builder())
         self.page_indexes[label] = idx
         nav_icons = {
-            "Welcome": "⌂", "Cheats": "⚡", "Progression": "◆",
-            "Items / Materials": "▣", "Sigils": "◇", "Weapons": "⚔", "Characters": "◉", "Mastery": "✚",
-            "Save Health": "✓", "About": "ⓘ", "Save Map": "🗺", "ID Cleanup": "⌁", "Unit Map": "◎",
+            "Welcome": "⌂", "Cheats": "⚡", "General": "★", "Progression": "◆",
+            "Items / Materials": "▣", "Sigils": "◇", "Weapons": "⚔", "Wrightstones": "◆", "Characters": "◉", "Mastery": "✚",
+            "Save Health": "✓", "Settings": "⚙", "About": "ⓘ", "Save Map": "🗺", "ID Cleanup": "⌁", "Unit Map": "◎",
             "GBID Browser": "#", "Item ID Catalog": "▦", "Sigil/Gem ID Catalog": "◇",
             "Trait/Skill ID Catalog": "✣", "Model ID Catalog": "▧", "Phase ID Catalog": "◌",
             "Quest ID Catalog": "?", "Reference Tables": "≡", "Resource Database": "▤",
@@ -1093,6 +1144,34 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+    def _configure_overmastery_matrix_table(self) -> None:
+        """Keep the selected-character Overmastery matrix readable."""
+        table = getattr(self, "mastery_overmastery_matrix_table", None)
+        if table is None:
+            return
+        try:
+            table.setWordWrap(False)
+            table.setTextElideMode(Qt.TextElideMode.ElideRight)
+            table.verticalHeader().setDefaultSectionSize(30)
+            table.verticalHeader().setMinimumSectionSize(28)
+            header = table.horizontalHeader()
+            header.setStretchLastSection(False)
+            header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+            table.setColumnWidth(0, 60)
+            table.setColumnWidth(1, 110)
+            table.setColumnWidth(2, 360)
+            table.setColumnWidth(3, 185)
+            table.setColumnWidth(4, 220)
+            table.setColumnWidth(5, 185)
+            table.setColumnWidth(6, 110)
+            try:
+                header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+
     def _load_ui_settings(self) -> None:
         try:
             if not self.settings_path.exists():
@@ -1155,12 +1234,20 @@ class MainWindow(QMainWindow):
     def set_clean_mode(self, enabled: bool) -> None:
         self.ui_clean_mode = bool(enabled)
         self._apply_view_preferences()
+        try:
+            self._sync_settings_controls()
+        except Exception:
+            pass
         self.statusBar().showMessage("Clean view enabled" if enabled else "Help text visible", 2500)
 
     def set_compact_mode(self, enabled: bool) -> None:
         self.compact_mode = bool(enabled)
         self._apply_view_preferences()
         self.apply_theme()
+        try:
+            self._sync_settings_controls()
+        except Exception:
+            pass
         self.statusBar().showMessage("Compact table rows enabled" if enabled else "Comfortable table rows enabled", 2500)
 
     def set_auto_fit_tables(self, enabled: bool) -> None:
@@ -1169,11 +1256,19 @@ class MainWindow(QMainWindow):
         if enabled:
             for table in self.findChildren(QTableView):
                 self._auto_fit_table(table)
+        try:
+            self._sync_settings_controls()
+        except Exception:
+            pass
         self.statusBar().showMessage("Auto-fit columns enabled" if enabled else "Auto-fit columns disabled", 2500)
 
     def set_fast_load_mode(self, enabled: bool) -> None:
         self.fast_load_mode = bool(enabled)
         self._save_ui_settings()
+        try:
+            self._sync_settings_controls()
+        except Exception:
+            pass
         self.statusBar().showMessage("Fast load enabled" if enabled else "Full refresh on load enabled", 2500)
 
     def reset_clean_view(self) -> None:
@@ -1186,6 +1281,10 @@ class MainWindow(QMainWindow):
             self.advanced_checkbox.setChecked(False)
         self._set_advanced_visible(False, persist=False)
         self._apply_view_preferences()
+        try:
+            self._sync_settings_controls()
+        except Exception:
+            pass
         self.statusBar().showMessage("Clean view reset", 2500)
 
     def _build_menu(self) -> None:
@@ -1198,8 +1297,6 @@ class MainWindow(QMainWindow):
         save_as_action.triggered.connect(self.save_as)
         export_action = QAction("Export JSON Report...", self)
         export_action.triggered.connect(self.export_report)
-        compare_action = QAction("Compare Two Saves...", self)
-        compare_action.triggered.connect(self.compare_two_saves_dialog)
         import_items_action = QAction("Import Item CSV...", self)
         import_items_action.triggered.connect(self.import_item_csv)
         download_items_action = QAction("Download Community Item/Sigil/Trait IDs", self)
@@ -1213,37 +1310,20 @@ class MainWindow(QMainWindow):
         file_menu.addAction(save_as_action)
         file_menu.addSeparator()
         file_menu.addAction(export_action)
-        file_menu.addAction(compare_action)
         file_menu.addSeparator()
         file_menu.addAction(import_items_action)
         file_menu.addAction(download_items_action)
         file_menu.addAction(download_all_community_action)
         file_menu.addAction(export_db_action)
 
-        theme_menu = self.menuBar().addMenu("Theme")
-        for key, label in [
-            ("modern_dark", "Modern Dark"),
-            ("clean_dark", "Clean Dark"),
-            ("midnight", "Midnight Blue"),
-            ("slate", "Slate Dark"),
-            ("light", "Clean Light"),
-            ("sakura", "Sakura"),
-            ("emerald", "Emerald"),
-            ("graphite", "Graphite"),
-            ("royal", "Royal Purple"),
-            ("cyberpunk", "Cyberpunk Neon"),
-            ("dracula", "Dracula"),
-            ("ocean", "Deep Ocean"),
-            ("forest", "Forest Green"),
-            ("amber", "Amber Terminal"),
-            ("oled", "OLED Black"),
-            ("contrast", "High Contrast"),
-        ]:
+        view_menu = self.menuBar().addMenu("View")
+        appearance_menu = view_menu.addMenu("Appearance / Theme")
+        for key, label in self._theme_options():
             action = QAction(label, self)
             action.triggered.connect(lambda _=False, k=key: self.set_theme(k))
-            theme_menu.addAction(action)
+            appearance_menu.addAction(action)
+        view_menu.addSeparator()
 
-        view_menu = self.menuBar().addMenu("View")
         self.clean_mode_action = QAction("Clean view (hide page tips)", self)
         self.clean_mode_action.setCheckable(True)
         self.clean_mode_action.setChecked(bool(self.ui_clean_mode))
@@ -1324,13 +1404,16 @@ class MainWindow(QMainWindow):
         nav_items_layout.addWidget(self._nav_section("Edit"))
         self._add_nav_button(nav_items_layout, "Welcome", self._overview_page)
         self._add_nav_button(nav_items_layout, "Cheats", self._cheat_preset_hub_page)
+        self._add_nav_button(nav_items_layout, "General", self._editor_hub_page)
         self._add_nav_button(nav_items_layout, "Progression", self._progression_page)
         self._add_nav_button(nav_items_layout, "Items / Materials", self._items_page)
         self._add_nav_button(nav_items_layout, "Sigils", self._sigils_page)
         self._add_nav_button(nav_items_layout, "Weapons", self._weapons_page)
+        self._add_nav_button(nav_items_layout, "Wrightstones", self._wrightstones_page)
         self._add_nav_button(nav_items_layout, "Characters", self._characters_page)
         self._add_nav_button(nav_items_layout, "Mastery", self._mastery_mods_page)
         self._add_nav_button(nav_items_layout, "Save Health", self._save_health_page)
+        self._add_nav_button(nav_items_layout, "Settings", self._settings_page)
         self._add_nav_button(nav_items_layout, "About", self._about_page)
         nav_items_layout.addStretch(1)
 
@@ -1345,6 +1428,117 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
         self._install_common_numeric_validators()
         self._show_page("Welcome")
+
+    def _theme_options(self) -> List[tuple[str, str]]:
+        return [
+            ("modern_dark", "Modern Dark"),
+            ("clean_dark", "Clean Dark"),
+            ("midnight", "Midnight Blue"),
+            ("slate", "Slate Dark"),
+            ("light", "Clean Light"),
+            ("sakura", "Sakura"),
+            ("emerald", "Emerald"),
+            ("graphite", "Graphite"),
+            ("royal", "Royal Purple"),
+            ("cyberpunk", "Cyberpunk Neon"),
+            ("dracula", "Dracula"),
+            ("ocean", "Deep Ocean"),
+            ("forest", "Forest Green"),
+            ("amber", "Amber Terminal"),
+            ("oled", "OLED Black"),
+            ("contrast", "High Contrast"),
+        ]
+
+    def _set_theme_from_combo(self) -> None:
+        combo = getattr(self, "settings_theme_combo", None)
+        if combo is None:
+            return
+        key = combo.currentData()
+        if key:
+            self.set_theme(str(key))
+
+    def _sync_settings_controls(self) -> None:
+        combo = getattr(self, "settings_theme_combo", None)
+        if combo is not None:
+            combo.blockSignals(True)
+            try:
+                for idx in range(combo.count()):
+                    if combo.itemData(idx) == getattr(self, "current_theme", "modern_dark"):
+                        combo.setCurrentIndex(idx)
+                        break
+            finally:
+                combo.blockSignals(False)
+        pairs = [
+            ("settings_clean_check", "ui_clean_mode"),
+            ("settings_compact_check", "compact_mode"),
+            ("settings_auto_fit_check", "auto_fit_tables"),
+            ("settings_fast_load_check", "fast_load_mode"),
+        ]
+        for widget_name, attr_name in pairs:
+            widget = getattr(self, widget_name, None)
+            if widget is not None:
+                widget.blockSignals(True)
+                try:
+                    widget.setChecked(bool(getattr(self, attr_name, False)))
+                finally:
+                    widget.blockSignals(False)
+
+    def _settings_page(self) -> QWidget:
+        page = QWidget()
+        page_layout = QVBoxLayout(page)
+        page_layout.setContentsMargins(28, 24, 28, 24)
+        page_layout.setSpacing(14)
+
+        header = QLabel("Settings")
+        header.setObjectName("pageHeader")
+        page_layout.addWidget(header)
+
+        help_text = QLabel("Theme and view options live here so the main editor stays clean. These settings are saved automatically.")
+        help_text.setWordWrap(True)
+        help_text.setObjectName("helpText")
+        page_layout.addWidget(help_text)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(0, 0, 10, 0)
+        layout.setSpacing(14)
+        scroll.setWidget(content)
+        page_layout.addWidget(scroll, 1)
+
+        appearance_card = make_card("Appearance")
+        appearance_layout = QVBoxLayout(appearance_card)
+        appearance_layout.setSpacing(10)
+        appearance_layout.addWidget(QLabel("Theme"))
+        self.settings_theme_combo = QComboBox()
+        for key, label in self._theme_options():
+            self.settings_theme_combo.addItem(label, key)
+        self.settings_theme_combo.currentIndexChanged.connect(lambda *_: self._set_theme_from_combo())
+        appearance_layout.addWidget(self.settings_theme_combo)
+        layout.addWidget(appearance_card)
+
+        view_card = make_card("View / Performance")
+        view_layout = QVBoxLayout(view_card)
+        view_layout.setSpacing(8)
+        self.settings_clean_check = QCheckBox("Clean view: hide most page tips")
+        self.settings_clean_check.toggled.connect(self.set_clean_mode)
+        self.settings_compact_check = QCheckBox("Compact table rows")
+        self.settings_compact_check.toggled.connect(self.set_compact_mode)
+        self.settings_auto_fit_check = QCheckBox("Auto-fit columns after refresh")
+        self.settings_auto_fit_check.toggled.connect(self.set_auto_fit_tables)
+        self.settings_fast_load_check = QCheckBox("Fast load / lazy refresh")
+        self.settings_fast_load_check.toggled.connect(self.set_fast_load_mode)
+        for widget in (self.settings_clean_check, self.settings_compact_check, self.settings_auto_fit_check, self.settings_fast_load_check):
+            view_layout.addWidget(widget)
+        reset_btn = QPushButton("Reset Clean Defaults")
+        reset_btn.clicked.connect(self.reset_clean_view)
+        view_layout.addWidget(reset_btn)
+        layout.addWidget(view_card)
+        layout.addStretch(1)
+        self._sync_settings_controls()
+        return page
 
     def _overview_page(self) -> QWidget:
         page = QWidget()
@@ -1426,10 +1620,43 @@ class MainWindow(QMainWindow):
     def _is_gbfr_save_candidate_name(self, name: str) -> bool:
         n = str(name or "").strip()
         lower = n.lower()
-        # PC saves normally appear as GameData. Some copied/resigned/backed-up
-        # slot saves use SaveData1. Accept extension/backups too so copied files
-        # still show up, but keep the scan focused on real save names.
-        return lower.startswith("gamedata") or lower.startswith("savedata1")
+        stem = Path(n).stem.lower()
+        # Prefer obvious save names, but do not require the exact file name.
+        # Users often rename saves by game/version, for example
+        # GameData_backup, Relink_GameData_v1, or SaveData1_test.sav.
+        if "gamedata" in lower or "savedata1" in lower or "savedata" in lower:
+            return True
+        suffix = Path(n).suffix.lower()
+        # Also allow common renamed save/archive patterns to be content-sniffed.
+        if suffix in {"", ".sav", ".save", ".dat", ".bin", ".bak", ".backup"}:
+            return True
+        if any(token in stem for token in ("gbfr", "relink", "granblue")):
+            return True
+        return False
+
+    def _detect_gbfr_save_file_kind(self, path: Path, stat: Optional[Any] = None) -> Optional[str]:
+        try:
+            if stat is None:
+                stat = path.stat()
+            size = int(stat.st_size)
+            if size < 1024:
+                return None
+            # Skip obvious non-save files even if they live in the save folder.
+            if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif", ".txt", ".log", ".json", ".ini", ".xml", ".md", ".csv", ".zip", ".7z", ".rar", ".exe", ".dll"}:
+                return None
+            # GBFR saves are small enough that reading the whole candidate is OK,
+            # but avoid dragging huge unrelated files into memory during folder scans.
+            if size > 128 * 1024 * 1024:
+                return None
+            data = bytearray(path.read_bytes())
+            container = GBFRSaveData._detect_container(path, data)
+            if container.mode == "wrapped_savegamefile_slotdata":
+                return "Wrapped Save"
+            if container.mode == "raw_savedatabinary":
+                return "GameData"
+            return "Detected Save"
+        except Exception:
+            return None
 
     def scan_save_finder_base_folder(self) -> None:
         edit = getattr(self, "save_finder_base_edit", None)
@@ -1457,15 +1684,24 @@ class MainWindow(QMainWindow):
                 ]
                 for filename in files:
                     checked += 1
-                    if not self._is_gbfr_save_candidate_name(filename):
-                        continue
                     path = Path(root) / filename
                     try:
                         stat = path.stat()
+                        if stat.st_size < 1024:
+                            continue
+                        if not self._is_gbfr_save_candidate_name(filename):
+                            continue
+                        kind = self._detect_gbfr_save_file_kind(path, stat)
+                        if not kind:
+                            continue
+                        lower = filename.lower()
+                        if "savedata1" in lower:
+                            kind = "SaveData1"
+                        elif "gamedata" in lower:
+                            kind = "GameData"
                         modified = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
-                        kind = "GameData" if filename.lower().startswith("gamedata") else "SaveData1"
                         rows.append([filename, kind, str(path.parent), modified])
-                        meta.append({"path": str(path), "name": filename, "kind": kind, "modified": modified})
+                        meta.append({"path": str(path), "name": filename, "kind": kind, "modified": modified, "size": int(stat.st_size)})
                         if len(rows) >= max_hits:
                             break
                     except Exception:
@@ -1480,7 +1716,7 @@ class MainWindow(QMainWindow):
         self.save_finder_model.set_rows(rows)
         if hasattr(self, "save_finder_table"):
             self._set_table_widths(self.save_finder_table, {0: 160, 1: 110, 2: 720, 3: 160})
-        msg = f"Found {len(rows):,} save candidate(s) under {base} and its subfolders."
+        msg = f"Found {len(rows):,} detected GBFR save(s) under {base} and its subfolders."
         if len(rows) >= max_hits:
             msg += f" Stopped at {max_hits:,} results."
         if hasattr(self, "save_finder_status"):
@@ -1512,7 +1748,7 @@ class MainWindow(QMainWindow):
         help_text = QLabel("A clean checklist for whether the opened save is safe to edit, how many reusable empty slots are available, and what still needs research.")
         help_text.setWordWrap(True)
         help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
+        help_text.setVisible(False)
 
         card = make_card("Current save status")
         card_layout = QVBoxLayout(card)
@@ -1641,8 +1877,8 @@ class MainWindow(QMainWindow):
     def _save_map_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(12)
+        layout.setContentsMargins(24, 16, 24, 16)
+        layout.setSpacing(8)
         header = QLabel("Save Map")
         header.setObjectName("pageHeader")
         layout.addWidget(header)
@@ -1754,128 +1990,611 @@ class MainWindow(QMainWindow):
         layout.addLayout(row)
         return page
 
-    def _editor_hub_page(self) -> QWidget:
-        """Player-facing basic editor page.
 
-        This is intentionally less technical than the row/catalog pages. It
-        collects the common safe actions in one place, then links out to the
-        detailed editors only when the user needs row-level control.
+    def _general_character_choices(self) -> List[Dict[str, Any]]:
+        """Character choices used by General party/roster tools."""
+        choices: List[Dict[str, Any]] = []
+        try:
+            base = list(getattr(self, "character_owner_choices", []) or [])
+            for choice in base:
+                try:
+                    h = int(choice.get("hash", 0)) & 0xFFFFFFFF
+                except Exception:
+                    continue
+                if h in (0, EMPTY_HASH):
+                    continue
+                label = str(choice.get("label") or choice.get("name") or f"0x{h:08X}")
+                choices.append({"label": label, "hash": h, "name": choice.get("name", label), "gbid": choice.get("gbid", "")})
+        except Exception:
+            pass
+        if not choices:
+            try:
+                for entry in self.item_db.by_hash.values():
+                    gbid = str(getattr(entry, "item_id", "") or "").upper()
+                    if gbid.startswith("PL"):
+                        choices.append({
+                            "label": f"{entry.display_name} ({entry.item_id})",
+                            "hash": int(entry.hash_value) & 0xFFFFFFFF,
+                            "name": entry.display_name,
+                            "gbid": entry.item_id,
+                        })
+            except Exception:
+                pass
+        seen = set()
+        out = []
+        for choice in choices:
+            h = int(choice.get("hash", 0)) & 0xFFFFFFFF
+            if h in seen:
+                continue
+            seen.add(h)
+            out.append(choice)
+        return out
+
+    def _party_slot_records_sw_order(self) -> List[UnitRecord]:
+        """Return party 2201 records in Save Wizard visible slot order.
+
+        Save Wizard codes use occurrence order for FF990800:
+        Slot 1 / on-screen leader = 4th occurrence, Slot 2 = 3rd,
+        Slot 3 = 2nd, Slot 4 = 1st. In file order these are reversed,
+        so this maps the UI to the exact code order.
         """
+        if not self.save:
+            return []
+        recs: List[UnitRecord] = []
+        try:
+            for rec in self.save.records:
+                if rec.kind == "uint" and int(rec.id_type) == 2201:
+                    recs.append(rec)
+        except Exception:
+            return []
+        recs = sorted(recs, key=lambda r: int(getattr(r, "value_data_offset", 0)))
+        return list(reversed(recs[:4]))
+
+    def _party_slot_record(self, slot_index: int) -> Optional[UnitRecord]:
+        try:
+            recs = self._party_slot_records_sw_order()
+            idx = int(slot_index)
+            if 0 <= idx < len(recs):
+                return recs[idx]
+        except Exception:
+            pass
+        return None
+
+    def _party_slot_fields(self, slot_index: int) -> Dict[int, UnitRecord]:
+        rec = self._party_slot_record(slot_index)
+        if not rec or not self.save:
+            return {}
+        try:
+            grouped = self.save.group_by_unit([2201, 2202, 2203])
+            return dict(grouped.get(int(rec.unit_id), {}) or {})
+        except Exception:
+            return {}
+
+    def _set_party_leader_flags(self) -> int:
+        """Keep Slot 1 as the active/on-screen leader row."""
+        changed = 0
+        for idx in range(4):
+            fields = self._party_slot_fields(idx)
+            leader_rec = fields.get(2203)
+            if leader_rec is not None:
+                desired = bool(idx == 0)
+                old = bool(self._record_first_value(leader_rec, False))
+                if old != desired and self._set_record_first_value(leader_rec, desired, f"party slot {idx + 1} leader flag 2203"):
+                    changed += 1
+            alt_rec = fields.get(2202)
+            if alt_rec is not None:
+                old_alt = bool(self._record_first_value(alt_rec, False))
+                if old_alt and self._set_record_first_value(alt_rec, False, f"party slot {idx + 1} secondary flag 2202"):
+                    changed += 1
+        return changed
+
+    def _set_combo_to_hash(self, combo: QComboBox, value: int) -> None:
+        try:
+            target = int(value) & 0xFFFFFFFF
+        except Exception:
+            target = EMPTY_HASH
+        for i in range(combo.count()):
+            data = combo.itemData(i)
+            try:
+                if data is not None and int(data) == target:
+                    combo.setCurrentIndex(i)
+                    return
+            except Exception:
+                pass
+        if combo.count():
+            combo.setCurrentIndex(0)
+
+    def refresh_general_character_controls(self) -> None:
+        self._general_party_loading = True
+        try:
+            choices = self._general_character_choices()
+            party_combos = list(getattr(self, "general_party_combos", []) or [])
+            roster_combo = getattr(self, "general_roster_character_combo", None)
+
+            current_values = []
+            for idx, combo in enumerate(party_combos):
+                current_values.append(combo.currentData() if combo is not None else None)
+
+            for idx, combo in enumerate(party_combos):
+                combo.blockSignals(True)
+                combo.clear()
+                for choice in choices:
+                    combo.addItem(str(choice.get("label")), int(choice.get("hash")) & 0xFFFFFFFF)
+                current = None
+                rec = self._party_slot_record(idx)
+                if rec is not None:
+                    current = self._record_first_value(rec, EMPTY_HASH)
+                elif current_values[idx] is not None:
+                    current = current_values[idx]
+                self._set_combo_to_hash(combo, int(current or EMPTY_HASH))
+                combo.blockSignals(False)
+
+            if roster_combo is not None:
+                current = roster_combo.currentData()
+                roster_combo.blockSignals(True)
+                roster_combo.clear()
+                for choice in choices:
+                    roster_combo.addItem(str(choice.get("label")), int(choice.get("hash")) & 0xFFFFFFFF)
+                if current is not None:
+                    self._set_combo_to_hash(roster_combo, int(current))
+                roster_combo.blockSignals(False)
+
+            if hasattr(self, "general_party_status"):
+                if not self.save:
+                    self.general_party_status.setText("Open a save to edit party slots or character selection.")
+                else:
+                    recs = self._party_slot_records_sw_order()
+                    mapping = ", ".join([f"Slot {i + 1}=unit {int(rec.unit_id)}" for i, rec in enumerate(recs[:4])])
+                    self.general_party_status.setText(
+                        f"Ready. Found {len(recs[:4])}/4 party slot records using 2201 / FF990800. Changes auto-apply in memory. {mapping}"
+                    )
+        finally:
+            self._general_party_loading = False
+
+    def _general_synced_value_specs(self) -> List[Dict[str, Any]]:
+        return [
+            {"field_id": 1104, "label": "Rupies", "edit": "general_rupies_edit", "cap": 99_999_999},
+            {"field_id": 1112, "label": "Mastery Points", "edit": "general_mastery_points_edit", "cap": 9_999_999},
+        ]
+
+    def _general_synced_value_record(self, field_id: int) -> Optional[UnitRecord]:
+        if not self.save:
+            return None
+        return self.save.find_first("int", int(field_id), 0)
+
+    def _set_general_value_text(self, edit_name: str, value: Any) -> None:
+        edit = getattr(self, edit_name, None)
+        if edit is None:
+            return
+        edit.blockSignals(True)
+        try:
+            edit.setText("" if value is None else str(value))
+        finally:
+            edit.blockSignals(False)
+
+    def refresh_general_synced_values(self) -> None:
+        self._general_values_loading = True
+        try:
+            found = 0
+            parts = []
+            for spec in self._general_synced_value_specs():
+                rec = self._general_synced_value_record(int(spec["field_id"]))
+                if rec is None:
+                    self._set_general_value_text(str(spec["edit"]), "")
+                    parts.append(f"{spec['label']}: missing field {spec['field_id']}")
+                    continue
+                value = self._record_first_value(rec, 0)
+                self._set_general_value_text(str(spec["edit"]), value)
+                found += 1
+                parts.append(f"{spec['label']}={self.format_value(value)}")
+            label = getattr(self, "general_synced_values_status", None)
+            if label is not None:
+                if not self.save:
+                    label.setText("Open a save to edit Rupies and Mastery Points.")
+                else:
+                    label.setText(f"Synced UserDataManager values found {found}/2 · " + " · ".join(parts))
+        finally:
+            self._general_values_loading = False
+
+    def _schedule_general_synced_value_apply(self, field_id: int, edit_name: str, label: str, cap: int) -> None:
+        if getattr(self, "_general_values_loading", False):
+            return
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return
+        if not self.save:
+            return
+        timers = getattr(self, "_general_value_timers", None)
+        if not isinstance(timers, dict):
+            self._general_value_timers = {}
+            timers = self._general_value_timers
+        timer = timers.get(int(field_id))
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timers[int(field_id)] = timer
+        try:
+            timer.timeout.disconnect()
+        except Exception:
+            pass
+        timer.timeout.connect(lambda fid=int(field_id), en=str(edit_name), lab=str(label), c=int(cap): self.apply_general_synced_value(fid, en, lab, c, auto=True))
+        timer.start(140)
+
+    def apply_general_synced_value(self, field_id: int, edit_name: str, label: str, cap: int, *, auto: bool = False) -> bool:
+        if getattr(self, "_general_values_loading", False):
+            return False
+        if not self.save:
+            if not auto:
+                QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return False
+        edit = getattr(self, edit_name, None)
+        if edit is None:
+            return False
+        raw = str(edit.text() or "").strip().replace(",", "")
+        if not raw:
+            return False
+        try:
+            value = int(raw, 0)
+        except Exception:
+            if not auto:
+                QMessageBox.warning(self, "Invalid value", f"{label} must be a decimal number or 0xHEX value.")
+            return False
+        value = max(0, min(int(cap), int(value)))
+        if str(value) != raw:
+            self._set_general_value_text(edit_name, value)
+        rec = self._general_synced_value_record(int(field_id))
+        if rec is None:
+            status = getattr(self, "general_synced_values_status", None)
+            msg = f"{label} field {field_id} was not found in this save."
+            if status is not None:
+                status.setText(msg)
+            if not auto:
+                QMessageBox.warning(self, "Field not found", msg)
+            return False
+        current = self._record_first_value(rec, 0)
+        if int(current or 0) == int(value):
+            return False
+        ok = self._set_record_first_value(rec, int(value), f"{label} UserDataManager {field_id}")
+        if ok:
+            self._mark_stale_pages(["General", "Items / Materials", "Cheats", "Save Health"])
+            status = getattr(self, "general_synced_values_status", None)
+            msg = f"Auto-applied {label} = {self.format_value(value)} in memory. Save when ready."
+            if status is not None:
+                status.setText(msg)
+            self.statusBar().showMessage(msg, 4500)
+            try:
+                if hasattr(self, "item_model"):
+                    # The Items page shows the same wallet rows; keep it marked
+                    # stale and refresh if already populated/opened.
+                    self.refresh_item_rows()
+            except Exception:
+                pass
+        return bool(ok)
+
+    def max_general_synced_values(self) -> None:
+        changed = 0
+        for spec in self._general_synced_value_specs():
+            self._set_general_value_text(str(spec["edit"]), int(spec["cap"]))
+            if self.apply_general_synced_value(int(spec["field_id"]), str(spec["edit"]), str(spec["label"]), int(spec["cap"]), auto=False):
+                changed += 1
+        self.refresh_general_synced_values()
+        self.statusBar().showMessage(f"Max synced General values applied: {changed} field(s) changed.", 4500)
+
+    def _schedule_general_party_auto_apply(self) -> None:
+        if getattr(self, "_general_party_loading", False):
+            return
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return
+        if not self.save:
+            return
+        timer = getattr(self, "_general_party_auto_apply_timer", None)
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(lambda: self.apply_general_party_slots(auto=True))
+            self._general_party_auto_apply_timer = timer
+        timer.start(180)
+
+    def apply_general_party_slots(self, auto: bool = False) -> None:
+        if not self.save:
+            if not auto:
+                QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return
+        changed = 0
+        missing = 0
+        for idx, combo in enumerate(list(getattr(self, "general_party_combos", []) or [])):
+            data = combo.currentData()
+            if data is None:
+                continue
+            rec = self._party_slot_record(idx)
+            if rec is None:
+                missing += 1
+                continue
+            if self._set_record_first_value(rec, int(data) & 0xFFFFFFFF, f"party slot {idx + 1} character 2201"):
+                changed += 1
+        changed += self._set_party_leader_flags()
+        self._mark_stale_pages(["General", "Characters", "Save Health"])
+        if not auto:
+            self.refresh_general_character_controls()
+        msg = f"Party slots updated: {changed} field(s) changed"
+        if missing:
+            msg += f", {missing} missing"
+        suffix = ". Auto-applied in memory. Save when ready." if auto else ". Save As to test in game."
+        if hasattr(self, "general_party_status"):
+            self.general_party_status.setText(msg + suffix)
+        self.statusBar().showMessage(msg + suffix, 5000)
+
+    def apply_general_party_leader_only(self) -> None:
+        if not self.save:
+            QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return
+        combos = list(getattr(self, "general_party_combos", []) or [])
+        if not combos or combos[0].currentData() is None:
+            self.statusBar().showMessage("Pick a Slot 1 / Leader character first.", 3000)
+            return
+        rec = self._party_slot_record(0)
+        if rec is None:
+            QMessageBox.warning(self, "Missing party slot", "Could not find the Slot 1 / Leader 2201 record.")
+            return
+        changed = 0
+        if self._set_record_first_value(rec, int(combos[0].currentData()) & 0xFFFFFFFF, "party slot 1 leader character 2201"):
+            changed += 1
+        changed += self._set_party_leader_flags()
+        self._mark_stale_pages(["General", "Characters", "Save Health"])
+        self.refresh_general_character_controls()
+        msg = f"Leader slot updated: {changed} field(s) changed. Save As to test in game."
+        if hasattr(self, "general_party_status"):
+            self.general_party_status.setText(msg)
+        self.statusBar().showMessage(msg, 6000)
+
+    def _character_meta_by_hash(self, character_hash: int) -> Optional[Dict[str, Any]]:
+        try:
+            target = int(character_hash) & 0xFFFFFFFF
+        except Exception:
+            return None
+        try:
+            if not getattr(self, "character_rows_meta", None):
+                self.refresh_character_rows()
+        except Exception:
+            pass
+        for meta in getattr(self, "character_rows_meta", []) or []:
+            try:
+                rec = meta.get("hash_rec")
+                value = self._record_first_value(rec, 0) & 0xFFFFFFFF
+                if value == target:
+                    return meta
+            except Exception:
+                continue
+        if self.save:
+            try:
+                grouped = self.save.group_by_unit(self.CHARACTER_FIELD_IDS)
+                for unit_id, fields in grouped.items():
+                    try:
+                        if int(self._record_first_value(fields.get(1301), 0)) & 0xFFFFFFFF == target:
+                            return {
+                                "unit_id": int(unit_id),
+                                "slot": int(unit_id) - 10000,
+                                "hash_rec": fields.get(1301),
+                                "unlock_rec": fields.get(1302),
+                                "fields": fields,
+                            }
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+        return None
+
+    def _apply_character_selection_flags(self, meta: Dict[str, Any]) -> int:
+        fields = dict(meta.get("fields") or {})
+        changed = 0
+        # 1305 is the strongest observed "in selection/owned" flag. The extra
+        # small flags keep rows from looking empty/inactive after being enabled.
+        for field_id, value in [
+            (1305, 1),
+            (1316, 1),
+            (1317, 1),
+            (1318, 1),
+            (1322, 1),
+        ]:
+            rec = fields.get(field_id)
+            if rec is not None:
+                old = self._record_first_value(rec, 0)
+                new_value = max(int(old or 0), int(value))
+                if self._set_record_first_value(rec, new_value, f"character selection field {field_id}"):
+                    changed += 1
+        for field_id, value in [
+            (1308, 1),   # level
+            (1309, 150), # starter MSP-like value if blank
+            (1310, 10),  # starter progress-like value if blank
+        ]:
+            rec = fields.get(field_id)
+            if rec is not None:
+                old = int(self._record_first_value(rec, 0) or 0)
+                if old <= 0 and self._set_record_first_value(rec, int(value), f"character starter field {field_id}"):
+                    changed += 1
+        return changed
+
+    def add_general_character_to_selection(self) -> None:
+        if not self.save:
+            QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return
+        combo = getattr(self, "general_roster_character_combo", None)
+        if combo is None or combo.currentData() is None:
+            QMessageBox.information(self, "No character selected", "Pick a character first.")
+            return
+        char_hash = int(combo.currentData()) & 0xFFFFFFFF
+        meta = self._character_meta_by_hash(char_hash)
+        if not meta:
+            QMessageBox.warning(self, "Character row not found", "This save does not have a matching 1301 / FF150500 character row for that character.")
+            return
+        changed = self._apply_character_selection_flags(meta)
+        self._mark_stale_pages(["General", "Characters", "Save Health"])
+        try:
+            self.refresh_character_rows()
+        except Exception:
+            pass
+        self.refresh_general_character_controls()
+        name = combo.currentText()
+        msg = f"Character enabled: {name}. {changed} field(s) changed."
+        if hasattr(self, "general_party_status"):
+            self.general_party_status.setText(msg + " Save As to test in game.")
+        self.statusBar().showMessage(msg + " Save As to test in game.", 6000)
+
+
+    def _editor_hub_page(self) -> QWidget:
+        """Focused General page for party and character selection."""
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(28, 24, 28, 24)
-        page_layout.setSpacing(12)
+        page_layout.setSpacing(14)
 
-        header = QLabel("Basic Editor")
+        header = QLabel("General")
         header.setObjectName("pageHeader")
         page_layout.addWidget(header)
-        help_text = QLabel(
-            "Start here for normal save editing. Use exact-value buttons for quick changes, "
-            "then open the row tabs only when you need to inspect or replace a specific item, sigil, weapon, or character."
-        )
+
+        help_text = QLabel("Change your active party slots or enable characters in your selectable roster.")
         help_text.setWordWrap(True)
         help_text.setObjectName("helpText")
         page_layout.addWidget(help_text)
 
-        self.basic_workflow_label = QLabel("Open a save to start. The editor will show safe next steps here.")
-        self.basic_workflow_label.setObjectName("subtleText")
-        self.basic_workflow_label.setWordWrap(True)
-        page_layout.addWidget(self.basic_workflow_label)
-
-        self.edit_hub_summary = QLabel("Open a save to see editable slot counts.")
-        self.edit_hub_summary.setObjectName("subtleText")
-        self.edit_hub_summary.setWordWrap(True)
-        page_layout.addWidget(self.edit_hub_summary)
-
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         content = QWidget()
         layout = QVBoxLayout(content)
         layout.setContentsMargins(0, 0, 10, 0)
-        layout.setSpacing(12)
+        layout.setSpacing(14)
         scroll.setWidget(content)
         page_layout.addWidget(scroll, 1)
 
-        top_row = QHBoxLayout()
-        file_box = make_card("1. Open / Save safely")
-        file_layout = QVBoxLayout(file_box)
-        file_layout.addWidget(QLabel("Use Save As for the first edited copy. Backup + Save Original is there only after you trust the edit."))
-        self._add_action_grid(file_layout, [
-            ("Open Save", self.open_save),
-            ("Save As Edited Copy", self.save_as),
-            ("Backup + Save Original", self.save_original),
-            ("Open Save Health", lambda: self._show_page("Save Health")),
-        ], columns=2, primary_first=True)
-        top_row.addWidget(file_box, 1)
+        party_box = make_card("Party Slots")
+        party_layout = QVBoxLayout(party_box)
+        party_layout.setSpacing(12)
 
-        exact_box = make_card("2. Exact value quick edits")
-        exact_layout = QVBoxLayout(exact_box)
-        exact_layout.addWidget(QLabel("Patch known existing rows to a value you choose. These do not create new rows."))
-        self._add_action_grid(exact_layout, [
-            ("Set Known Items To...", self.cheat_set_known_item_quantities_custom),
-            ("Set Sigil Levels To...", self.cheat_set_known_sigil_levels_custom),
-            ("Set Weapon XP To...", self.cheat_set_known_weapon_xp_custom),
-            ("Set Character Levels To...", self.cheat_set_character_levels_custom),
-        ], columns=2)
-        top_row.addWidget(exact_box, 1)
-        layout.addLayout(top_row)
+        party_help = QLabel("Pick the four characters shown in your party. Slot 1 is the on-screen leader. Combo changes auto-apply in memory; save when ready.")
+        party_help.setWordWrap(True)
+        party_help.setObjectName("subtleText")
+        party_layout.addWidget(party_help)
 
-        middle_row = QHBoxLayout()
-        row_edit_box = make_card("3. Row editors")
-        row_edit_layout = QVBoxLayout(row_edit_box)
-        row_edit_layout.addWidget(QLabel("Open a specific tab when you want to select one row, search/filter, or replace a hash."))
-        self._add_action_grid(row_edit_layout, [
-            ("Items / Materials", lambda: self._show_page("Items / Materials")),
-            ("Sigils", lambda: self._show_page("Sigils")),
-            ("Weapons", lambda: self._show_page("Weapons")),
-            ("Characters", lambda: self._show_page("Characters")),
-            ("Progression", lambda: self._show_page("Progression")),
-        ], columns=2)
-        middle_row.addWidget(row_edit_box, 1)
+        party_grid = QGridLayout()
+        party_grid.setHorizontalSpacing(14)
+        party_grid.setVerticalSpacing(10)
+        self.general_party_combos = []
+        for idx in range(4):
+            combo = QComboBox()
+            combo.setMinimumWidth(360)
+            combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            combo.currentIndexChanged.connect(lambda *_: self._schedule_general_party_auto_apply())
+            self.general_party_combos.append(combo)
 
-        add_box = make_card("4. Add packs / empty-slot tools")
-        add_layout = QVBoxLayout(add_box)
-        add_layout.addWidget(QLabel("These add into reusable empty slots. They do not resize/rebuild the save yet."))
-        self._add_action_grid(add_layout, [
-            ("Open Cheats", lambda: self._show_page("Cheats")),
-            ("Add Item to Empty Slot", self.add_item_to_empty_slot),
-            ("Add Sigil to Empty Slot", self.add_sigil_to_empty_slot),
-            ("Add Weapon to Empty Slot", self.add_weapon_to_empty_slot),
-            ("Repair Unsafe Inventory Rows", self.repair_unsafe_material_add_all_rows),
-            ("Add All Known V/V+ Sigils", self.cheat_add_all_known_v_sigils),
-        ], columns=2)
-        middle_row.addWidget(add_box, 1)
-        layout.addLayout(middle_row)
+            label = QLabel(f"Slot {idx + 1}" + (" / Leader" if idx == 0 else ""))
+            label.setMinimumWidth(110)
+            party_grid.addWidget(label, idx, 0)
+            party_grid.addWidget(combo, idx, 1)
+        party_layout.addLayout(party_grid)
 
-        bottom_row = QHBoxLayout()
-        max_box = make_card("Optional max cheats")
-        max_layout = QVBoxLayout(max_box)
-        max_layout.addWidget(QLabel("Fast bulk edits for known rows already present in your save."))
-        self._add_action_grid(max_layout, [
-            ("Max Known Item Quantities", self.cheat_max_known_item_quantities),
-            ("Max Sigil Levels + Lock", self.cheat_max_sigil_levels_and_locks),
-            ("Max Weapon XP + Flags", self.cheat_max_weapon_xp_and_flags),
-            ("Max Character Levels", self.cheat_max_character_levels),
-        ], columns=2)
-        bottom_row.addWidget(max_box, 1)
+        party_actions = QHBoxLayout()
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.clicked.connect(self.refresh_general_character_controls)
+        apply_leader_btn = QPushButton("Set Leader Now")
+        apply_leader_btn.clicked.connect(self.apply_general_party_leader_only)
+        apply_party_btn = QPushButton("Resync Party Now")
+        apply_party_btn.setProperty("class", "primaryButton")
+        apply_party_btn.clicked.connect(self.apply_general_party_slots)
+        open_chars_btn = QPushButton("Open Characters")
+        open_chars_btn.clicked.connect(lambda: self._show_page("Characters"))
+        party_actions.addWidget(refresh_btn)
+        party_actions.addWidget(apply_leader_btn)
+        party_actions.addWidget(apply_party_btn)
+        party_actions.addWidget(open_chars_btn)
+        party_actions.addStretch(1)
+        party_layout.addLayout(party_actions)
+        layout.addWidget(party_box)
 
-        cleanup_box = make_card("Cleanup / research only when needed")
-        cleanup_layout = QVBoxLayout(cleanup_box)
-        cleanup_layout.addWidget(QLabel("Use these when names are missing or you need to map new IDs."))
-        self._add_action_grid(cleanup_layout, [
-            ("Show Unknown Sigils", self.show_unknown_sigils),
-            ("Copy Unknown Sigil Hashes", self.copy_visible_unknown_sigil_hashes),
-            ("Open Sigil Catalog", lambda: self._show_page("Sigil/Gem ID Catalog")),
-            ("Open ID Cleanup", lambda: self._show_page("ID Cleanup")),
-        ], columns=2)
-        bottom_row.addWidget(cleanup_box, 1)
-        layout.addLayout(bottom_row)
+        roster_box = make_card("Character Selection")
+        roster_layout = QVBoxLayout(roster_box)
+        roster_layout.setSpacing(12)
 
-        self.basic_safety_label = QLabel("Safety status will appear after opening a save.")
-        self.basic_safety_label.setObjectName("subtleText")
-        self.basic_safety_label.setWordWrap(True)
-        layout.addWidget(self.basic_safety_label)
+        roster_help = QLabel("Enable a character so they appear in your selectable roster. Save As first, then test in game.")
+        roster_help.setWordWrap(True)
+        roster_help.setObjectName("subtleText")
+        roster_layout.addWidget(roster_help)
+
+        roster_row = QHBoxLayout()
+        roster_row.addWidget(QLabel("Character"))
+        self.general_roster_character_combo = QComboBox()
+        self.general_roster_character_combo.setMinimumWidth(420)
+        self.general_roster_character_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        roster_row.addWidget(self.general_roster_character_combo, 1)
+        roster_layout.addLayout(roster_row)
+
+        roster_actions = QHBoxLayout()
+        enable_btn = QPushButton("Add / Enable Character")
+        enable_btn.setProperty("class", "primaryButton")
+        enable_btn.clicked.connect(self.add_general_character_to_selection)
+        roster_actions.addWidget(enable_btn)
+        roster_actions.addStretch(1)
+        roster_layout.addLayout(roster_actions)
+        layout.addWidget(roster_box)
+
+        values_box = make_card("Synced Values")
+        values_layout = QVBoxLayout(values_box)
+        values_layout.setSpacing(10)
+        values_help = QLabel(
+            "These edit the direct UserDataManager values the game reads for the top bar. "
+            "They stay synced with the Wallet / Profile rows on Items / Materials."
+        )
+        values_help.setWordWrap(True)
+        values_help.setObjectName("subtleText")
+        values_layout.addWidget(values_help)
+
+        values_grid = QGridLayout()
+        values_grid.setHorizontalSpacing(12)
+        values_grid.setVerticalSpacing(8)
+        self.general_rupies_edit = QLineEdit()
+        self.general_rupies_edit.setPlaceholderText("Rupies / 1104")
+        self.general_mastery_points_edit = QLineEdit()
+        self.general_mastery_points_edit.setPlaceholderText("Mastery Points / 1112")
+        for edit in (self.general_rupies_edit, self.general_mastery_points_edit):
+            edit.setMinimumHeight(32)
+            edit.setFont(QFont("Segoe UI", 10))
+        self.general_rupies_edit.textChanged.connect(
+            lambda *_: self._schedule_general_synced_value_apply(1104, "general_rupies_edit", "Rupies", 99_999_999)
+        )
+        self.general_mastery_points_edit.textChanged.connect(
+            lambda *_: self._schedule_general_synced_value_apply(1112, "general_mastery_points_edit", "Mastery Points", 9_999_999)
+        )
+        values_grid.addWidget(QLabel("Rupies"), 0, 0)
+        values_grid.addWidget(self.general_rupies_edit, 0, 1)
+        values_grid.addWidget(QLabel("Mastery Points"), 1, 0)
+        values_grid.addWidget(self.general_mastery_points_edit, 1, 1)
+        values_layout.addLayout(values_grid)
+
+        values_actions = QHBoxLayout()
+        refresh_values_btn = QPushButton("Refresh Values")
+        refresh_values_btn.clicked.connect(self.refresh_general_synced_values)
+        max_values_btn = QPushButton("Max Rupies + Mastery Points")
+        max_values_btn.clicked.connect(self.max_general_synced_values)
+        open_items_btn = QPushButton("Open Items")
+        open_items_btn.clicked.connect(lambda: self._show_page("Items / Materials"))
+        values_actions.addWidget(refresh_values_btn)
+        values_actions.addWidget(max_values_btn)
+        values_actions.addWidget(open_items_btn)
+        values_actions.addStretch(1)
+        values_layout.addLayout(values_actions)
+
+        self.general_synced_values_status = QLabel("Open a save to edit Rupies and Mastery Points.")
+        self.general_synced_values_status.setObjectName("subtleText")
+        self.general_synced_values_status.setWordWrap(True)
+        values_layout.addWidget(self.general_synced_values_status)
+        layout.addWidget(values_box)
+
+        self.general_party_status = QLabel("Open a save to edit party slots or character selection.")
+        self.general_party_status.setObjectName("subtleText")
+        self.general_party_status.setWordWrap(True)
+        layout.addWidget(self.general_party_status)
+
         layout.addStretch(1)
         return page
 
@@ -1933,7 +2652,7 @@ class MainWindow(QMainWindow):
             "Fast cheats for rows already present in the loaded save. These do not add new FlatBuffer rows.",
             [
                 ("Max Items / Currency", self.cheat_max_known_item_quantities),
-                ("Max Sigils + Lock", self.cheat_max_sigil_levels_and_locks),
+                ("Max Sigils + Traits + Lock", self.cheat_max_sigil_levels_and_locks),
                 ("Max Weapons 999,999,999", self.cheat_max_weapon_xp_and_flags),
                 ("Max Characters 999,999,999", self.cheat_max_character_levels),
             ],
@@ -1946,7 +2665,7 @@ class MainWindow(QMainWindow):
             "Use these when you want a typed value instead of a max value. These now skip extra confirmation popups.",
             [
                 ("Set Items To...", self.cheat_set_known_item_quantities_custom),
-                ("Set Sigil Levels To...", self.cheat_set_known_sigil_levels_custom),
+                ("Set Sigil + Trait Levels To...", self.cheat_set_known_sigil_levels_custom),
                 ("Set Weapon XP To...", self.cheat_set_known_weapon_xp_custom),
                 ("Set Character Values To...", self.cheat_set_character_levels_custom),
             ],
@@ -1978,7 +2697,7 @@ class MainWindow(QMainWindow):
                 ("Normal All Attack Power", lambda _=False: self.apply_mastery_sw_normal_effect_sweep(0xC4925BD7, "Attack Power Up")),
                 ("Normal All Critical Rate", lambda _=False: self.apply_mastery_sw_normal_effect_sweep(0x6757C645, "Critical Rate")),
                 ("Overmastery 20%", lambda _=False: self.apply_mastery_sw_overmastery_value_sweep(0x200)),
-                ("Overmastery 80%", lambda _=False: self.apply_mastery_sw_overmastery_value_sweep(0xFFFFFFFF)),
+                ("Overmastery 80%", lambda _=False: self.apply_mastery_sw_overmastery_value_sweep(OVERMASTERY_VALUE_MAX)),
                 ("Open Mastery Editor", lambda _=False: self._show_page("Mastery")),
             ],
             columns=4,
@@ -2018,8 +2737,9 @@ class MainWindow(QMainWindow):
         notes = make_card("Notes")
         notes_layout = QVBoxLayout(notes)
         notes_label = QLabel(
-            "Sigil equipment writes are still guarded until we map the real equip relation. "
-            "Add actions reuse empty existing slots only. Max buttons update the status bar instead of opening completion dialogs."
+            "Sigil cheats now accept the current Sigil / Gem database category, update linked 120M trait-level rows where present, "
+            "and preserve the Save Wizard assignment pattern: assigned rows use 2706 character hash / 2707=2; unassigned locked rows use 2707=3. "
+            "Add actions reuse existing empty slots only. Max buttons update the status bar instead of opening completion dialogs."
         )
         notes_label.setWordWrap(True)
         notes_label.setObjectName("subtleText")
@@ -2151,7 +2871,7 @@ class MainWindow(QMainWindow):
             ("Repair Unsafe Inventory", "sw-repair-unsafe-material-addall"),
         ])
         add_section("Sigils", [
-            ("Max Existing Sigils + Lock", "sw-max-current-sigils"),
+            ("Max Existing Sigils + Traits + Lock", "sw-max-current-sigils"),
             ("Add All Known V/V+", "sw-add-all-known-v-sigils"),
             ("Add Basic V Set", "sw-add-basic-v-sigils"),
             ("Add Meta Core", "sw-add-meta-sigils"),
@@ -2176,7 +2896,7 @@ class MainWindow(QMainWindow):
         custom_row = QHBoxLayout()
         for text, slot in [
             ("Set Known Items To...", self.cheat_set_known_item_quantities_custom),
-            ("Set Sigils To...", self.cheat_set_known_sigil_levels_custom),
+            ("Set Sigil + Trait Levels To...", self.cheat_set_known_sigil_levels_custom),
             ("Set Weapons To...", self.cheat_set_known_weapon_xp_custom),
             ("Set Characters To...", self.cheat_set_character_levels_custom),
         ]:
@@ -2507,7 +3227,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(help_text)
         self.preset_filter_edit = QLineEdit()
         self.preset_filter_edit.setPlaceholderText("Filter presets by category, name, item/sigil/weapon, or description...")
-        self.preset_filter_edit.textChanged.connect(lambda _: self.refresh_preset_rows())
+        self._connect_debounced_text_changed(self.preset_filter_edit, "preset_filter", self.refresh_preset_rows, 220)
         layout.addWidget(self.preset_filter_edit)
         self.preset_table = QTableView()
         self.preset_table.setModel(self.preset_model)
@@ -2621,14 +3341,14 @@ class MainWindow(QMainWindow):
 
         grid = QGridLayout()
         self.add_browser_qty_spin = QSpinBox(); self.add_browser_qty_spin.setRange(1, 99_999_999); self.add_browser_qty_spin.setValue(99)
-        self.add_browser_level_spin = QSpinBox(); self.add_browser_level_spin.setRange(0, 99); self.add_browser_level_spin.setValue(15)
+        self.add_browser_level_spin = QSpinBox(); self.add_browser_level_spin.setRange(1, SIGIL_LEVEL_MAX); self.add_browser_level_spin.setValue(SIGIL_LEVEL_MAX)
         self.add_browser_xp_spin = QSpinBox(); self.add_browser_xp_spin.setRange(0, 2_147_483_647); self.add_browser_xp_spin.setValue(0)
-        self.add_browser_locked_check = QCheckBox("Lock new sigil"); self.add_browser_locked_check.setChecked(True)
-        self.add_browser_equip_combo = QComboBox(); self.add_browser_equip_combo.addItem("None / Unequipped", EMPTY_HASH)
+        self.add_browser_locked_check = QCheckBox("Lock if unassigned (2707=3)"); self.add_browser_locked_check.setChecked(True)
+        self.add_browser_equip_combo = QComboBox(); self.add_browser_equip_combo.addItem("None / Unassigned", EMPTY_HASH)
         grid.addWidget(QLabel("Material / Wallet Quantity"), 0, 0); grid.addWidget(self.add_browser_qty_spin, 0, 1)
         grid.addWidget(QLabel("Sigil Level"), 1, 0); grid.addWidget(self.add_browser_level_spin, 1, 1)
         grid.addWidget(QLabel("Weapon XP"), 2, 0); grid.addWidget(self.add_browser_xp_spin, 2, 1)
-        grid.addWidget(QLabel("Equip New Sigil To"), 3, 0); grid.addWidget(self.add_browser_equip_combo, 3, 1)
+        grid.addWidget(QLabel("Assign Sigil To"), 3, 0); grid.addWidget(self.add_browser_equip_combo, 3, 1)
         grid.addWidget(self.add_browser_locked_check, 4, 0, 1, 2)
         detail_layout.addLayout(grid)
 
@@ -2684,7 +3404,7 @@ class MainWindow(QMainWindow):
 
         self.item_filter_edit = QLineEdit()
         self.item_filter_edit.setPlaceholderText("Filter owned items/materials by name, GBID, hash, quantity, or unit id...")
-        self.item_filter_edit.textChanged.connect(lambda _: self.refresh_item_rows())
+        self._connect_debounced_text_changed(self.item_filter_edit, "items_filter", self.refresh_item_rows, 180)
         inventory_layout.addWidget(self.item_filter_edit)
 
         category_row = QHBoxLayout()
@@ -2724,7 +3444,7 @@ class MainWindow(QMainWindow):
             ("Unknown hashes only", self.item_unknown_only_check),
             ("Show technical / non-quantity rows", self.item_show_technical_check),
         ]))
-        item_filter_row.addWidget(QLabel("Tip: double-click the Quantity column to edit, or use the selected-item actions below."))
+        item_filter_row.addWidget(QLabel("Tip: selected quantity auto-applies; table edits also write immediately in memory."))
         item_filter_row.addStretch(1)
         inventory_layout.addLayout(item_filter_row)
         self.item_table = QTableView()
@@ -2760,9 +3480,10 @@ class MainWindow(QMainWindow):
         self.item_selected_qty_spin.setRange(0, 99_999_999)
         self.item_selected_qty_spin.setValue(1)
         self.item_selected_qty_spin.setMinimumWidth(130)
+        self.item_selected_qty_spin.valueChanged.connect(lambda *_: self._schedule_item_selected_quantity_auto_apply())
         action_row.addWidget(self.item_selected_qty_spin)
         for text, slot in [
-            ("Set Quantity", self.set_selected_item_quantity_from_spin),
+            ("Set Quantity Now", self.set_selected_item_quantity_from_spin),
             ("Max Selected", self.max_selected_item_quantity),
             ("Add Item", self.add_item_to_empty_slot),
             ("Copy Hash", self.copy_selected_item_hash),
@@ -2808,18 +3529,18 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
-        help_text = QLabel("Shows verified normal item/material database entries missing from this save. This view uses the same safe 180x material-template writer as the working item cheat; relics, curios, wallet values, unknowns, and reference-only rows are not added here.")
+        help_text = QLabel("Searches the item/material database and shows whether each row is already owned, safely addable, or blocked for this loaded save. Safe add rows use the verified 180x material-template writer; blocked rows are visible for clarity but are not written.")
         help_text.setWordWrap(True)
         help_text.setObjectName("helpText")
         layout.addWidget(help_text)
 
         controls = QHBoxLayout()
         self.items_database_filter = QLineEdit()
-        self.items_database_filter.setPlaceholderText("Search missing materials/items by name, GBID, category, or hash...")
-        self.items_database_filter.textChanged.connect(lambda _: self.refresh_items_database_rows())
+        self.items_database_filter.setPlaceholderText("Search database by name, GBID, category, hash, or sheet LE hash...")
+        self._connect_debounced_text_changed(self.items_database_filter, "items_database_filter", self.refresh_items_database_rows, 220)
         controls.addWidget(self.items_database_filter, 2)
         self.items_database_category = QComboBox()
-        self.items_database_category.addItems(["Missing Safe Only", "Already Owned", "All Safe Materials", "Blocked / Not Safe"])
+        self.items_database_category.addItems(["Missing Safe Only", "Already Owned", "All Database Matches", "Blocked / Not Safe"])
         self.items_database_category.currentTextChanged.connect(lambda _: self.refresh_items_database_rows())
         controls.addWidget(self.items_database_category)
         controls.addWidget(QLabel("Qty"))
@@ -3155,8 +3876,8 @@ class MainWindow(QMainWindow):
             return status == "Missing · safe add"
         if category == "Already Owned":
             return status == "Already owned"
-        if category == "All Safe Materials":
-            return status in {"Missing · safe add", "Already owned"}
+        if category in {"All Safe Materials", "All Database Matches"}:
+            return status in {"Missing · safe add", "Already owned", "Blocked / not safe"}
         if category == "Blocked / Not Safe":
             return status == "Blocked / not safe"
         return True
@@ -3190,13 +3911,16 @@ class MainWindow(QMainWindow):
                 counts["owned"] += 1
             else:
                 counts["blocked"] += 1
-            if not self._items_database_category_accepts(status):
-                continue
             searchable = " ".join([
                 str(entry.display_name), str(entry.item_id), str(entry.category), str(entry.hash_hex), str(entry.alias_text)
             ]).lower()
             if query and query not in searchable:
                 continue
+            if not query and not self._items_database_category_accepts(status):
+                continue
+            # When the user types a specific search such as "dragon", show all
+            # matching statuses so database rows do not look missing from the
+            # editor just because they are already owned or blocked in this save.
             rows.append([status, entry.display_name, entry.item_id, entry.category, entry.hash_hex, action])
             meta.append({"entry": entry, "status": status, "action": action})
             if len(rows) >= shown_limit:
@@ -3221,7 +3945,7 @@ class MainWindow(QMainWindow):
         if not entry:
             self._set_detail_text(
                 self.items_database_detail,
-                "Select a row. Missing safe rows can be added because the save already has the exact inactive 1801 material row and the editor has a verified 1803-1807 template."
+                "Select a row. Searches show matching database rows even if the loaded save cannot safely add them yet. Only 'Missing · safe add' and 'Already owned' rows can be written."
             )
             return
         status = meta.get("status", "")
@@ -3369,8 +4093,8 @@ class MainWindow(QMainWindow):
         )
 
     def _build_character_owner_choices(self) -> List[Dict[str, Any]]:
-        """Known character hashes used by GemManager 2706 worn/equipped owner."""
-        choices: List[Dict[str, Any]] = [{"label": "None / Unequipped", "name": "None / Unequipped", "gbid": "", "hash": EMPTY_HASH}]
+        """Known character hashes used by GemManager 2706 worn/character assignment."""
+        choices: List[Dict[str, Any]] = [{"label": "None / Unassigned", "name": "None / Unassigned", "gbid": "", "hash": EMPTY_HASH}]
         try:
             entries = []
             for entry in self.item_db.by_hash.values():
@@ -3400,7 +4124,7 @@ class MainWindow(QMainWindow):
         except Exception:
             return str(value or "")
         if ivalue in (0, EMPTY_HASH):
-            return "None / Unequipped"
+            return "None / Unassigned"
         for choice in getattr(self, "character_owner_choices", []):
             if int(choice.get("hash", 0)) & 0xFFFFFFFF == ivalue:
                 return str(choice.get("name") or choice.get("label") or f"0x{ivalue:08X}")
@@ -3432,7 +4156,7 @@ class MainWindow(QMainWindow):
                 return int(self._record_first_value(meta.get("worn_rec"), EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
         except Exception:
             pass
-        resolved = self._resolve_hash_from_text(str(row[7] or row[6] or ""))
+        resolved = self._resolve_hash_from_text(str(row[12] or row[8] or ""))
         return int(resolved if resolved is not None else EMPTY_HASH) & 0xFFFFFFFF
 
     def _set_owner_combo_by_hash(self, value: Any) -> None:
@@ -3461,10 +4185,10 @@ class MainWindow(QMainWindow):
         combo.blockSignals(False)
 
     def _sigil_owner_counts_by_hash(self, skip_meta: Optional[Dict[str, Any]] = None) -> Dict[int, int]:
-        """Count non-empty sigils that currently point at each equipped-owner hash.
+        """Count non-empty sigils that currently point at each character assignment hash.
 
         This only counts the visible owner reference field. It is used as a
-        safety guard because the game breaks above 13 equipped sigils for one
+        safety guard because the game breaks above 13 assigned sigils for one
         owner, even after the full equip mapping is implemented.
         """
         counts: Dict[int, int] = {}
@@ -3489,35 +4213,19 @@ class MainWindow(QMainWindow):
         return counts
 
     def _sigil_owner_assignment_allowed(self, row_index: int, target_hash: int, show_message: bool = True) -> bool:
-        """Validate a sigil owner/equip assignment before touching the save.
+        """Validate a sigil owner/character assignment assignment before touching the save.
 
-        Current builds only know the visible owner reference. The uploaded test
-        reports prove that writing this field alone can create a crashy state:
-        the game says the sigil is equipped, but it is not actually attached to
-        the weapon/character equip list. Non-empty equip writes are therefore
-        blocked until a known-good equipped save maps the missing fields.
+        Known-good equipped saves confirm field 2706 / FF920A stores the
+        character assignment character owner. The guard now only blocks impossible/unsafe
+        assignments, such as too many sigils on one character.
         """
         try:
             target_hash = int(target_hash or 0) & 0xFFFFFFFF
         except Exception:
             target_hash = EMPTY_HASH
 
-        # Clearing/unequipping is allowed so users can repair bad owner refs
-        # created by older builds.
         if target_hash in (0, EMPTY_HASH):
             return True
-
-        if not SIGIL_EQUIP_WRITES_ENABLED:
-            if show_message:
-                QMessageBox.warning(
-                    self,
-                    "Sigil equip disabled",
-                    "Sigil equip writes are temporarily disabled because the old editor only changed the visible owner field.\n\n"
-                    "That can make the game show an Equip option but crash when you click equip/unequip. "
-                    "Send the known-good save with sigils equipped to a weapon and I can map the missing weapon/equip-list fields.\n\n"
-                    "You can still edit sigil ID, level, lock flags, add sigils to inventory, and use Unequip/Clear Worn By to remove unsafe owner refs."
-                )
-            return False
 
         meta = {}
         try:
@@ -3526,23 +4234,90 @@ class MainWindow(QMainWindow):
         except Exception:
             meta = {}
 
+        if meta and meta.get("is_empty"):
+            if show_message:
+                QMessageBox.warning(self, "Empty sigil slot", "Pick a real sigil before assigning an character assignment character.")
+            return False
+
         counts = self._sigil_owner_counts_by_hash(skip_meta=meta)
         if counts.get(target_hash, 0) >= SIGIL_MAX_EQUIPPED_PER_OWNER:
             if show_message:
                 QMessageBox.warning(
                     self,
-                    "Too many equipped sigils",
-                    f"The game only tolerates {SIGIL_MAX_EQUIPPED_PER_OWNER} equipped sigils per owner. "
+                    "Too many assigned sigils",
+                    f"The game only tolerates {SIGIL_MAX_EQUIPPED_PER_OWNER} assigned sigils per character. "
                     f"This owner already has {counts.get(target_hash, 0)}. Clear one first."
                 )
             return False
         return True
 
-    def _sigil_owner_combo_changed(self, index: int) -> None:
-        """Mirror the owner dropdown and only apply safe clear/unequip edits.
+    def _apply_sigil_owner_to_meta(self, meta: Dict[str, Any], owner_hash: int, row_index: int = -1, show_message: bool = True) -> bool:
+        """Apply the observed sigil character-assignment pattern.
 
-        Non-empty equip writes are blocked until the full in-game equipment
-        relationship is mapped from a known-good save.
+        Save Wizard / in-game assigned rows use:
+        - 2702: sigil serial/key
+        - 2703: sigil hash
+        - 2704: sigil level
+        - 2706: assigned character hash
+        - 2707: assignment/inventory flags
+
+        From the uploaded sample:
+        - assigned rows use 2706 = character hash and 2707 low bits = 2
+        - unassigned locked inventory rows commonly use 2707 low bits = 3
+        """
+        if not self.save or not meta:
+            return False
+        try:
+            owner_hash = int(owner_hash or EMPTY_HASH) & 0xFFFFFFFF
+        except Exception:
+            owner_hash = EMPTY_HASH
+        if not self._sigil_owner_assignment_allowed(row_index, owner_hash, show_message=show_message):
+            return False
+
+        owner_rec = meta.get("worn_rec")
+        if owner_rec is None:
+            if show_message:
+                QMessageBox.information(self, "Missing assignment field", "This sigil row does not expose the 2706 assigned-character field.")
+            return False
+
+        sigil_hash = int(self._record_first_value(meta.get("hash_rec"), 0) or 0) & 0xFFFFFFFF
+        if owner_hash not in (0, EMPTY_HASH) and sigil_hash in (0, EMPTY_HASH):
+            if show_message:
+                QMessageBox.warning(self, "Empty sigil slot", "This row is empty. Add or select a sigil before assigning it to a character.")
+            return False
+
+        changed = False
+        try:
+            serial = int(self._record_first_value(meta.get("slot_rec"), 0) or 0) & 0xFFFFFFFF
+        except Exception:
+            serial = 0
+        if sigil_hash not in (0, EMPTY_HASH) and serial in (0, EMPTY_HASH):
+            self._set_sigil_serial(meta)
+            changed = True
+
+        old_owner = int(self._record_first_value(owner_rec, EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
+        if old_owner != owner_hash:
+            if self._set_record_first_value(owner_rec, owner_hash, "sigil assigned character 2706"):
+                changed = True
+        else:
+            changed = True
+
+        flags_rec = meta.get("flags_rec")
+        if flags_rec is not None and sigil_hash not in (0, EMPTY_HASH):
+            cur_flags = int(self._record_first_value(flags_rec, 0) or 0)
+            assigned = owner_hash not in (0, EMPTY_HASH)
+            locked = bool(cur_flags & 1)
+            normalized = self._safe_sigil_flags(cur_flags, locked=locked, assigned=assigned)
+            if self._set_record_first_value(flags_rec, normalized, "sigil assignment/inventory flags 2707"):
+                changed = True
+
+        return changed
+
+    def _sigil_owner_combo_changed(self, index: int) -> None:
+        """Mirror/apply the observed 2706 character-assignment pattern.
+
+        The uploaded Save Wizard sample shows assigned rows as 2706=character hash
+        and 2707 low bits=2, so dropdown changes now write that mapped pattern.
         """
         combo = getattr(self, "sigil_worn_by_combo", None)
         if combo is None:
@@ -3571,12 +4346,12 @@ class MainWindow(QMainWindow):
         if current_owner == owner_hash:
             return
         edit_value = "" if owner_hash in (0, EMPTY_HASH) else f"0x{owner_hash:08X}"
-        if self.apply_sigil_table_cell_edit(row_index, 6, edit_value):
+        if self.apply_sigil_table_cell_edit(row_index, 8, edit_value):
             # Keep the detail panel in sync without requiring the Apply button.
             self.update_sigil_detail()
-            self.statusBar().showMessage("Equipped To updated in memory. Save when ready.", 5000)
+            self.statusBar().showMessage("Auto-applied selected sigil assigned character. Save when ready.", 3500)
         else:
-            # Restore the dropdown to the selected row if the unsafe equip write
+            # Restore the dropdown to the selected row if the unsafe character-assignment write
             # was blocked.
             self.update_sigil_detail()
 
@@ -3601,10 +4376,10 @@ class MainWindow(QMainWindow):
                 continue
             if owner_i not in valid:
                 sigil_name, _, _ = self.hash_entry_parts(gem_i)
-                issues.append(f"Unit {unit_id}: {sigil_name} equipped to unknown owner 0x{owner_i:08X}")
+                issues.append(f"Unit {unit_id}: {sigil_name} assigned to unknown owner 0x{owner_i:08X}")
         if show_message:
             if issues:
-                QMessageBox.warning(self, "Sigil owner validation", "Unknown equipped-owner references found:\n\n" + "\n".join(issues[:40]))
+                QMessageBox.warning(self, "Sigil owner validation", "Unknown character assignment references found:\n\n" + "\n".join(issues[:40]))
             else:
                 QMessageBox.information(self, "Sigil owner validation", "No invalid sigil owner references found.")
         return issues
@@ -3612,25 +4387,28 @@ class MainWindow(QMainWindow):
     def _sigils_page(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(12)
+        layout.setContentsMargins(22, 10, 22, 10)
+        layout.setSpacing(6)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         header = QLabel("Sigils")
         header.setObjectName("pageHeader")
-        layout.addWidget(header)
+        header.setMaximumHeight(36)
+        layout.addWidget(header, 0, Qt.AlignmentFlag.AlignTop)
 
         help_text = QLabel(
-            "Edit current sigils, view reusable empty slots, and add new sigils from the built-in database. "
-            "Sigil ID is 2703 / FF8F0A and level is 2704 / FF900A. Equip writes stay guarded until the full in-game relation is mapped."
+            "Edit current sigils, view reusable empty slots, and add new sigils from the built-in database. Selected sigil fields auto-apply after you change them; Save writes them to disk. "
+            "Sigil ID is 2703 / FF8F0A, level is 2704 / FF900A, assigned character is 2706 / FF920A, and the observed active assignment flag is 2707 = 2."
         )
         help_text.setWordWrap(True)
         help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
+        help_text.setVisible(False)
 
         self.sigil_count_label = QLabel("Open a save to inspect sigil slots.")
-        self.sigil_count_label.setWordWrap(True)
+        self.sigil_count_label.setWordWrap(False)
         self.sigil_count_label.setObjectName("subtleText")
-        layout.addWidget(self.sigil_count_label)
+        self.sigil_count_label.setMaximumHeight(24)
+        layout.addWidget(self.sigil_count_label, 0, Qt.AlignmentFlag.AlignTop)
 
         self.sigil_tabs = QTabWidget()
         self.sigil_tabs.setObjectName("editorTabs")
@@ -3638,12 +4416,15 @@ class MainWindow(QMainWindow):
 
         current_tab = QWidget()
         current_layout = QVBoxLayout(current_tab)
-        current_layout.setContentsMargins(12, 12, 12, 12)
-        current_layout.setSpacing(10)
+        current_layout.setContentsMargins(8, 6, 8, 6)
+        current_layout.setSpacing(6)
 
         self.sigil_filter_edit = QLineEdit()
-        self.sigil_filter_edit.setPlaceholderText("Filter current sigils by name, GBID, hash, level, worn-by, flags, or unit id...")
-        self.sigil_filter_edit.textChanged.connect(lambda _: self.refresh_sigil_rows())
+        self.sigil_filter_edit.setPlaceholderText("Filter current sigils by name, GBID, hash, level, character assignment 2706, flags, or unit id...")
+        self._connect_debounced_text_changed(self.sigil_filter_edit, "sigils_filter", self.refresh_sigil_rows, 180)
+        self.sigil_filter_edit.setMinimumHeight(32)
+        self.sigil_filter_edit.setMaximumHeight(34)
+        self.sigil_filter_edit.setFont(QFont("Segoe UI", 10))
         current_layout.addWidget(self.sigil_filter_edit)
 
         sigil_filter_row = QHBoxLayout()
@@ -3654,7 +4435,7 @@ class MainWindow(QMainWindow):
         self.sigil_show_technical_check = QCheckBox("Technical columns")
         self.sigil_known_only_check.setToolTip("Show only slots whose sigil hash resolves to a known GBID/name.")
         self.sigil_unknown_only_check.setToolTip("Show only non-empty sigil slots whose hash is not in the database yet.")
-        self.sigil_invalid_owner_only_check.setToolTip("Show equipped sigils whose owner hash is not one of the known character hashes.")
+        self.sigil_invalid_owner_only_check.setToolTip("Show assigned sigils whose owner hash is not one of the known character hashes.")
         self.sigil_show_technical_check.setToolTip("Show Unit, GBID, raw Hash, and Equipped GBID columns. Leave this off for normal editing.")
         self.sigil_known_only_check.toggled.connect(lambda checked: self._sync_known_unknown_filter(checked, self.sigil_unknown_only_check, self.refresh_sigil_rows))
         self.sigil_unknown_only_check.toggled.connect(lambda checked: self._sync_known_unknown_filter(checked, self.sigil_known_only_check, self.refresh_sigil_rows))
@@ -3676,15 +4457,19 @@ class MainWindow(QMainWindow):
             btn = QPushButton(text)
             btn.clicked.connect(slot)
             sigil_filter_row.addWidget(btn)
-        sigil_filter_row.addWidget(QLabel("Tip: add new sigils from the Database tab; empty reusable slots are listed separately."))
+        # No long inline tip label in compact layout.
         sigil_filter_row.addStretch(1)
-        current_layout.addLayout(sigil_filter_row)
+        current_layout.addLayout(sigil_filter_row, 0)
 
         self.sigil_table = QTableView()
         self.sigil_table.setModel(self.sigil_model)
-        self._table_clean(self.sigil_table, hidden_columns=(0, 3, 4, 7))
-        self.sigil_table.verticalHeader().setDefaultSectionSize(30 if getattr(self, "compact_mode", True) else 36)
-        self.sigil_table.setFont(QFont("Segoe UI", 10))
+        self._table_clean(self.sigil_table, hidden_columns=(0, 3, 4, 10, 11, 12))
+        self.sigil_table.verticalHeader().setDefaultSectionSize(21 if getattr(self, "compact_mode", True) else 28)
+        self.sigil_table.setFont(QFont("Segoe UI", 9))
+        self.sigil_table.setMinimumHeight(190)
+        self.sigil_table.setMaximumHeight(190)
+        self.sigil_table.setFixedHeight(190)
+        self.sigil_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._apply_sigil_column_visibility()
         self.sigil_table.setEditTriggers(
             QAbstractItemView.EditTrigger.DoubleClicked
@@ -3693,19 +4478,20 @@ class MainWindow(QMainWindow):
         )
         self.sigil_table.selectionModel().selectionChanged.connect(lambda *_: self.update_sigil_detail())
         self.sigil_table.doubleClicked.connect(lambda _: self.edit_selected_sigil_level())
-        current_layout.addWidget(self.sigil_table, 1)
+        current_layout.addWidget(self.sigil_table, 0)
 
         detail = make_card("Selected Sigil · Inline Editor")
-        self._set_compact_detail(detail, max_height=218)
+        self._set_compact_detail(detail, max_height=335)
         detail_layout = QVBoxLayout(detail)
-        detail_layout.setSpacing(5)
+        detail_layout.setContentsMargins(16, 12, 16, 12)
+        detail_layout.setSpacing(7)
         self.sigil_detail_label = QPlainTextEdit()
         self.sigil_detail_label.setReadOnly(True)
         self.sigil_detail_label.setMinimumHeight(0)
         self.sigil_detail_label.setMaximumHeight(0)
         self.sigil_detail_label.setVisible(False)
         self.sigil_detail_label.setWordWrapMode(QTextOption.WrapMode.NoWrap)
-        self.sigil_detail_label.setPlainText("Select a sigil row, then edit the sigil, level, equipped character, and flags here without a dialog.")
+        self.sigil_detail_label.setPlainText("Select a sigil row, then edit the sigil, level, assigned character 2706, and flags. In-game assigned rows use 2706 = character hash and 2707 = 2.")
         self.sigil_detail_label.setObjectName("detailText")
         self.sigil_detail_label.setFont(QFont("Consolas", 10))
         self.sigil_detail_label.setStyleSheet("QPlainTextEdit#detailText { padding: 10px; }")
@@ -3713,57 +4499,100 @@ class MainWindow(QMainWindow):
         detail_layout.addWidget(self.sigil_detail_label)
 
         sigil_grid = QGridLayout()
-        sigil_grid.setHorizontalSpacing(10)
-        sigil_grid.setVerticalSpacing(4)
+        sigil_grid.setHorizontalSpacing(8)
+        sigil_grid.setVerticalSpacing(7)
         self.sigil_identity_edit = QLineEdit(); self.sigil_identity_edit.setPlaceholderText("GBID, sigil name, decimal hash, or 0xHASH")
         self.sigil_level_edit = QLineEdit(); self.sigil_level_edit.setPlaceholderText("Level")
-        self.sigil_level_edit.setMinimumWidth(140)
+        self.sigil_level_edit.setMinimumWidth(170)
         self.sigil_worn_by_combo = QComboBox()
         self.sigil_worn_by_combo.setMinimumHeight(32)
-        self.sigil_worn_by_combo.setMinimumWidth(380)
+        self.sigil_worn_by_combo.setMinimumWidth(280)
         self.sigil_worn_by_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.sigil_worn_by_combo.setMinimumContentsLength(24)
-        self.sigil_worn_by_combo.setToolTip("Equip writes are disabled until the full in-game equip relation is mapped. Use Unequip to clear unsafe owner refs.")
+        self.sigil_worn_by_combo.setToolTip("Sets 2706 / FF920A to a character hash and normalizes 2707 to the in-game active assignment flag 2.")
         for choice in getattr(self, "character_owner_choices", []):
             self.sigil_worn_by_combo.addItem(str(choice.get("label", "")), int(choice.get("hash", EMPTY_HASH)) & 0xFFFFFFFF)
         self.sigil_worn_by_combo.currentIndexChanged.connect(self._sigil_owner_combo_changed)
-        self.sigil_worn_by_edit = QLineEdit(); self.sigil_worn_by_edit.setPlaceholderText("Raw owner hash / GBID fallback for unknown characters")
+        self.sigil_worn_by_edit = QLineEdit(); self.sigil_worn_by_edit.setPlaceholderText("Optional raw 2706 hash")
         self.sigil_worn_by_edit.setMinimumHeight(32)
         self.sigil_flags_edit = QLineEdit(); self.sigil_flags_edit.setPlaceholderText("Flags / lock state")
-        self.sigil_flags_edit.setMinimumWidth(180)
+        self.sigil_flags_edit.setMinimumWidth(140)
+
+        trait_choices = self._weapon_trait_choices() if hasattr(self, "_weapon_trait_choices") else []
+        self.sigil_trait1_combo = QComboBox()
+        self.sigil_trait1_combo.setMinimumWidth(300)
+        self.sigil_trait1_combo.setMinimumHeight(32)
+        self.sigil_trait1_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.sigil_trait1_level_spin = QSpinBox()
+        self.sigil_trait1_level_spin.setRange(0, I32_MAX)
+        self.sigil_trait1_level_spin.setValue(15)
+        self.sigil_trait1_level_spin.setMinimumWidth(105)
+        self.sigil_trait1_level_spin.setMinimumHeight(32)
+
+        self.sigil_trait2_combo = QComboBox()
+        self.sigil_trait2_combo.setMinimumWidth(300)
+        self.sigil_trait2_combo.setMinimumHeight(32)
+        self.sigil_trait2_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.sigil_trait2_level_spin = QSpinBox()
+        self.sigil_trait2_level_spin.setRange(0, I32_MAX)
+        self.sigil_trait2_level_spin.setValue(15)
+        self.sigil_trait2_level_spin.setMinimumWidth(105)
+        self.sigil_trait2_level_spin.setMinimumHeight(32)
+        self._populate_hash_combo(self.sigil_trait1_combo, trait_choices)
+        self._populate_hash_combo(self.sigil_trait2_combo, trait_choices)
+
         for editor in (self.sigil_identity_edit, self.sigil_level_edit, self.sigil_worn_by_edit, self.sigil_flags_edit):
             editor.setMinimumHeight(32)
             editor.setFont(QFont("Segoe UI", 10))
-            editor.returnPressed.connect(self.apply_sigil_inline_edits)
+            editor.returnPressed.connect(lambda *_: self.apply_sigil_inline_edits(show_no_change=False))
+        self.sigil_identity_edit.textChanged.connect(lambda *_: self._schedule_sigil_field_auto_apply(2, lambda: self.sigil_identity_edit.text(), "sigil", delay_ms=220))
+        self.sigil_identity_edit.editingFinished.connect(lambda *_: self._apply_selected_sigil_column_now(2, self.sigil_identity_edit.text(), "sigil", show_status=False))
+        self.sigil_worn_by_edit.textChanged.connect(lambda *_: self._schedule_sigil_field_auto_apply(8, lambda: self.sigil_worn_by_edit.text(), "assigned character", delay_ms=220))
+        self.sigil_worn_by_edit.editingFinished.connect(lambda *_: self._apply_selected_sigil_column_now(8, self.sigil_worn_by_edit.text(), "assigned character", show_status=False))
+        self.sigil_level_edit.textChanged.connect(lambda *_: self._schedule_sigil_field_auto_apply(5, lambda: self.sigil_level_edit.text(), "level", delay_ms=140))
+        self.sigil_flags_edit.textChanged.connect(lambda *_: self._schedule_sigil_field_auto_apply(9, lambda: self.sigil_flags_edit.text(), "flags", delay_ms=140))
+        self.sigil_trait1_combo.currentIndexChanged.connect(lambda *_: self._apply_selected_sigil_combo_column_now(6, self.sigil_trait1_combo, "trait 1"))
+        self.sigil_trait2_combo.currentIndexChanged.connect(lambda *_: self._apply_selected_sigil_combo_column_now(7, self.sigil_trait2_combo, "trait 2"))
+        self.sigil_trait1_level_spin.valueChanged.connect(lambda *_: self._apply_selected_sigil_column_now(10, self.sigil_trait1_level_spin.value(), "trait 1 level"))
+        self.sigil_trait2_level_spin.valueChanged.connect(lambda *_: self._apply_selected_sigil_column_now(11, self.sigil_trait2_level_spin.value(), "trait 2 level"))
         sigil_grid.addWidget(QLabel("Sigil / GBID / Hash"), 0, 0)
         sigil_grid.addWidget(self.sigil_identity_edit, 0, 1, 1, 3)
         sigil_grid.addWidget(QLabel("Level"), 1, 0)
         sigil_grid.addWidget(self.sigil_level_edit, 1, 1)
-        sigil_grid.addWidget(QLabel("Equipped To"), 1, 2)
+        sigil_grid.addWidget(QLabel("Assigned Character"), 1, 2)
         sigil_grid.addWidget(self.sigil_worn_by_combo, 1, 3)
-        sigil_grid.addWidget(QLabel("Raw owner"), 2, 0)
-        sigil_grid.addWidget(self.sigil_worn_by_edit, 2, 1)
-        sigil_grid.addWidget(QLabel("Flags"), 2, 2)
-        sigil_grid.addWidget(self.sigil_flags_edit, 2, 3)
+        sigil_grid.addWidget(QLabel("Trait 1"), 2, 0)
+        sigil_grid.addWidget(self.sigil_trait1_combo, 2, 1)
+        sigil_grid.addWidget(QLabel("T1 Level"), 2, 2)
+        sigil_grid.addWidget(self.sigil_trait1_level_spin, 2, 3)
+        sigil_grid.addWidget(QLabel("Trait 2"), 3, 0)
+        sigil_grid.addWidget(self.sigil_trait2_combo, 3, 1)
+        sigil_grid.addWidget(QLabel("T2 Level"), 3, 2)
+        sigil_grid.addWidget(self.sigil_trait2_level_spin, 3, 3)
+        sigil_grid.addWidget(QLabel("Raw 2706"), 4, 0)
+        sigil_grid.addWidget(self.sigil_worn_by_edit, 4, 1)
+        sigil_grid.addWidget(QLabel("Flags"), 4, 2)
+        sigil_grid.addWidget(self.sigil_flags_edit, 4, 3)
         sigil_grid.setColumnStretch(1, 2)
         sigil_grid.setColumnStretch(3, 3)
         detail_layout.addLayout(sigil_grid)
 
         sigil_inline_row = QHBoxLayout()
         for text, slot in [
-            ("Apply Changes", self.apply_sigil_inline_edits),
+            ("Apply Now / Resync", self.apply_sigil_inline_edits),
             ("Max + Lock", self.max_selected_sigil),
-            ("Unequip", self.clear_selected_sigil_worn_by),
+            ("Clear 2706", self.clear_selected_sigil_worn_by),
+            ("Remove / Empty", self.remove_selected_sigil_to_empty_slot),
         ]:
             btn = QPushButton(text); btn.clicked.connect(slot); sigil_inline_row.addWidget(btn)
         sigil_inline_row.addStretch(1)
         detail_layout.addLayout(sigil_inline_row)
-        current_layout.addWidget(detail)
+        current_layout.addWidget(detail, 0)
 
         row = QHBoxLayout()
         for text, slot in [
             ("Add Sigil", self.add_sigil_to_empty_slot),
-            ("Show Empty Slots", lambda _=False: self._show_sigil_tab(2)),
+            ("Show Empty", self.show_empty_sigils_in_current_table),
         ]:
             btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
         row.addWidget(self._make_more_button("More", [
@@ -3772,14 +4601,15 @@ class MainWindow(QMainWindow):
             ("Unlock Selected", lambda: self.set_selected_sigil_lock(False)),
             ("Batch Add Sigils From Text", self.batch_add_sigils_to_empty_slots),
             ("Duplicate Sigil to Empty Slot", self.duplicate_selected_sigil_to_empty_slot),
+            ("Remove Selected to Empty Slot", self.remove_selected_sigil_to_empty_slot),
             ("Copy Sigil Slot", self.copy_selected_sigil_slot),
             ("Paste Sigil Slot", self.paste_sigil_slot_to_selected),
             ("Swap With Copied Sigil Slot", self.swap_selected_sigil_with_copied),
             ("Max Visible Levels", self.bulk_set_visible_sigil_level),
             ("Max Visible + Lock", self.max_visible_sigils),
-            ("Set Worn By", self.edit_selected_sigil_worn_by),
-            ("Repair Added Sigil Slots", self.repair_added_sigil_slots),
-            ("Unequip / Clear Worn By", self.clear_selected_sigil_worn_by),
+            ("Assign to Character 2706", self.edit_selected_sigil_worn_by),
+            ("Repair / Sanitize Sigil Slots", self.repair_added_sigil_slots),
+            ("Clear Character Assignment", self.clear_selected_sigil_worn_by),
             ("Jump to Raw Unit", self.jump_to_sigil_unit),
             ("Copy Hash", self.copy_selected_sigil_hash),
             ("Copy GBID", self.copy_selected_sigil_gbid),
@@ -3795,14 +4625,14 @@ class MainWindow(QMainWindow):
         db_layout = QVBoxLayout(database_tab)
         db_layout.setContentsMargins(12, 12, 12, 12)
         db_layout.setSpacing(10)
-        db_help = QLabel("Add new sigils from the built-in sigil database into reusable empty 2703/2704 slots. Database rows are named and filtered; unknown/raw research rows stay out of the normal workflow.")
+        db_help = QLabel("Add sigils into reusable empty 2703/2704 slots. Levels may use signed 32-bit max. Save Wizard pattern: assigned rows use 2706 = character hash and 2707 = 2; unassigned locked inventory rows commonly use 2707 = 3.")
         db_help.setWordWrap(True)
         db_help.setObjectName("helpText")
         db_layout.addWidget(db_help)
         db_tools = QHBoxLayout()
         self.sigil_database_filter_edit = QLineEdit()
         self.sigil_database_filter_edit.setPlaceholderText("Search sigil database by name, GBID, hash, family, V, V+, Damage Cap, Supplementary...")
-        self.sigil_database_filter_edit.textChanged.connect(lambda *_: self.refresh_sigil_database_rows())
+        self._connect_debounced_text_changed(self.sigil_database_filter_edit, "sigils_database_filter", self.refresh_sigil_database_rows, 220)
         db_tools.addWidget(self.sigil_database_filter_edit, 3)
         self.sigil_database_grade_combo = QComboBox()
         self.sigil_database_grade_combo.addItems(["All sigils", "V / V+ only", "V only", "V+ only", "Missing only", "Owned only"])
@@ -3814,9 +4644,16 @@ class MainWindow(QMainWindow):
         self.sigil_database_level_spin.setMinimumWidth(130)
         db_tools.addWidget(QLabel("Level"))
         db_tools.addWidget(self.sigil_database_level_spin)
-        self.sigil_database_locked_check = QCheckBox("Locked")
+        self.sigil_database_locked_check = QCheckBox("Lock if unassigned (2707=3)")
         self.sigil_database_locked_check.setChecked(True)
         db_tools.addWidget(self.sigil_database_locked_check)
+        self.sigil_database_assign_combo = QComboBox()
+        self.sigil_database_assign_combo.addItem("None / Unassigned", EMPTY_HASH)
+        for choice in self.character_owner_choices[1:]:
+            self.sigil_database_assign_combo.addItem(str(choice.get("label", "")), int(choice.get("hash", EMPTY_HASH)) & 0xFFFFFFFF)
+        self.sigil_database_assign_combo.setMinimumWidth(240)
+        db_tools.addWidget(QLabel("Assign To"))
+        db_tools.addWidget(self.sigil_database_assign_combo, 1)
         refresh_db_btn = QPushButton("Refresh")
         refresh_db_btn.clicked.connect(self.refresh_sigil_database_rows)
         db_tools.addWidget(refresh_db_btn)
@@ -3841,38 +4678,16 @@ class MainWindow(QMainWindow):
             ("Add Selected Locked", self.add_selected_database_sigil_locked_to_empty_slot),
             ("Add Selected Unlocked", self.add_selected_database_sigil_unlocked_to_empty_slot),
             ("Batch Add From Text", self.batch_add_sigils_to_empty_slots),
-            ("Show Empty Slots", lambda _=False: self._show_sigil_tab(2)),
+            ("Show Empty In Current", self.show_empty_sigils_in_current_table),
         ]:
             btn = QPushButton(text); btn.clicked.connect(slot); db_actions.addWidget(btn)
         db_actions.addStretch(1)
         db_layout.addLayout(db_actions)
 
-        empty_tab = QWidget()
-        empty_layout = QVBoxLayout(empty_tab)
-        empty_layout.setContentsMargins(12, 12, 12, 12)
-        empty_layout.setSpacing(10)
-        self.sigil_empty_status = QLabel("Open a save to list reusable empty sigil slots.")
-        self.sigil_empty_status.setObjectName("subtleText")
-        self.sigil_empty_status.setWordWrap(True)
-        empty_layout.addWidget(self.sigil_empty_status)
-        self.sigil_empty_table = QTableView()
-        self.sigil_empty_table.setModel(self.sigil_empty_model)
-        self._table_clean(self.sigil_empty_table)
-        self.sigil_empty_table.setMinimumHeight(430)
-        empty_layout.addWidget(self.sigil_empty_table, 1)
-        empty_actions = QHBoxLayout()
-        for text, slot in [
-            ("Refresh Empty Slots", self.refresh_sigil_empty_slot_rows),
-            ("Open Database", lambda _=False: self._show_sigil_tab(1)),
-            ("Show Empty In Current Table", self.show_empty_sigils_in_current_table),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); empty_actions.addWidget(btn)
-        empty_actions.addStretch(1)
-        empty_layout.addLayout(empty_actions)
+        # Empty slots are shown inside Current Sigils via the Show Empty button.
 
         self.sigil_tabs.addTab(current_tab, "Current Sigils")
         self.sigil_tabs.addTab(database_tab, "Database / Add")
-        self.sigil_tabs.addTab(empty_tab, "Empty Slots")
         layout.addWidget(self.sigil_tabs, 1)
         self._install_common_numeric_validators()
         return page
@@ -3912,7 +4727,7 @@ class MainWindow(QMainWindow):
 
         self.weapon_filter_edit = QLineEdit()
         self.weapon_filter_edit.setPlaceholderText("Filter current weapons by name, GBID, hash, XP, stone, flags, or unit id...")
-        self.weapon_filter_edit.textChanged.connect(lambda _: self.refresh_weapon_rows())
+        self._connect_debounced_text_changed(self.weapon_filter_edit, "weapons_filter", self.refresh_weapon_rows, 180)
         current_layout.addWidget(self.weapon_filter_edit)
 
         weapon_filter_row = QHBoxLayout()
@@ -3930,7 +4745,7 @@ class MainWindow(QMainWindow):
             ("Unknown only", self.weapon_unknown_only_check),
         ]))
         for text, slot in [
-            ("Show Empty Slots", lambda _=False: self._show_weapon_tab(2)),
+            ("Show Empty Slots", lambda _=False: self._show_weapon_tab(3)),
             ("Clear", self.clear_weapon_filters),
             ("Max Visible", self.max_visible_weapons),
         ]:
@@ -3977,7 +4792,10 @@ class MainWindow(QMainWindow):
         self.weapon_flags_edit = QLineEdit(); self.weapon_flags_edit.setPlaceholderText("Flags")
         for editor in (self.weapon_identity_edit, self.weapon_xp_edit, self.weapon_stone_edit, self.weapon_flags_edit):
             editor.setMinimumHeight(32)
-            editor.returnPressed.connect(self.apply_weapon_inline_edits)
+            # Debounced live apply keeps the selected weapon form, table row,
+            # and Caps / Traits selector synced without requiring a manual apply.
+            editor.textChanged.connect(lambda *_: self._schedule_weapon_inline_auto_apply())
+            editor.editingFinished.connect(self.sync_weapon_detail_controls)
         weapon_grid.addWidget(QLabel("Weapon"), 0, 0)
         weapon_grid.addWidget(self.weapon_identity_edit, 0, 1, 1, 3)
         weapon_grid.addWidget(QLabel("XP"), 1, 0)
@@ -3992,7 +4810,7 @@ class MainWindow(QMainWindow):
 
         weapon_inline_row = QHBoxLayout()
         for text, slot in [
-            ("Apply Changes", self.apply_weapon_inline_edits),
+            ("Apply Changes / Resync", self.apply_weapon_inline_edits),
             ("Max Selected", self.max_selected_weapon),
             ("Max All", self.max_all_weapons),
             ("Clear Stone", self.clear_selected_weapon_stone),
@@ -4006,7 +4824,7 @@ class MainWindow(QMainWindow):
         for text, slot in [
             ("Add Weapon", self.add_weapon_to_empty_slot),
             ("Duplicate", self.duplicate_selected_weapon_to_empty_slot),
-            ("Open Database", lambda _=False: self._show_weapon_tab(1)),
+            ("Open Database", lambda _=False: self._show_weapon_tab(2)),
         ]:
             btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
         row.addWidget(self._make_more_button("More", [
@@ -4030,6 +4848,149 @@ class MainWindow(QMainWindow):
         ]))
         row.addStretch(1)
         current_layout.addLayout(row)
+
+        caps_tab = QWidget()
+        caps_layout = QVBoxLayout(caps_tab)
+        caps_layout.setContentsMargins(12, 12, 12, 12)
+        caps_layout.setSpacing(12)
+
+        caps_help = QLabel(
+            "Weapon uncap/max-level uses 2805. The in-game ATK/HP weapon trait list is mostly derived by the game from weapon level/uncap, while 2806 appears to be the separate + trait-level bonus shown after the base trait level. Wrightstones are separate inventory rows."
+        )
+        caps_help.setWordWrap(True)
+        caps_help.setObjectName("helpText")
+        caps_layout.addWidget(caps_help)
+
+        selected_card = make_card("Selected Weapon")
+        selected_layout = QVBoxLayout(selected_card)
+        selected_grid = QGridLayout()
+        selected_grid.setHorizontalSpacing(12)
+        selected_grid.setVerticalSpacing(8)
+        self.weapon_cap_trait_weapon_combo = QComboBox()
+        self.weapon_cap_trait_weapon_combo.setMinimumWidth(560)
+        self.weapon_cap_trait_weapon_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.weapon_cap_trait_weapon_combo.currentIndexChanged.connect(lambda *_: self.on_weapon_cap_trait_weapon_combo_changed())
+        selected_grid.addWidget(QLabel("Weapon"), 0, 0)
+        selected_grid.addWidget(self.weapon_cap_trait_weapon_combo, 0, 1)
+        refresh_weapon_pick_btn = QPushButton("Refresh Weapons")
+        refresh_weapon_pick_btn.clicked.connect(self.refresh_weapon_rows)
+        selected_grid.addWidget(refresh_weapon_pick_btn, 0, 2)
+        selected_grid.setColumnStretch(1, 3)
+        selected_layout.addLayout(selected_grid)
+        self.weapon_builtin_trait_summary = QLabel("Open a save and select a weapon to inspect its saved uncap/trait-bonus fields.")
+        self.weapon_builtin_trait_summary.setObjectName("subtleText")
+        self.weapon_builtin_trait_summary.setWordWrap(True)
+        selected_layout.addWidget(self.weapon_builtin_trait_summary)
+        caps_layout.addWidget(selected_card)
+
+        cap_card = make_card("Weapon Uncap / Max Level")
+        cap_layout = QVBoxLayout(cap_card)
+        cap_grid = QGridLayout()
+        cap_grid.setHorizontalSpacing(12)
+        cap_grid.setVerticalSpacing(8)
+
+        self.weapon_cap_combo = QComboBox()
+        for label, value in [
+            ("Base / 30 cap (0)", 0),
+            ("50 cap (1)", 1),
+            ("75 cap (2)", 2),
+            ("100 cap (3)", 3),
+            ("125 cap (4)", 4),
+            ("150 cap / Max (5)", 5),
+        ]:
+            self.weapon_cap_combo.addItem(label, value)
+        self.weapon_cap_custom_spin = QSpinBox()
+        self.weapon_cap_custom_spin.setRange(0, 255)
+        self.weapon_cap_custom_spin.setValue(5)
+        self.weapon_cap_custom_spin.setMinimumWidth(90)
+
+        cap_grid.addWidget(QLabel("Preset"), 0, 0)
+        cap_grid.addWidget(self.weapon_cap_combo, 0, 1)
+        cap_grid.addWidget(QLabel("Custom"), 0, 2)
+        cap_grid.addWidget(self.weapon_cap_custom_spin, 0, 3)
+        cap_layout.addLayout(cap_grid)
+
+        cap_actions = QHBoxLayout()
+        for text, slot in [
+            ("Apply Preset To Selected", self.apply_weapon_cap_preset_selected),
+            ("Apply Custom To Selected", self.apply_weapon_cap_custom_selected),
+            ("Apply Preset To Visible", self.apply_weapon_cap_preset_visible),
+            ("Open Current Weapons", lambda _=False: self._show_weapon_tab(0)),
+        ]:
+            btn = QPushButton(text)
+            btn.clicked.connect(slot)
+            cap_actions.addWidget(btn)
+        cap_actions.addStretch(1)
+        cap_layout.addLayout(cap_actions)
+        caps_layout.addWidget(cap_card)
+
+        bonus_card = make_card("Weapon Trait + Bonus")
+        bonus_layout = QVBoxLayout(bonus_card)
+        bonus_note = QLabel("This edits weapon field 2806. In the in-game details screen this appears to be the + value after the base weapon trait level, for example ATK T.Lvl 20 + 1. Keep this experimental and test with Save As.")
+        bonus_note.setWordWrap(True)
+        bonus_note.setObjectName("subtleText")
+        bonus_layout.addWidget(bonus_note)
+        bonus_row = QHBoxLayout()
+        bonus_row.addWidget(QLabel("Trait + / 2806"))
+        self.weapon_trait_bonus_spin = QSpinBox()
+        self.weapon_trait_bonus_spin.setRange(0, 999)
+        self.weapon_trait_bonus_spin.setValue(0)
+        self.weapon_trait_bonus_spin.setMinimumWidth(110)
+        bonus_row.addWidget(self.weapon_trait_bonus_spin)
+        for text, slot in [
+            ("Apply Bonus To Selected", self.apply_weapon_trait_bonus_selected),
+            ("Apply Bonus To Visible", self.apply_weapon_trait_bonus_visible),
+        ]:
+            btn = QPushButton(text)
+            btn.clicked.connect(slot)
+            bonus_row.addWidget(btn)
+        bonus_row.addStretch(1)
+        bonus_layout.addLayout(bonus_row)
+        caps_layout.addWidget(bonus_card)
+
+        trait_card = make_card("Wrightstone / Direct Trait Notes")
+        trait_layout = QVBoxLayout(trait_card)
+        trait_note = QLabel("The ATK/HP traits shown on the weapon details screen are not normal 1701/1702 trait records on the weapon row. Direct 1701/1702 controls stay here only as a fallback for unusual saves; normal Wrightstone traits are edited from the Wrightstones tab.")
+        trait_note.setWordWrap(True)
+        trait_note.setObjectName("subtleText")
+        trait_layout.addWidget(trait_note)
+
+        trait_grid = QGridLayout()
+        trait_grid.setHorizontalSpacing(12)
+        trait_grid.setVerticalSpacing(8)
+        self.weapon_trait_combo = QComboBox()
+        self.weapon_trait_combo.setMinimumWidth(420)
+        self.weapon_trait_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.weapon_trait_level_spin = QSpinBox()
+        self.weapon_trait_level_spin.setRange(0, I32_MAX)
+        self.weapon_trait_level_spin.setValue(15)
+        self.weapon_trait_level_spin.setMinimumWidth(120)
+
+        trait_grid.addWidget(QLabel("Trait"), 0, 0)
+        trait_grid.addWidget(self.weapon_trait_combo, 0, 1)
+        trait_grid.addWidget(QLabel("Level"), 0, 2)
+        trait_grid.addWidget(self.weapon_trait_level_spin, 0, 3)
+        trait_layout.addLayout(trait_grid)
+
+        trait_actions = QHBoxLayout()
+        for text, slot in [
+            ("Refresh Traits", self.refresh_weapon_trait_choices),
+            ("Open Wrightstones", self.open_wrightstones_for_selected_weapon),
+            ("Apply Direct Trait If Present", self.apply_weapon_trait_selected),
+            ("Clear Direct Trait If Present", self.clear_weapon_trait_selected),
+        ]:
+            btn = QPushButton(text)
+            btn.clicked.connect(slot)
+            trait_actions.addWidget(btn)
+        trait_actions.addStretch(1)
+        trait_layout.addLayout(trait_actions)
+        caps_layout.addWidget(trait_card)
+
+        self.weapon_cap_trait_status = QLabel("Select a weapon above or in Current Weapons. Uncap and trait + bonus edit directly; Wrightstone traits are edited from Wrightstones.")
+        self.weapon_cap_trait_status.setObjectName("subtleText")
+        self.weapon_cap_trait_status.setWordWrap(True)
+        caps_layout.addWidget(self.weapon_cap_trait_status)
+        caps_layout.addStretch(1)
 
         database_tab = QWidget()
         db_layout = QVBoxLayout(database_tab)
@@ -4082,7 +5043,7 @@ class MainWindow(QMainWindow):
             ("Add Selected Max XP", self.add_selected_database_weapon_max_to_empty_slot),
             ("Add All Missing", self.add_all_missing_database_weapons_to_empty_slots),
             ("Batch Add From Text", self.batch_add_weapons_to_empty_slots),
-            ("Show Empty Slots", lambda _=False: self._show_weapon_tab(2)),
+            ("Show Empty Slots", lambda _=False: self._show_weapon_tab(3)),
         ]:
             btn = QPushButton(text); btn.clicked.connect(slot); db_actions.addWidget(btn)
         db_actions.addStretch(1)
@@ -4104,7 +5065,7 @@ class MainWindow(QMainWindow):
         empty_actions = QHBoxLayout()
         for text, slot in [
             ("Refresh Empty Slots", self.refresh_weapon_empty_slot_rows),
-            ("Open Database", lambda _=False: self._show_weapon_tab(1)),
+            ("Open Database", lambda _=False: self._show_weapon_tab(2)),
             ("Show Empty In Current Table", self.show_empty_weapons_in_current_table),
         ]:
             btn = QPushButton(text); btn.clicked.connect(slot); empty_actions.addWidget(btn)
@@ -4112,11 +5073,702 @@ class MainWindow(QMainWindow):
         empty_layout.addLayout(empty_actions)
 
         self.weapon_tabs.addTab(current_tab, "Current Weapons")
+        self.weapon_tabs.addTab(caps_tab, "Caps / Traits")
         self.weapon_tabs.addTab(database_tab, "Database / Add")
         self.weapon_tabs.addTab(empty_tab, "Empty Slots")
         layout.addWidget(self.weapon_tabs, 1)
         self._install_common_numeric_validators()
         return page
+
+
+
+    def _wrightstone_choices(self) -> List[Dict[str, Any]]:
+        cached = getattr(self, "wrightstone_choices_cache", None)
+        if cached is not None:
+            return cached
+        choices: List[Dict[str, Any]] = [{"label": "None / Empty", "hash": EMPTY_HASH, "gbid": "", "name": "None / Empty"}]
+        try:
+            entries = []
+            for entry in self.item_db.by_hash.values():
+                cat = str(getattr(entry, "category", "") or "").lower()
+                gbid = str(getattr(entry, "item_id", "") or "").upper()
+                name = str(getattr(entry, "display_name", "") or "").lower()
+                if "wrightstone" in cat or "wrightstone" in name or gbid.startswith("ITEM_25_") or gbid.startswith("ITEM_26_") or gbid.startswith("ITEM_27_") or gbid.startswith("ITEM_28_") or gbid.startswith("ITEM_29_"):
+                    entries.append(entry)
+            def _sort_key(entry):
+                return (str(getattr(entry, "category", "")), str(getattr(entry, "item_id", "")), str(getattr(entry, "display_name", "")))
+            for entry in sorted(entries, key=_sort_key):
+                choices.append({
+                    "label": f"{entry.display_name} ({entry.item_id})",
+                    "hash": int(entry.hash_value) & 0xFFFFFFFF,
+                    "gbid": str(entry.item_id),
+                    "name": str(entry.display_name),
+                })
+        except Exception:
+            pass
+        self.wrightstone_choices_cache = choices
+        return choices
+
+    def _set_hash_combo_current_value(self, combo: QComboBox, current: Optional[int] = None) -> None:
+        if combo is None or current is None:
+            return
+        try:
+            target_int = int(current) & 0xFFFFFFFF
+        except Exception:
+            return
+        combo.blockSignals(True)
+        try:
+            for i in range(combo.count()):
+                data = combo.itemData(i)
+                if data is not None and int(data) & 0xFFFFFFFF == target_int:
+                    combo.setCurrentIndex(i)
+                    break
+        except Exception:
+            pass
+        combo.blockSignals(False)
+
+    def _populate_hash_combo(self, combo: QComboBox, choices: List[Dict[str, Any]], current: Optional[int] = None) -> None:
+        if combo is None:
+            return
+        old = combo.currentData()
+        target = current if current is not None else old
+        # ComboBox rebuilds are surprisingly expensive on large pages; only
+        # populate once unless the choice count changes.
+        if combo.count() != len(choices):
+            combo.blockSignals(True)
+            combo.clear()
+            for choice in choices:
+                combo.addItem(str(choice.get("label")), int(choice.get("hash", EMPTY_HASH)) & 0xFFFFFFFF)
+            combo.blockSignals(False)
+        self._set_hash_combo_current_value(combo, target)
+
+    def populate_wrightstone_editors(self) -> None:
+        if hasattr(self, "wrightstone_hash_combo"):
+            self._populate_hash_combo(self.wrightstone_hash_combo, self._wrightstone_choices())
+        trait_choices = self._weapon_trait_choices() if hasattr(self, "_weapon_trait_choices") else []
+        if hasattr(self, "wrightstone_trait1_combo"):
+            self._populate_hash_combo(self.wrightstone_trait1_combo, trait_choices)
+        if hasattr(self, "wrightstone_trait2_combo"):
+            self._populate_hash_combo(self.wrightstone_trait2_combo, trait_choices)
+        if hasattr(self, "wrightstone_trait3_combo"):
+            self._populate_hash_combo(self.wrightstone_trait3_combo, trait_choices)
+
+    def _sigil_trait_grouped(self) -> Dict[int, Dict[int, UnitRecord]]:
+        if not self.save:
+            return {}
+        cached = getattr(self, "_sigil_trait_grouped_cache", None)
+        if cached is not None:
+            return cached
+        try:
+            cached = self.save.group_by_unit([1701, 1702])
+        except Exception:
+            cached = {}
+        self._sigil_trait_grouped_cache = cached
+        return cached
+
+    def _sigil_trait_unit_for_sigil_unit(self, sigil_unit_id: int, lane: int) -> int:
+        return SIGIL_TRAIT_UNIT_BASE + (int(sigil_unit_id) - 30000) * 100 + int(lane)
+
+    def _sigil_trait_fields_for_sigil_unit(self, sigil_unit_id: int, lane: int) -> Dict[int, UnitRecord]:
+        if not self.save:
+            return {}
+        try:
+            unit_id = self._sigil_trait_unit_for_sigil_unit(int(sigil_unit_id), int(lane))
+            return dict(self._sigil_trait_grouped().get(unit_id, {}) or {})
+        except Exception:
+            return {}
+
+    def _sigil_trait_display(self, trait_hash: Any, trait_level: Any) -> str:
+        try:
+            h = int(trait_hash or EMPTY_HASH) & 0xFFFFFFFF
+        except Exception:
+            h = EMPTY_HASH
+        if h in (0, EMPTY_HASH):
+            return "—"
+        name, _gbid, hx = self.hash_entry_parts(h)
+        label = name or hx or f"0x{h:08X}"
+        try:
+            lv = int(trait_level or 0)
+        except Exception:
+            lv = 0
+        return f"{label} Lv {lv}" if lv else str(label)
+
+    def _sigil_trait_meta_records_for_unit(self, sigil_unit_id: int) -> Dict[str, Any]:
+        try:
+            t1 = self._sigil_trait_fields_for_sigil_unit(int(sigil_unit_id), 0)
+            t2 = self._sigil_trait_fields_for_sigil_unit(int(sigil_unit_id), 1)
+            return {
+                "trait1_hash_rec": t1.get(1701),
+                "trait1_level_rec": t1.get(1702),
+                "trait2_hash_rec": t2.get(1701),
+                "trait2_level_rec": t2.get(1702),
+                "trait1_unit": self._sigil_trait_unit_for_sigil_unit(int(sigil_unit_id), 0),
+                "trait2_unit": self._sigil_trait_unit_for_sigil_unit(int(sigil_unit_id), 1),
+            }
+        except Exception:
+            return {}
+
+    def _wrightstone_trait_grouped(self) -> Dict[int, Dict[int, UnitRecord]]:
+        if not self.save:
+            return {}
+        cached = getattr(self, "_wrightstone_trait_grouped_cache", None)
+        if cached is not None:
+            return cached
+        try:
+            cached = self.save.group_by_unit([1701, 1702])
+        except Exception:
+            cached = {}
+        self._wrightstone_trait_grouped_cache = cached
+        return cached
+
+    def _wrightstone_trait_fields_for_slot(self, slot: int, lane: int) -> Dict[int, UnitRecord]:
+        if not self.save:
+            return {}
+        try:
+            unit_id = WRIGHTSTONE_TRAIT_UNIT_BASE + int(slot) * 100 + int(lane)
+            return dict(self._wrightstone_trait_grouped().get(unit_id, {}) or {})
+        except Exception:
+            return {}
+
+    def _wrightstone_slot_fields(self) -> Dict[int, Dict[int, UnitRecord]]:
+        if not self.save:
+            return {}
+        cached = getattr(self, "_wrightstone_slot_grouped_cache", None)
+        if cached is not None:
+            return cached
+        try:
+            cached = self.save.group_by_unit([2102, 2103, 2104, 2105])
+        except Exception:
+            cached = {}
+        self._wrightstone_slot_grouped_cache = cached
+        return cached
+
+    def _wrightstone_hash_display(self, value: Any, empty_label: str = "") -> Tuple[str, str, str]:
+        try:
+            h = int(value or EMPTY_HASH) & 0xFFFFFFFF
+        except Exception:
+            h = EMPTY_HASH
+        if h in (0, EMPTY_HASH):
+            return empty_label, "", ""
+        return self.hash_entry_parts(h)
+
+    def _wrightstones_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(28, 24, 28, 24)
+        layout.setSpacing(12)
+
+        header = QLabel("Wrightstones")
+        header.setObjectName("pageHeader")
+        layout.addWidget(header)
+
+        help_text = QLabel(
+            "Edit real Wrightstone rows and their up to three linked trait rows. Wrightstone inventory uses 2102-2105 on units 50000-54999; linked traits use 1701/1702 on units 140000000 + slot*100 + lane. Detail controls auto-apply after each change; Save writes them to disk."
+        )
+        help_text.setWordWrap(True)
+        help_text.setObjectName("helpText")
+        layout.addWidget(help_text)
+
+        self.wrightstone_status_label = QLabel("Open a save to inspect real Wrightstone slots. Mapping: 2102 stone hash, 2103 value, 2104 active, 2105 flags, 140000000-series linked traits.")
+        self.wrightstone_status_label.setWordWrap(True)
+        self.wrightstone_status_label.setObjectName("subtleText")
+        layout.addWidget(self.wrightstone_status_label)
+
+        tools = QHBoxLayout()
+        self.wrightstone_filter_edit = QLineEdit()
+        self.wrightstone_filter_edit.setPlaceholderText("Filter wrightstones by name, GBID, hash, trait, slot, or unit...")
+        self._connect_debounced_text_changed(self.wrightstone_filter_edit, "wrightstones_filter", self.refresh_wrightstone_rows, 180)
+        tools.addWidget(self.wrightstone_filter_edit, 3)
+
+        self.wrightstone_show_empty_check = QCheckBox("Show empty")
+        self.wrightstone_show_empty_check.toggled.connect(lambda *_: self.refresh_wrightstone_rows())
+        tools.addWidget(self.wrightstone_show_empty_check)
+
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.clicked.connect(self.refresh_wrightstone_rows)
+        tools.addWidget(refresh_btn)
+        tools.addStretch(1)
+        layout.addLayout(tools)
+
+        self.wrightstone_table = QTableView()
+        self.wrightstone_table.setModel(self.wrightstone_model)
+        self._table_clean(self.wrightstone_table, hidden_columns=(3, 12))
+        self.wrightstone_table.setEditTriggers(
+            QAbstractItemView.EditTrigger.DoubleClicked
+            | QAbstractItemView.EditTrigger.SelectedClicked
+            | QAbstractItemView.EditTrigger.EditKeyPressed
+        )
+        self.wrightstone_table.selectionModel().selectionChanged.connect(lambda *_: self.update_wrightstone_detail())
+        layout.addWidget(self.wrightstone_table, 1)
+
+        detail = make_card("Selected Wrightstone")
+        detail_layout = QVBoxLayout(detail)
+        detail_layout.setSpacing(10)
+
+        self.wrightstone_detail_label = QLabel("Select a wrightstone row.")
+        self.wrightstone_detail_label.setWordWrap(True)
+        self.wrightstone_detail_label.setObjectName("subtleText")
+        detail_layout.addWidget(self.wrightstone_detail_label)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(8)
+
+        self.wrightstone_hash_combo = QComboBox()
+        self.wrightstone_hash_combo.setMinimumWidth(360)
+        self.wrightstone_hash_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        self.wrightstone_value_spin = QSpinBox()
+        self.wrightstone_value_spin.setRange(0, I32_MAX)
+        self.wrightstone_value_spin.setMinimumWidth(130)
+
+        self.wrightstone_trait1_combo = QComboBox()
+        self.wrightstone_trait1_combo.setMinimumWidth(360)
+        self.wrightstone_trait1_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        self.wrightstone_trait1_level_spin = QSpinBox()
+        self.wrightstone_trait1_level_spin.setRange(0, I32_MAX)
+        self.wrightstone_trait1_level_spin.setValue(15)
+        self.wrightstone_trait1_level_spin.setMinimumWidth(100)
+
+        self.wrightstone_trait2_combo = QComboBox()
+        self.wrightstone_trait2_combo.setMinimumWidth(360)
+        self.wrightstone_trait2_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        self.wrightstone_trait2_level_spin = QSpinBox()
+        self.wrightstone_trait2_level_spin.setRange(0, I32_MAX)
+        self.wrightstone_trait2_level_spin.setValue(15)
+        self.wrightstone_trait2_level_spin.setMinimumWidth(100)
+
+        self.wrightstone_trait3_combo = QComboBox()
+        self.wrightstone_trait3_combo.setMinimumWidth(360)
+        self.wrightstone_trait3_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        self.wrightstone_trait3_level_spin = QSpinBox()
+        self.wrightstone_trait3_level_spin.setRange(0, I32_MAX)
+        self.wrightstone_trait3_level_spin.setValue(15)
+        self.wrightstone_trait3_level_spin.setMinimumWidth(100)
+
+        for combo in (self.wrightstone_hash_combo, self.wrightstone_trait1_combo, self.wrightstone_trait2_combo, self.wrightstone_trait3_combo):
+            combo.currentIndexChanged.connect(lambda *_: self._schedule_wrightstone_auto_apply())
+        for spin in (self.wrightstone_value_spin, self.wrightstone_trait1_level_spin, self.wrightstone_trait2_level_spin, self.wrightstone_trait3_level_spin):
+            spin.valueChanged.connect(lambda *_: self._schedule_wrightstone_auto_apply())
+
+        grid.addWidget(QLabel("Wrightstone"), 0, 0)
+        grid.addWidget(self.wrightstone_hash_combo, 0, 1)
+        grid.addWidget(QLabel("Value"), 0, 2)
+        grid.addWidget(self.wrightstone_value_spin, 0, 3)
+
+        grid.addWidget(QLabel("Trait 1"), 1, 0)
+        grid.addWidget(self.wrightstone_trait1_combo, 1, 1)
+        grid.addWidget(QLabel("Level"), 1, 2)
+        grid.addWidget(self.wrightstone_trait1_level_spin, 1, 3)
+
+        grid.addWidget(QLabel("Trait 2"), 2, 0)
+        grid.addWidget(self.wrightstone_trait2_combo, 2, 1)
+        grid.addWidget(QLabel("Level"), 2, 2)
+        grid.addWidget(self.wrightstone_trait2_level_spin, 2, 3)
+
+        grid.addWidget(QLabel("Trait 3"), 3, 0)
+        grid.addWidget(self.wrightstone_trait3_combo, 3, 1)
+        grid.addWidget(QLabel("Level"), 3, 2)
+        grid.addWidget(self.wrightstone_trait3_level_spin, 3, 3)
+        grid.setColumnStretch(1, 3)
+        detail_layout.addLayout(grid)
+
+        actions = QHBoxLayout()
+        for text, slot in [
+            ("Apply Selected / Resync", self.apply_selected_wrightstone_edit),
+            ("Clear Selected", self.clear_selected_wrightstone),
+            ("Open Weapons", lambda: self._show_page("Weapons")),
+        ]:
+            btn = QPushButton(text)
+            if text == "Apply Selected":
+                btn.setProperty("class", "primaryButton")
+            btn.clicked.connect(slot)
+            actions.addWidget(btn)
+        actions.addStretch(1)
+        detail_layout.addLayout(actions)
+
+        layout.addWidget(detail)
+        return page
+
+    def refresh_wrightstone_rows(self) -> None:
+        if not hasattr(self, "wrightstone_model"):
+            return
+        if not self.save:
+            self.wrightstone_model.set_rows([])
+            self.wrightstone_rows_meta = []
+            if hasattr(self, "wrightstone_status_label"):
+                self.wrightstone_status_label.setText("Open a save to inspect wrightstone slots.")
+            return
+
+        self._wrightstone_slot_grouped_cache = None
+        self._wrightstone_trait_grouped_cache = None
+        self.populate_wrightstone_editors()
+        grouped = self._wrightstone_slot_fields()
+        trait_grouped = self._wrightstone_trait_grouped()
+        # Corrected mapping: 140000000-series is 5000 slots x 3 lanes for Wrightstones.
+        # 120000000-series is 5100 slots x 2 lanes and matches sigil/gem trait storage.
+        rows: List[List[Any]] = []
+        meta_rows: List[Dict[str, Any]] = []
+        q = getattr(self, "wrightstone_filter_edit", None).text().strip().lower() if hasattr(self, "wrightstone_filter_edit") else ""
+        show_empty = bool(getattr(getattr(self, "wrightstone_show_empty_check", None), "isChecked", lambda: False)())
+
+        total = active = empty = hidden_special = 0
+        for unit_id, fields in sorted(grouped.items()):
+            try:
+                unit_int = int(unit_id)
+            except Exception:
+                continue
+            if not (50000 <= unit_int <= 54999):
+                continue
+            total += 1
+            slot = unit_int - 50000
+            stone_hash_value = self._record_first_value(fields.get(2102), EMPTY_HASH)
+            value_2103 = self._record_first_value(fields.get(2103), 0)
+            active_2104 = self._record_first_value(fields.get(2104), False)
+            flags_2105 = self._record_first_value(fields.get(2105), 0)
+
+            trait1_fields = dict(trait_grouped.get(WRIGHTSTONE_TRAIT_UNIT_BASE + slot * 100, {}) or {})
+            trait2_fields = dict(trait_grouped.get(WRIGHTSTONE_TRAIT_UNIT_BASE + slot * 100 + 1, {}) or {})
+            trait3_fields = dict(trait_grouped.get(WRIGHTSTONE_TRAIT_UNIT_BASE + slot * 100 + 2, {}) or {})
+            trait1_hash = self._record_first_value(trait1_fields.get(1701), EMPTY_HASH)
+            trait1_level = self._record_first_value(trait1_fields.get(1702), 0)
+            trait2_hash = self._record_first_value(trait2_fields.get(1701), EMPTY_HASH)
+            trait2_level = self._record_first_value(trait2_fields.get(1702), 0)
+            trait3_hash = self._record_first_value(trait3_fields.get(1701), EMPTY_HASH)
+            trait3_level = self._record_first_value(trait3_fields.get(1702), 0)
+
+            stone_name, stone_gbid, stone_hx = self._wrightstone_hash_display(stone_hash_value, "<Empty wrightstone slot>")
+            t1_name, t1_gbid, _ = self._wrightstone_hash_display(trait1_hash, "")
+            t2_name, t2_gbid, _ = self._wrightstone_hash_display(trait2_hash, "")
+            t3_name, t3_gbid, _ = self._wrightstone_hash_display(trait3_hash, "")
+
+            is_empty = int(stone_hash_value or EMPTY_HASH) & 0xFFFFFFFF in (0, EMPTY_HASH)
+            is_real_wrightstone = self._is_wrightstone_hash(stone_hash_value)
+            # Trait rows can exist even when the inventory slot is empty, and
+            # the 50000-series also contains potions/currency/special items.
+            # The Wrightstones page should only show real Wrightstone entries.
+            if is_empty:
+                empty += 1
+                if not show_empty:
+                    continue
+                trait1_hash = EMPTY_HASH
+                trait1_level = 0
+                trait2_hash = EMPTY_HASH
+                trait2_level = 0
+                trait3_hash = EMPTY_HASH
+                trait3_level = 0
+                t1_name, t1_gbid = "", ""
+                t2_name, t2_gbid = "", ""
+                t3_name, t3_gbid = "", ""
+            elif not is_real_wrightstone:
+                hidden_special += 1
+                continue
+            else:
+                active += 1
+
+            row = [
+                slot,
+                stone_name,
+                stone_gbid,
+                stone_hx,
+                value_2103,
+                t1_name if t1_name else "",
+                trait1_level,
+                t2_name if t2_name else "",
+                trait2_level,
+                t3_name if t3_name else "",
+                trait3_level,
+                f"{int(flags_2105)} / active {bool(active_2104)}",
+                unit_int,
+            ]
+            if q and not self._matches_editor_filter(row, q):
+                continue
+            rows.append(row)
+            meta_rows.append({
+                "slot": slot,
+                "unit_id": unit_int,
+                "is_empty": is_empty,
+                "stone_rec": fields.get(2102),
+                "value_rec": fields.get(2103),
+                "active_rec": fields.get(2104),
+                "flags_rec": fields.get(2105),
+                "trait1_hash_rec": trait1_fields.get(1701),
+                "trait1_level_rec": trait1_fields.get(1702),
+                "trait2_hash_rec": trait2_fields.get(1701),
+                "trait2_level_rec": trait2_fields.get(1702),
+                "trait3_hash_rec": trait3_fields.get(1701),
+                "trait3_level_rec": trait3_fields.get(1702),
+                "trait1_unit": WRIGHTSTONE_TRAIT_UNIT_BASE + slot * 100,
+                "trait2_unit": WRIGHTSTONE_TRAIT_UNIT_BASE + slot * 100 + 1,
+                "trait3_unit": WRIGHTSTONE_TRAIT_UNIT_BASE + slot * 100 + 2,
+            })
+
+        self.wrightstone_rows_meta = meta_rows
+        self.wrightstone_model.set_rows(rows)
+        if hasattr(self, "wrightstone_status_label"):
+            hidden_note = f" · {self.format_value(hidden_special)} non-wrightstone special rows hidden" if hidden_special else ""
+            if active == 0 and not show_empty:
+                self.wrightstone_status_label.setText(
+                    f"Wrightstone slots: 0 active / {self.format_value(total)} total · "
+                    f"{self.format_value(empty)} empty{hidden_note}. Enable Show empty to inspect reusable slots."
+                )
+            else:
+                self.wrightstone_status_label.setText(
+                    f"Wrightstone slots: {self.format_value(active)} active / {self.format_value(total)} total · "
+                    f"{self.format_value(empty)} empty · showing {self.format_value(len(rows))}{hidden_note}"
+                )
+        if hasattr(self, "wrightstone_table"):
+            self._set_table_widths(self.wrightstone_table, {0: 70, 1: 320, 2: 150, 4: 80, 5: 240, 6: 80, 7: 240, 8: 80, 9: 240, 10: 80, 11: 140})
+        self.update_wrightstone_detail()
+
+    def _selected_wrightstone_meta(self) -> Optional[Dict[str, Any]]:
+        if not hasattr(self, "wrightstone_table"):
+            return None
+        return self._selected_meta(self.wrightstone_table, self.wrightstone_rows_meta)
+
+    def update_wrightstone_detail(self) -> None:
+        self._updating_wrightstone_detail = True
+        try:
+            meta = self._selected_wrightstone_meta()
+            if not hasattr(self, "wrightstone_detail_label"):
+                return
+            if not meta:
+                self.wrightstone_detail_label.setText("Select a wrightstone row.")
+                return
+            stone_hash = self._record_first_value(meta.get("stone_rec"), EMPTY_HASH)
+            value = self._record_first_value(meta.get("value_rec"), 0)
+            stone_is_empty = int(stone_hash or EMPTY_HASH) & 0xFFFFFFFF in (0, EMPTY_HASH)
+            if stone_is_empty:
+                t1 = EMPTY_HASH
+                t1_lv = 0
+                t2 = EMPTY_HASH
+                t2_lv = 0
+                t3 = EMPTY_HASH
+                t3_lv = 0
+            else:
+                t1 = self._record_first_value(meta.get("trait1_hash_rec"), EMPTY_HASH)
+                t1_lv = self._record_first_value(meta.get("trait1_level_rec"), 0)
+                t2 = self._record_first_value(meta.get("trait2_hash_rec"), EMPTY_HASH)
+                t2_lv = self._record_first_value(meta.get("trait2_level_rec"), 0)
+                t3 = self._record_first_value(meta.get("trait3_hash_rec"), EMPTY_HASH)
+                t3_lv = self._record_first_value(meta.get("trait3_level_rec"), 0)
+            stone_name, stone_gbid, stone_hx = self._wrightstone_hash_display(stone_hash, "Empty")
+            t1_name, t1_gbid, _ = self._wrightstone_hash_display(t1, "None")
+            t2_name, t2_gbid, _ = self._wrightstone_hash_display(t2, "None")
+            t3_name, t3_gbid, _ = self._wrightstone_hash_display(t3, "None")
+            self.wrightstone_detail_label.setText(
+                f"Slot {meta.get('slot')} · Unit {meta.get('unit_id')}\n"
+                f"Wrightstone: {stone_name} {f'({stone_gbid})' if stone_gbid else ''} {stone_hx}\n"
+                f"Trait 1: {t1_name} {f'({t1_gbid})' if t1_gbid else ''} · Level {t1_lv} · Unit {meta.get('trait1_unit')}\n"
+                f"Trait 2: {t2_name} {f'({t2_gbid})' if t2_gbid else ''} · Level {t2_lv} · Unit {meta.get('trait2_unit')}\n"
+                f"Trait 3: {t3_name} {f'({t3_gbid})' if t3_gbid else ''} · Level {t3_lv} · Unit {meta.get('trait3_unit')}"
+            )
+            if hasattr(self, "wrightstone_hash_combo"):
+                if self.wrightstone_hash_combo.count() == 0:
+                    self._populate_hash_combo(self.wrightstone_hash_combo, self._wrightstone_choices(), stone_hash)
+                else:
+                    self._set_hash_combo_current_value(self.wrightstone_hash_combo, stone_hash)
+            if hasattr(self, "wrightstone_value_spin"):
+                self.wrightstone_value_spin.blockSignals(True)
+                self.wrightstone_value_spin.setValue(max(0, min(I32_MAX, int(value or 0))))
+                self.wrightstone_value_spin.blockSignals(False)
+            trait_choices = self._weapon_trait_choices() if hasattr(self, "_weapon_trait_choices") else []
+            if hasattr(self, "wrightstone_trait1_combo"):
+                if self.wrightstone_trait1_combo.count() == 0:
+                    self._populate_hash_combo(self.wrightstone_trait1_combo, trait_choices, t1)
+                else:
+                    self._set_hash_combo_current_value(self.wrightstone_trait1_combo, t1)
+            if hasattr(self, "wrightstone_trait2_combo"):
+                if self.wrightstone_trait2_combo.count() == 0:
+                    self._populate_hash_combo(self.wrightstone_trait2_combo, trait_choices, t2)
+                else:
+                    self._set_hash_combo_current_value(self.wrightstone_trait2_combo, t2)
+            if hasattr(self, "wrightstone_trait3_combo"):
+                if self.wrightstone_trait3_combo.count() == 0:
+                    self._populate_hash_combo(self.wrightstone_trait3_combo, trait_choices, t3)
+                else:
+                    self._set_hash_combo_current_value(self.wrightstone_trait3_combo, t3)
+            if hasattr(self, "wrightstone_trait1_level_spin"):
+                self.wrightstone_trait1_level_spin.blockSignals(True)
+                self.wrightstone_trait1_level_spin.setValue(max(0, min(I32_MAX, int(t1_lv or 0))))
+                self.wrightstone_trait1_level_spin.blockSignals(False)
+            if hasattr(self, "wrightstone_trait2_level_spin"):
+                self.wrightstone_trait2_level_spin.blockSignals(True)
+                self.wrightstone_trait2_level_spin.setValue(max(0, min(I32_MAX, int(t2_lv or 0))))
+                self.wrightstone_trait2_level_spin.blockSignals(False)
+            if hasattr(self, "wrightstone_trait3_level_spin"):
+                self.wrightstone_trait3_level_spin.blockSignals(True)
+                self.wrightstone_trait3_level_spin.setValue(max(0, min(I32_MAX, int(t3_lv or 0))))
+                self.wrightstone_trait3_level_spin.blockSignals(False)
+        finally:
+            self._updating_wrightstone_detail = False
+
+    def _schedule_wrightstone_auto_apply(self) -> None:
+        if getattr(self, "_updating_wrightstone_detail", False):
+            return
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return
+        if not getattr(self, "save", None) or not hasattr(self, "wrightstone_table"):
+            return
+        idx = self.wrightstone_table.currentIndex()
+        if not idx.isValid() or idx.row() < 0:
+            return
+        timer = getattr(self, "_wrightstone_auto_apply_timer", None)
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(self._run_wrightstone_auto_apply)
+            self._wrightstone_auto_apply_timer = timer
+        timer.start(180)
+
+    def _run_wrightstone_auto_apply(self) -> None:
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return
+        self.apply_selected_wrightstone_edit(auto=True)
+
+    def apply_selected_wrightstone_edit(self, *_args, auto: bool = False) -> None:
+        if not self.save:
+            if not auto:
+                QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return
+        meta = self._selected_wrightstone_meta()
+        if not meta:
+            if not auto:
+                self.statusBar().showMessage("Select a wrightstone row first.", 3000)
+            return
+        changed = 0
+        stone_hash = int(self.wrightstone_hash_combo.currentData()) & 0xFFFFFFFF if hasattr(self, "wrightstone_hash_combo") and self.wrightstone_hash_combo.currentData() is not None else EMPTY_HASH
+        if stone_hash not in (0, EMPTY_HASH) and not self._is_wrightstone_hash(stone_hash):
+            QMessageBox.warning(self, "Not a wrightstone", "The selected item is not categorized as a Wrightstone.")
+            return
+        value = int(self.wrightstone_value_spin.value()) if hasattr(self, "wrightstone_value_spin") else 0
+        t1 = int(self.wrightstone_trait1_combo.currentData()) & 0xFFFFFFFF if hasattr(self, "wrightstone_trait1_combo") and self.wrightstone_trait1_combo.currentData() is not None else EMPTY_HASH
+        t1_lv = int(self.wrightstone_trait1_level_spin.value()) if hasattr(self, "wrightstone_trait1_level_spin") else 0
+        t2 = int(self.wrightstone_trait2_combo.currentData()) & 0xFFFFFFFF if hasattr(self, "wrightstone_trait2_combo") and self.wrightstone_trait2_combo.currentData() is not None else EMPTY_HASH
+        t2_lv = int(self.wrightstone_trait2_level_spin.value()) if hasattr(self, "wrightstone_trait2_level_spin") else 0
+        t3 = int(self.wrightstone_trait3_combo.currentData()) & 0xFFFFFFFF if hasattr(self, "wrightstone_trait3_combo") and self.wrightstone_trait3_combo.currentData() is not None else EMPTY_HASH
+        t3_lv = int(self.wrightstone_trait3_level_spin.value()) if hasattr(self, "wrightstone_trait3_level_spin") else 0
+
+        for rec_key, val, label in [
+            ("stone_rec", stone_hash, "wrightstone hash 2102 / FF360800"),
+            ("value_rec", value, "wrightstone value 2103 / FF370800"),
+            ("trait1_hash_rec", t1, "wrightstone trait 1 ID 1701 / FFA50600"),
+            ("trait1_level_rec", t1_lv, "wrightstone trait 1 level 1702 / FFA60600"),
+            ("trait2_hash_rec", t2, "wrightstone trait 2 ID 1701 / FFA50600"),
+            ("trait2_level_rec", t2_lv, "wrightstone trait 2 level 1702 / FFA60600"),
+            ("trait3_hash_rec", t3, "wrightstone trait 3 ID 1701 / FFA50600"),
+            ("trait3_level_rec", t3_lv, "wrightstone trait 3 level 1702 / FFA60600"),
+        ]:
+            if meta.get(rec_key) is not None and self._set_record_first_value(meta.get(rec_key), val, label):
+                changed += 1
+        if stone_hash not in (0, EMPTY_HASH):
+            if meta.get("active_rec") is not None and self._set_record_first_value(meta.get("active_rec"), True, "wrightstone active flag 2104"):
+                changed += 1
+            if meta.get("flags_rec") is not None:
+                old_flags = int(self._record_first_value(meta.get("flags_rec"), 0) or 0)
+                new_flags = max(1, old_flags)
+                if self._set_record_first_value(meta.get("flags_rec"), new_flags, "wrightstone flags 2105"):
+                    changed += 1
+        self._mark_stale_pages(["Wrightstones", "Weapons", "Save Health"])
+        self.refresh_wrightstone_rows()
+        self.statusBar().showMessage(f"Wrightstone updated: {changed} field(s) changed. Save As to test.", 6000)
+
+    def clear_selected_wrightstone(self) -> None:
+        if not self.save:
+            QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return
+        meta = self._selected_wrightstone_meta()
+        if not meta:
+            self.statusBar().showMessage("Select a wrightstone row first.", 3000)
+            return
+        if QMessageBox.question(self, "Clear wrightstone", "Clear selected wrightstone slot and its three linked trait slots?") != QMessageBox.StandardButton.Yes:
+            return
+        changed = 0
+        for rec_key, val, label in [
+            ("stone_rec", EMPTY_HASH, "wrightstone hash 2102"),
+            ("value_rec", 0, "wrightstone value 2103"),
+            ("active_rec", False, "wrightstone active 2104"),
+            ("flags_rec", 0, "wrightstone flags 2105"),
+            ("trait1_hash_rec", EMPTY_HASH, "trait 1 ID 1701"),
+            ("trait1_level_rec", 0, "trait 1 level 1702"),
+            ("trait2_hash_rec", EMPTY_HASH, "trait 2 ID 1701"),
+            ("trait2_level_rec", 0, "trait 2 level 1702"),
+            ("trait3_hash_rec", EMPTY_HASH, "trait 3 ID 1701"),
+            ("trait3_level_rec", 0, "trait 3 level 1702"),
+        ]:
+            if meta.get(rec_key) is not None and self._set_record_first_value(meta.get(rec_key), val, label):
+                changed += 1
+        self._mark_stale_pages(["Wrightstones", "Weapons", "Save Health"])
+        self.refresh_wrightstone_rows()
+        prefix = "Auto-applied" if auto else "Applied"
+        self.statusBar().showMessage(f"{prefix} wrightstone edit: {changed} field(s) changed. Save when ready.", 5000)
+
+    def apply_wrightstone_table_cell_edit(self, row_index: int, column: int, value: Any) -> bool:
+        if not self.save or row_index >= len(getattr(self, "wrightstone_rows_meta", [])):
+            return False
+        meta = self.wrightstone_rows_meta[row_index]
+        ok = False
+        if column in (1, 2, 3):
+            resolved = self._resolve_edit_hash(value, "wrightstone", allow_empty=True)
+            if resolved is None:
+                return False
+            if resolved not in (0, EMPTY_HASH) and not self._is_wrightstone_hash(resolved):
+                QMessageBox.warning(self, "Not a wrightstone", "That hash resolves to a non-wrightstone item, so it is hidden from this page.")
+                return False
+            ok = self._set_record_first_value(meta.get("stone_rec"), resolved, "wrightstone hash 2102 / FF360800")
+            if ok and resolved not in (0, EMPTY_HASH):
+                if meta.get("active_rec") is not None:
+                    self._set_record_first_value(meta.get("active_rec"), True, "wrightstone active 2104")
+                if meta.get("flags_rec") is not None:
+                    self._set_record_first_value(meta.get("flags_rec"), max(1, int(self._record_first_value(meta.get("flags_rec"), 0) or 0)), "wrightstone flags 2105")
+        elif column == 4:
+            parsed = self._parse_edit_int(value, "wrightstone value 2103")
+            if parsed is None:
+                return False
+            ok = self._set_record_first_value(meta.get("value_rec"), parsed, "wrightstone value 2103 / FF370800")
+        elif column == 5:
+            resolved = self._resolve_edit_hash(value, "trait 1", allow_empty=True)
+            if resolved is None:
+                return False
+            ok = self._set_record_first_value(meta.get("trait1_hash_rec"), resolved, "wrightstone trait 1 ID 1701")
+        elif column == 6:
+            parsed = self._parse_edit_int(value, "trait 1 level")
+            if parsed is None:
+                return False
+            ok = self._set_record_first_value(meta.get("trait1_level_rec"), parsed, "wrightstone trait 1 level 1702")
+        elif column == 7:
+            resolved = self._resolve_edit_hash(value, "trait 2", allow_empty=True)
+            if resolved is None:
+                return False
+            ok = self._set_record_first_value(meta.get("trait2_hash_rec"), resolved, "wrightstone trait 2 ID 1701")
+        elif column == 8:
+            parsed = self._parse_edit_int(value, "trait 2 level")
+            if parsed is None:
+                return False
+            ok = self._set_record_first_value(meta.get("trait2_level_rec"), parsed, "wrightstone trait 2 level 1702")
+        elif column == 9:
+            resolved = self._resolve_edit_hash(value, "trait 3", allow_empty=True)
+            if resolved is None:
+                return False
+            ok = self._set_record_first_value(meta.get("trait3_hash_rec"), resolved, "wrightstone trait 3 ID 1701")
+        elif column == 10:
+            parsed = self._parse_edit_int(value, "trait 3 level")
+            if parsed is None:
+                return False
+            ok = self._set_record_first_value(meta.get("trait3_level_rec"), parsed, "wrightstone trait 3 level 1702")
+        elif column == 11:
+            parsed = self._parse_edit_int(value, "wrightstone flags")
+            if parsed is None:
+                return False
+            ok = self._set_record_first_value(meta.get("flags_rec"), parsed, "wrightstone flags 2105")
+        if ok:
+            self._mark_stale_pages(["Wrightstones", "Weapons", "Save Health"])
+            self.refresh_wrightstone_rows()
+            self.statusBar().showMessage("Wrightstone row updated in memory. Save As to test.", 4000)
+        return bool(ok)
 
 
     def _characters_page(self) -> QWidget:
@@ -4135,7 +5787,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.character_count_label)
         self.character_filter_edit = QLineEdit()
         self.character_filter_edit.setPlaceholderText("Filter characters by name, GBID, hash, level, slot, or unit id...")
-        self.character_filter_edit.textChanged.connect(lambda _: self.refresh_character_rows())
+        self._connect_debounced_text_changed(self.character_filter_edit, "characters_filter", self.refresh_character_rows, 180)
         layout.addWidget(self.character_filter_edit)
         filter_row = QHBoxLayout()
         filter_row.addWidget(QLabel("Tip: double-click editable cells for character, level, or state."))
@@ -4317,6 +5969,13 @@ class MainWindow(QMainWindow):
         layout.addWidget(mastery_card, 1)
         return page
 
+    def _apply_value_preset_to_line_edit(self, combo: QComboBox, edit: QLineEdit) -> None:
+        data = combo.currentData()
+        if data is None:
+            return
+        edit.setText(str(data))
+
+
 
     def _mastery_mods_page(self) -> QWidget:
         page = QWidget()
@@ -4328,10 +5987,30 @@ class MainWindow(QMainWindow):
         header.setObjectName("pageHeader")
         layout.addWidget(header)
 
-        help_text = QLabel("Pick four Overmastery stats and a value. Auto apply can write the setup as soon as you change it.")
+        help_text = QLabel("1606 / FF460600 = mastery ID. 1607 / FF470600 = paired value. Use Overmastery for the 4 visible slots; use Basic Sweep only when you intentionally want to write the 0x258 basic mastery rows.")
         help_text.setWordWrap(True)
         help_text.setObjectName("helpText")
         layout.addWidget(help_text)
+
+        target_card = make_card("Character / group")
+        target_layout = QHBoxLayout(target_card)
+        target_layout.setSpacing(10)
+        target_layout.addWidget(QLabel("Target"))
+        self.mastery_mod_character_combo = QComboBox()
+        self.mastery_mod_character_combo.setMinimumWidth(360)
+        self.mastery_mod_character_combo.currentIndexChanged.connect(lambda *_: self._on_mastery_mod_character_changed())
+        target_layout.addWidget(self.mastery_mod_character_combo, 1)
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.clicked.connect(self._on_mastery_mod_character_changed)
+        target_layout.addWidget(refresh_btn)
+        update_names_btn = QPushButton("Update Names")
+        update_names_btn.clicked.connect(self.download_mastery_mod_id_search_db)
+        target_layout.addWidget(update_names_btn)
+        self.mastery_mod_status_label = QLabel("Open a save, then pick a character/group.")
+        self.mastery_mod_status_label.setObjectName("subtleText")
+        self.mastery_mod_status_label.setWordWrap(True)
+        target_layout.addWidget(self.mastery_mod_status_label, 2)
+        layout.addWidget(target_card)
 
         self.mastery_mod_tabs = QTabWidget(page)
         self.mastery_mod_tabs.hide()
@@ -4348,35 +6027,7 @@ class MainWindow(QMainWindow):
         over_layout_root.setContentsMargins(12, 12, 12, 12)
         over_layout_root.setSpacing(12)
 
-        top_row = QHBoxLayout()
-        target_card = make_card("Target")
-        target_layout = QVBoxLayout(target_card)
-        target_layout.setSpacing(8)
-        target_label = QLabel("Target for selected-group edits.")
-        target_label.setWordWrap(True)
-        target_label.setObjectName("subtleText")
-        target_layout.addWidget(target_label)
-        self.mastery_mod_character_combo = QComboBox()
-        self.mastery_mod_character_combo.setMinimumWidth(360)
-        self.mastery_mod_character_combo.currentIndexChanged.connect(lambda *_: self.refresh_mastery_mod_rows())
-        target_layout.addWidget(QLabel("Character / group"))
-        target_layout.addWidget(self.mastery_mod_character_combo)
-        target_btns = QHBoxLayout()
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self.refresh_mastery_mod_rows)
-        update_names_btn = QPushButton("Update Names / IDs")
-        update_names_btn.clicked.connect(self.download_mastery_mod_id_search_db)
-        target_btns.addWidget(refresh_btn)
-        target_btns.addWidget(update_names_btn)
-        target_btns.addStretch(1)
-        target_layout.addLayout(target_btns)
-        self.mastery_mod_status_label = QLabel("Open a save, then pick a character/group.")
-        self.mastery_mod_status_label.setObjectName("subtleText")
-        self.mastery_mod_status_label.setWordWrap(True)
-        target_layout.addWidget(self.mastery_mod_status_label)
-        top_row.addWidget(target_card, 1)
-
-        over_card = make_card("Overmastery")
+        over_card = make_card("Overmastery 4-Lane Editor")
         over_layout = QVBoxLayout(over_card)
         over_layout.setSpacing(8)
 
@@ -4395,84 +6046,120 @@ class MainWindow(QMainWindow):
             over_grid.addWidget(combo, i // 2, (i % 2) * 2 + 1)
         over_layout.addLayout(over_grid)
 
-        value_row = QHBoxLayout()
-        self.mastery_overmastery_value_edit = QLineEdit("-1")
-        self.mastery_overmastery_value_edit.setToolTip("-1 = 80%, 512 = 20%, 0 = clear")
-        self.mastery_overmastery_value_edit.setMaximumWidth(95)
+        value_grid = QGridLayout()
+        value_grid.setHorizontalSpacing(10)
+        value_grid.setVerticalSpacing(6)
+        self.mastery_overmastery_value_edit = QLineEdit(str(OVERMASTERY_VALUE_MAX))
+        self.mastery_overmastery_value_edit.setToolTip("0x03FF / 1023 = max / 80%; 0x0200 / 512 = normal max / 20%. Legacy -1 writes raw FFFFFFFF only for old test saves.")
+        self.mastery_overmastery_value_edit.setMaximumWidth(110)
         self.mastery_overmastery_value_edit.textChanged.connect(lambda *_: self._schedule_overmastery_auto_apply())
-        self.mastery_overmastery_write_value_check = QCheckBox("Value")
+        self.mastery_overmastery_value_preset_combo = QComboBox()
+        self.mastery_overmastery_value_preset_combo.setMinimumWidth(160)
+        for label, value_text in [
+            ("80% / 03FF", str(OVERMASTERY_VALUE_MAX)),
+            ("20% / 0200", str(OVERMASTERY_VALUE_NORMAL)),
+            ("Zero", "0"),
+            ("Legacy Raw FF", "-1"),
+        ]:
+            self.mastery_overmastery_value_preset_combo.addItem(label, value_text)
+        self.mastery_overmastery_value_preset_combo.currentIndexChanged.connect(
+            lambda *_: self._apply_value_preset_to_line_edit(self.mastery_overmastery_value_preset_combo, self.mastery_overmastery_value_edit)
+        )
+        self.mastery_overmastery_write_value_check = QCheckBox("Write 1607")
         self.mastery_overmastery_write_value_check.setChecked(True)
         self.mastery_overmastery_write_value_check.toggled.connect(lambda *_: self._schedule_overmastery_auto_apply())
-        self.mastery_overmastery_auto_apply_check = QCheckBox("Auto apply to all")
+        self.mastery_overmastery_auto_apply_check = QCheckBox("Auto selected")
         self.mastery_overmastery_auto_apply_check.setChecked(True)
-        value_row.addWidget(QLabel("Value"))
-        value_row.addWidget(self.mastery_overmastery_value_edit)
-        for label, value_text in [
-            ("80%", "-1"),
-            ("20%", "512"),
-            ("Zero", "0"),
-        ]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, t=value_text: self.mastery_overmastery_value_edit.setText(t))
-            value_row.addWidget(btn)
-        value_row.addWidget(self.mastery_overmastery_write_value_check)
-        value_row.addWidget(self.mastery_overmastery_auto_apply_check)
-        value_row.addStretch(1)
-        over_layout.addLayout(value_row)
+        self.mastery_overmastery_apply_all_auto_check = QCheckBox("Auto all 40")
+        self.mastery_overmastery_apply_all_auto_check.setChecked(False)
+        value_grid.addWidget(QLabel("Value"), 0, 0)
+        value_grid.addWidget(self.mastery_overmastery_value_edit, 0, 1)
+        value_grid.addWidget(QLabel("Preset"), 0, 2)
+        value_grid.addWidget(self.mastery_overmastery_value_preset_combo, 0, 3)
+        value_grid.addWidget(self.mastery_overmastery_write_value_check, 0, 4)
+        value_grid.addWidget(self.mastery_overmastery_auto_apply_check, 1, 1, 1, 2)
+        value_grid.addWidget(self.mastery_overmastery_apply_all_auto_check, 1, 3, 1, 2)
+        over_layout.addLayout(value_grid)
 
-        action_grid = QGridLayout()
-        action_grid.setHorizontalSpacing(8)
-        action_grid.setVerticalSpacing(6)
-        apply_all_over_btn = QPushButton("Apply All")
-        apply_all_over_btn.clicked.connect(self.apply_overmastery_four_stats_all)
+        action_row = QHBoxLayout()
         apply_selected_over_btn = QPushButton("Apply Selected")
         apply_selected_over_btn.clicked.connect(self.apply_overmastery_four_stats_selected)
-        stats_only_all_btn = QPushButton("Stats Only")
-        stats_only_all_btn.clicked.connect(self.apply_mastery_sw_overmastery_selected_four_stats)
-        set_values_btn = QPushButton("Values Only")
-        set_values_btn.clicked.connect(
-            lambda _=False: self.apply_mastery_sw_overmastery_value_sweep(
-                self._parse_mastery_u32_text(self.mastery_overmastery_value_edit.text(), -1)
-            )
-        )
-        action_grid.addWidget(apply_all_over_btn, 0, 0)
-        action_grid.addWidget(apply_selected_over_btn, 0, 1)
-        action_grid.addWidget(stats_only_all_btn, 0, 2)
-        action_grid.addWidget(set_values_btn, 0, 3)
-        over_layout.addLayout(action_grid)
+        apply_all_over_btn = QPushButton("Apply All 40")
+        apply_all_over_btn.clicked.connect(self.apply_overmastery_four_stats_all)
+        action_row.addWidget(apply_selected_over_btn)
+        action_row.addWidget(apply_all_over_btn)
+        action_row.addStretch(1)
+        over_layout.addLayout(action_row)
 
         self.mastery_sw_lab_status = QLabel("Ready")
         self.mastery_sw_lab_status.setWordWrap(True)
         self.mastery_sw_lab_status.setObjectName("subtleText")
         over_layout.addWidget(self.mastery_sw_lab_status)
 
-        top_row.addWidget(over_card, 2)
-        over_layout_root.addLayout(top_row)
+        over_layout_root.addWidget(over_card)
 
-        selected_card = make_card("Selected Row")
-        selected_layout = QHBoxLayout(selected_card)
-        selected_layout.setSpacing(8)
-        selected_layout.addWidget(QLabel("Row"))
-        for label, value in [
-            ("0", 0),
-            ("512", 512),
-            ("Max", MASTERY_1607_SAFE_MAX),
+        # ------------------------------------------------------------------
+        # Tab 2: basic mastery sweep workflow
+        # ------------------------------------------------------------------
+        basic_tab = QWidget()
+        basic_tab_layout = QVBoxLayout(basic_tab)
+        basic_tab_layout.setContentsMargins(12, 12, 12, 12)
+        basic_tab_layout.setSpacing(12)
+
+        basic_card = make_card("Basic Masteries Sweep")
+        basic_layout = QVBoxLayout(basic_card)
+        basic_layout.setSpacing(8)
+        basic_note = QLabel("Writes the selected character's basic mastery rows using the newer Save Wizard template: first SlotINFO row as N, count 0x258, stride +0x18. This stays button-based because it can rewrite hundreds of rows.")
+        basic_note.setWordWrap(True)
+        basic_note.setObjectName("subtleText")
+        basic_layout.addWidget(basic_note)
+
+        basic_grid = QGridLayout()
+        basic_grid.setHorizontalSpacing(10)
+        basic_grid.setVerticalSpacing(6)
+        self.mastery_basic_effect_combo = QComboBox()
+        self.mastery_basic_effect_combo.setMinimumWidth(520)
+        self.mastery_basic_effect_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.mastery_basic_value_edit = QLineEdit(str(OVERMASTERY_VALUE_MAX))
+        self.mastery_basic_value_edit.setMaximumWidth(110)
+        self.mastery_basic_value_preset_combo = QComboBox()
+        self.mastery_basic_value_preset_combo.setMinimumWidth(160)
+        for label, value_text in [
+            ("80% / 03FF", str(OVERMASTERY_VALUE_MAX)),
+            ("20% / 0200", str(OVERMASTERY_VALUE_NORMAL)),
+            ("Zero", "0"),
+            ("Legacy Raw FF", "-1"),
         ]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, v=value: self.set_mastery_selected_row_value(v))
-            selected_layout.addWidget(btn)
-        selected_layout.addSpacing(12)
-        selected_layout.addWidget(QLabel("Group"))
-        for label, value in [
-            ("0", 0),
-            ("512", 512),
-            ("Max", MASTERY_1607_SAFE_MAX),
-        ]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, v=value: self.set_mastery_current_group_value(v))
-            selected_layout.addWidget(btn)
-        selected_layout.addStretch(1)
-        over_layout_root.addWidget(selected_card)
+            self.mastery_basic_value_preset_combo.addItem(label, value_text)
+        self.mastery_basic_value_preset_combo.currentIndexChanged.connect(
+            lambda *_: self._apply_value_preset_to_line_edit(self.mastery_basic_value_preset_combo, self.mastery_basic_value_edit)
+        )
+        self.mastery_basic_write_effect_check = QCheckBox("Write 1606 IDs")
+        self.mastery_basic_write_effect_check.setChecked(True)
+        self.mastery_basic_write_value_check = QCheckBox("Write 1607 values")
+        self.mastery_basic_write_value_check.setChecked(True)
+        basic_grid.addWidget(QLabel("Mastery ID"), 0, 0)
+        basic_grid.addWidget(self.mastery_basic_effect_combo, 0, 1, 1, 5)
+        basic_grid.addWidget(QLabel("Value"), 1, 0)
+        basic_grid.addWidget(self.mastery_basic_value_edit, 1, 1)
+        basic_grid.addWidget(QLabel("Preset"), 1, 2)
+        basic_grid.addWidget(self.mastery_basic_value_preset_combo, 1, 3)
+        basic_grid.addWidget(self.mastery_basic_write_effect_check, 1, 4)
+        basic_grid.addWidget(self.mastery_basic_write_value_check, 1, 5)
+        basic_apply_btn = QPushButton("Apply Sweep")
+        basic_apply_btn.clicked.connect(self.apply_basic_mastery_sweep_selected)
+        basic_preview_btn = QPushButton("Preview SlotINFO")
+        basic_preview_btn.clicked.connect(self.refresh_basic_mastery_sweep_status)
+        basic_grid.addWidget(basic_apply_btn, 2, 3, 1, 2)
+        basic_grid.addWidget(basic_preview_btn, 2, 5)
+        basic_layout.addLayout(basic_grid)
+        self.mastery_basic_status_label = QLabel("Pick a character to preview the first Basic Mastery SlotINFO row.")
+        self.mastery_basic_status_label.setWordWrap(True)
+        self.mastery_basic_status_label.setObjectName("subtleText")
+        basic_layout.addWidget(self.mastery_basic_status_label)
+        basic_tab_layout.addWidget(basic_card)
+        basic_tab_layout.addStretch(1)
+
         over_layout_root.addStretch(1)
 
         # Hidden single-slot controls retained for old helper compatibility only.
@@ -4482,12 +6169,12 @@ class MainWindow(QMainWindow):
         self.mastery_sw_slot_spin.hide()
         self.mastery_sw_value_spin = QSpinBox(page)
         self.mastery_sw_value_spin.setRange(-1, MASTERY_1607_SAFE_MAX)
-        self.mastery_sw_value_spin.setSpecialValueText("FFFFFFFF / 80%")
-        self.mastery_sw_value_spin.setValue(-1)
+        self.mastery_sw_value_spin.setSpecialValueText("Legacy FFFFFFFF")
+        self.mastery_sw_value_spin.setValue(OVERMASTERY_VALUE_MAX)
         self.mastery_sw_value_spin.hide()
 
         # ------------------------------------------------------------------
-        # Tab 2: rows / edit
+        # Tab 3: rows / edit
         # ------------------------------------------------------------------
         rows_tab = QWidget()
         rows_tab_layout = QVBoxLayout(rows_tab)
@@ -4567,8 +6254,9 @@ class MainWindow(QMainWindow):
         rows_tab_layout.addWidget(edit_card, 1)
 
         mastery_tabs.addTab(over_tab, "Overmastery")
+        mastery_tabs.addTab(basic_tab, "Basic Sweep")
         mastery_tabs.addTab(rows_tab, "Rows / Edit")
-        mastery_tabs.currentChanged.connect(lambda idx: self.refresh_mastery_mod_rows() if idx == 1 else None)
+        mastery_tabs.currentChanged.connect(lambda idx: self.refresh_mastery_mod_rows() if idx == 2 else None)
         mastery_tabs.setCurrentIndex(0)
         layout.addWidget(mastery_tabs, 1)
 
@@ -4587,7 +6275,7 @@ class MainWindow(QMainWindow):
         self.mastery_mod_preset_write_1607_check.setChecked(True)
         self.mastery_mod_preset_1607_spin = QSpinBox(hidden)
         self.mastery_mod_preset_1607_spin.setRange(0, MASTERY_1607_SAFE_MAX)
-        self.mastery_mod_preset_1607_spin.setValue(0x200)
+        self.mastery_mod_preset_1607_spin.setValue(0x3FF)
         self.mastery_mod_preset_status = QLabel(hidden)
         self.mastery_mod_preset_table = QTableView(hidden)
         self.mastery_mod_preset_table.setModel(self.mastery_mod_preset_model)
@@ -4604,6 +6292,7 @@ class MainWindow(QMainWindow):
         self.mastery_mod_effect_combo.currentIndexChanged.connect(lambda *_: self._maybe_live_apply_mastery_mod())
         self._populate_mastery_mod_effect_combo()
         self._populate_overmastery_effect_combos()
+        self._populate_basic_mastery_effect_combo()
         self._install_common_numeric_validators()
         return page
 
@@ -5501,7 +7190,7 @@ class MainWindow(QMainWindow):
             entry = self.item_db.lookup_hash(h) if h is not None else None
             if h is None or entry is None:
                 errors.append(f"Sigil unresolved or unnamed: {key}")
-            elif entry.category != "Sigil":
+            elif not self._is_sigil_db_entry(entry):
                 errors.append(f"Sigil category mismatch: {key} resolved as {entry.category}")
             else:
                 resolved_sigils.append((h, level, locked, key))
@@ -5752,7 +7441,7 @@ class MainWindow(QMainWindow):
         rows = []
         for entry in self.item_db.by_hash.values():
             item_id = entry.item_id.upper()
-            if entry.category != "Sigil" or not item_id.startswith("GEEN_"):
+            if not self._is_sigil_db_entry(entry) or not item_id.startswith("GEEN_"):
                 continue
             if item_id.endswith("_04") or item_id.endswith("_14") or entry.display_name.endswith(" V") or entry.display_name.endswith(" V+"):
                 rows.append(entry)
@@ -5833,6 +7522,13 @@ class MainWindow(QMainWindow):
     def _is_material_bank_entry(self, item_hash: int) -> bool:
         entry = self.item_db.lookup_hash(int(item_hash) & 0xFFFFFFFF) if hasattr(self, "item_db") else None
         return bool(entry and entry.category in self.MATERIAL_BANK_CATEGORIES)
+
+    def _is_sigil_db_entry(self, entry: Any) -> bool:
+        if not entry:
+            return False
+        cat = str(getattr(entry, "category", "") or "").strip().lower()
+        item_id = str(getattr(entry, "item_id", "") or "").strip().upper()
+        return cat in {"sigil", "sigil / gem", "sigils", "gem"} or item_id.startswith("GEEN_")
 
     def _item_meta_has_real_quantity(self, meta: Dict[str, Any]) -> bool:
         # 1802 is the actual material/currency stack count. 2105 is used by
@@ -6061,11 +7757,14 @@ class MainWindow(QMainWindow):
             name_low = entry.display_name.lower()
             if name_low.startswith("unnamed / reserved") or name_low.startswith("reserved /"):
                 continue
-            allowed_categories = {"Material", "Currency", "Consumable", "Glitterstone", "Wrightstone", "Ticket"}
+            allowed_categories = {"Material", "Currency", "Consumable", "Glitterstone", "Wrightstone", "Ticket", "Crewmate Card"}
             wallet = self._wallet_field_for_item_key(entry.display_name, entry.hash_value)
             if wallet is not None:
                 continue
-            if entry.category in allowed_categories:
+            alias_text = str(getattr(entry, "alias_text", "") or "").lower()
+            item_id = str(getattr(entry, "item_id", "") or "").upper()
+            sheet_treasure = "treasure" in alias_text or item_id.startswith(("ITEM_17_", "ITEM_18_", "ITEM_22_", "ITEM_23_"))
+            if entry.category in allowed_categories or sheet_treasure:
                 rows.append(entry)
         return sorted(rows, key=lambda e: (e.category, e.item_id, e.display_name))
 
@@ -6188,7 +7887,8 @@ class MainWindow(QMainWindow):
     def _known_sigil_level_targets(self) -> List[Dict[str, Any]]:
         if not self.save:
             return []
-        grouped = self.save.group_by_unit([2703, 2704, 2707])
+        self._sigil_trait_grouped_cache = None
+        grouped = self.save.group_by_unit([2703, 2704, 2706, 2707])
         targets: List[Dict[str, Any]] = []
         seen_levels = set()
         for unit_id, fields in sorted(grouped.items()):
@@ -6201,9 +7901,10 @@ class MainWindow(QMainWindow):
                 continue
             seen_levels.add(level_rec.key)
             entry = self.item_db.lookup_hash(int(h) & 0xFFFFFFFF)
-            if not entry or entry.category != "Sigil":
+            if not self._is_sigil_db_entry(entry):
                 continue
-            targets.append({"unit": unit_id, "name": entry.display_name, "level_rec": level_rec, "flags_rec": fields.get(2707)})
+            trait_meta = self._sigil_trait_meta_records_for_unit(int(unit_id))
+            targets.append({"unit": unit_id, "name": entry.display_name, "level_rec": level_rec, "owner_rec": fields.get(2706), "flags_rec": fields.get(2707), **trait_meta})
         return targets
 
     def _known_weapon_xp_targets(self) -> List[Dict[str, Any]]:
@@ -6312,14 +8013,27 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("No known sigil rows were found to patch.", 4000)
             return
         patched = 0
+        trait_patched = 0
+        flags_patched = 0
         for t in targets:
             if self._set_record_first_value(t.get("level_rec"), value, "sigil level 2704 / FF900A"):
                 patched += 1
+            for rec_key, label in (("trait1_level_rec", "sigil trait 1 level 1702 / FFA60600"), ("trait2_level_rec", "sigil trait 2 level 1702 / FFA60600")):
+                rec = t.get(rec_key)
+                trait_hash_key = "trait1_hash_rec" if rec_key == "trait1_level_rec" else "trait2_hash_rec"
+                trait_hash = self._record_first_value(t.get(trait_hash_key), EMPTY_HASH)
+                if rec is not None and trait_hash not in (0, EMPTY_HASH):
+                    if self._set_record_first_value(rec, value, label):
+                        trait_patched += 1
             flags_rec = t.get("flags_rec")
-            if lock and flags_rec is not None:
+            if flags_rec is not None:
                 cur = self._record_first_value(flags_rec, 0)
-                self._set_record_first_value(flags_rec, cur | 1, "sigil flags")
-        self._after_editor_patch(f"Specific value cheat applied: set {patched} known sigil levels to {value:,}.")
+                owner = self._record_first_value(t.get("owner_rec"), EMPTY_HASH)
+                assigned = (int(owner or EMPTY_HASH) & 0xFFFFFFFF) not in (0, EMPTY_HASH)
+                # Preserve/normalize Save Wizard-style inventory/assignment flags.
+                if self._set_record_first_value(flags_rec, self._safe_sigil_flags(cur, locked=True, assigned=assigned), "sigil flags 2707"):
+                    flags_patched += 1
+        self._after_editor_patch(f"Specific value cheat applied: set {patched} sigil level row(s) and {trait_patched} linked trait level row(s) to {value:,}; normalized {flags_patched} flag row(s).")
 
     def cheat_set_known_weapon_xp_custom(self) -> None:
         if not self.save:
@@ -6418,7 +8132,8 @@ class MainWindow(QMainWindow):
         if not self.save:
             QMessageBox.information(self, "No save loaded", "Open a save first.")
             return
-        grouped = self.save.group_by_unit([2702, 2703, 2704, 2707])
+        self._sigil_trait_grouped_cache = None
+        grouped = self.save.group_by_unit([2702, 2703, 2704, 2706, 2707])
         targets: List[Dict[str, Any]] = []
         unknown = 0
         paired_mismatch = 0
@@ -6437,26 +8152,38 @@ class MainWindow(QMainWindow):
                 continue
             seen_levels.add(level_rec.key)
             entry = self.item_db.lookup_hash(int(h) & 0xFFFFFFFF)
-            if not entry or entry.category != "Sigil":
+            if not self._is_sigil_db_entry(entry):
                 unknown += 1
                 name = f"Unknown 0x{int(h) & 0xFFFFFFFF:08X}"
             else:
                 name = entry.display_name
             if int(getattr(hash_rec, "unit_id", unit_id)) != int(getattr(level_rec, "unit_id", unit_id)):
                 paired_mismatch += 1
-            targets.append({"unit": unit_id, "name": name, "level_rec": level_rec, "flags_rec": fields.get(2707)})
+            targets.append({"unit": unit_id, "name": name, "level_rec": level_rec, "owner_rec": fields.get(2706), "flags_rec": fields.get(2707)})
         if not targets:
             self.statusBar().showMessage("No active sigil rows were found to patch.", 4000)
             return
         patched = 0
+        trait_patched = 0
+        flags_patched = 0
         for t in targets:
             if self._set_record_first_value(t.get("level_rec"), SIGIL_LEVEL_MAX, "sigil level 2704 / FF900A"):
                 patched += 1
+            for rec_key, label in (("trait1_level_rec", "sigil trait 1 level 1702 / FFA60600"), ("trait2_level_rec", "sigil trait 2 level 1702 / FFA60600")):
+                rec = t.get(rec_key)
+                trait_hash_key = "trait1_hash_rec" if rec_key == "trait1_level_rec" else "trait2_hash_rec"
+                trait_hash = self._record_first_value(t.get(trait_hash_key), EMPTY_HASH)
+                if rec is not None and trait_hash not in (0, EMPTY_HASH):
+                    if self._set_record_first_value(rec, SIGIL_LEVEL_MAX, label):
+                        trait_patched += 1
             flags_rec = t.get("flags_rec")
             if flags_rec is not None:
                 cur = self._record_first_value(flags_rec, 0)
-                self._set_record_first_value(flags_rec, cur | 1, "sigil flags 2707")
-        self._after_editor_patch(f"Cheat applied: set {patched} active sigil level row(s) to {SIGIL_LEVEL_MAX} through 2704/FF900A bottom-up pairing and locked matching flags.")
+                owner = self._record_first_value(t.get("owner_rec"), EMPTY_HASH)
+                assigned = (int(owner or EMPTY_HASH) & 0xFFFFFFFF) not in (0, EMPTY_HASH)
+                if self._set_record_first_value(flags_rec, self._safe_sigil_flags(cur, locked=True, assigned=assigned), "sigil flags 2707"):
+                    flags_patched += 1
+        self._after_editor_patch(f"Cheat applied: set {patched} active sigil level row(s) and {trait_patched} linked trait level row(s) to {SIGIL_LEVEL_MAX:,}; normalized {flags_patched} flag row(s).")
 
     def cheat_max_weapon_xp_and_flags(self) -> None:
         if not self.save:
@@ -6915,7 +8642,7 @@ class MainWindow(QMainWindow):
 
         Community's Save Unit notes place Curio/ItemJunk data under ItemManager
         1901-1904 and 2001-2004, not normal stackable 1801/1802 rows.
-        The item ID commonly appears as ITEM_19_xxxx in notes. Keep these
+        The item ID commonly appears as ITEM_19-series in notes. Keep these
         separated so the Add/Equip browser does not put them into material or
         generic item slots by mistake.
         """
@@ -7013,7 +8740,7 @@ class MainWindow(QMainWindow):
         if use_as == "Trait Lookup":
             return "Reference only: traits are not inventory sigils by themselves."
         if use_as == "Character Lookup":
-            return "Reference only: useful for worn-by/equipment ownership hashes."
+            return "Character hash reference for sigil 2706 assignment."
         return "Reference hash; not directly addable to inventory."
 
     def _add_browser_status_kind(self, entry) -> str:
@@ -7238,12 +8965,13 @@ class MainWindow(QMainWindow):
         current = self.add_browser_equip_combo.currentData()
         self.add_browser_equip_combo.blockSignals(True)
         self.add_browser_equip_combo.clear()
-        self.add_browser_equip_combo.addItem("None / Unequipped", EMPTY_HASH)
+        self.add_browser_equip_combo.addItem("None / Unassigned", EMPTY_HASH)
         for label, value in choices:
             self.add_browser_equip_combo.addItem(label, value)
         idx = self.add_browser_equip_combo.findData(current)
         if idx >= 0:
             self.add_browser_equip_combo.setCurrentIndex(idx)
+        self.add_browser_equip_combo.setEnabled(True)
         self.add_browser_equip_combo.blockSignals(False)
 
     def selected_add_browser_entry(self):
@@ -7371,10 +9099,11 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Wrong add type", f"{entry.display_name} is marked as {self._add_browser_use_as(entry)}, not a sigil. GEEN_* rows are addable sigils; SKILL_/trait rows are lookup-only.")
             return
         owner_hash = self.add_browser_equip_combo.currentData() if hasattr(self, "add_browser_equip_combo") else EMPTY_HASH
+        locked = bool(self.add_browser_locked_check.isChecked()) if hasattr(self, "add_browser_locked_check") else True
         result = self._add_sigil_hash_level_to_empty_slot(
             entry.hash_value,
             self.add_browser_level_spin.value(),
-            self.add_browser_locked_check.isChecked(),
+            locked,
             owner_hash=owner_hash,
         )
         if not result:
@@ -7753,9 +9482,9 @@ class MainWindow(QMainWindow):
         try:
             with open(path, "w", encoding="utf-8", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow(["Unit", "Slot", "Hash", "Level", "Worn By", "Flags", "Visible Name"])
+                writer.writerow(["Unit", "Slot", "Hash", "Level", "Trait 1", "Trait 2", "Assigned Character", "Flags", "Visible Name"])
                 for row in rows:
-                    writer.writerow([row[0], row[1], row[4], row[5], row[6], row[8], row[2]])
+                    writer.writerow([row[0], row[1], row[4], row[5], row[6], row[7], row[8], row[9], row[2]])
             QMessageBox.information(self, "Exported", f"Unknown sigil hashes written to:\n{path}")
         except Exception as exc:
             QMessageBox.critical(self, "Export failed", str(exc))
@@ -7884,20 +9613,54 @@ class MainWindow(QMainWindow):
         finally:
             spin.blockSignals(False)
 
-    def set_selected_item_quantity_from_spin(self) -> None:
+    def set_selected_item_quantity_from_spin(self, *_args, auto: bool = False) -> None:
         if not self.save or not hasattr(self, "item_table") or not hasattr(self, "item_selected_qty_spin"):
             return
         idx = self.item_table.currentIndex()
         meta = self._selected_item_meta()
         if not idx.isValid() or not meta:
-            self.statusBar().showMessage("Select an item first.", 2500)
+            if not auto:
+                self.statusBar().showMessage("Select an item first.", 2500)
             return
         if not (meta.get("wallet_value") or self._item_meta_has_real_quantity(meta)):
-            self.statusBar().showMessage("Selected row is technical/reference data, not a quantity field.", 4000)
+            if not auto:
+                self.statusBar().showMessage("Selected row is technical/reference data, not a quantity field.", 4000)
             return
         value = int(self.item_selected_qty_spin.value())
         if self.apply_item_table_cell_edit(idx.row(), 6, value):
             self.update_item_detail()
+            if auto:
+                self.statusBar().showMessage("Auto-applied selected item quantity in memory. Save when ready.", 3500)
+
+    def _schedule_item_selected_quantity_auto_apply(self) -> None:
+        if getattr(self, "_item_qty_auto_apply_in_progress", False):
+            return
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return
+        if not getattr(self, "save", None) or not hasattr(self, "item_table"):
+            return
+        idx = self.item_table.currentIndex()
+        if not idx.isValid():
+            return
+        meta = self._selected_item_meta()
+        if not meta or not (meta.get("wallet_value") or self._item_meta_has_real_quantity(meta)):
+            return
+        timer = getattr(self, "_item_qty_auto_apply_timer", None)
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(self._run_item_selected_quantity_auto_apply)
+            self._item_qty_auto_apply_timer = timer
+        timer.start(180)
+
+    def _run_item_selected_quantity_auto_apply(self) -> None:
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return
+        self._item_qty_auto_apply_in_progress = True
+        try:
+            self.set_selected_item_quantity_from_spin(auto=True)
+        finally:
+            self._item_qty_auto_apply_in_progress = False
 
     def _set_item_inline_fields(self, row: Optional[List[Any]]) -> None:
         """Keep the selected item editor synchronized without firing save edits."""
@@ -7992,8 +9755,164 @@ class MainWindow(QMainWindow):
     def _selected_sigil_meta(self) -> Optional[Dict[str, Any]]:
         return self._selected_meta(self.sigil_table, self.sigil_rows_meta) if hasattr(self, "sigil_table") else None
 
-    def _selected_weapon_meta(self) -> Optional[Dict[str, Any]]:
-        return self._selected_meta(self.weapon_table, self.weapon_rows_meta) if hasattr(self, "weapon_table") else None
+    def _weapon_meta_by_unit(self, unit_id: int) -> Optional[Dict[str, Any]]:
+        for meta in getattr(self, "weapon_rows_meta", []) or []:
+            try:
+                if int(meta.get("unit_id", -1)) == int(unit_id):
+                    return meta
+            except Exception:
+                continue
+        return None
+
+    def _weapon_meta_display_label(self, meta: Dict[str, Any]) -> str:
+        h = self._record_first_value(meta.get("hash_rec"), 0)
+        name, gbid, hash_hex = self.hash_entry_parts(h)
+        unit = meta.get("unit_id", "?")
+        cap = self._record_first_value(meta.get("cap_rec") or meta.get("unk_2805_rec"), 0)
+        bonus = self._record_first_value(meta.get("unk_2806_rec"), 0)
+        if name and name != "Unknown":
+            return f"{unit} · {name} · cap {cap} · trait +{bonus}"
+        return f"{unit} · {hash_hex or 'Unknown weapon'} · cap {cap} · trait +{bonus}"
+
+    def _weapon_row_index_for_unit(self, unit_id: Any) -> int:
+        try:
+            target = int(unit_id)
+        except Exception:
+            return -1
+        for row_index, meta in enumerate(getattr(self, "weapon_rows_meta", []) or []):
+            try:
+                if int(meta.get("unit_id", -1)) == target:
+                    return row_index
+            except Exception:
+                continue
+        return -1
+
+    def _weapon_stone_display_from_value(self, stone_value: Any) -> str:
+        try:
+            ivalue = int(stone_value or 0) & 0xFFFFFFFF
+        except Exception:
+            return str(stone_value or "")
+        if ivalue in (0, EMPTY_HASH):
+            return ""
+        stone_name, stone_gbid, stone_hash = self.hash_entry_parts(ivalue)
+        return stone_name if stone_gbid else stone_hash
+
+    def _refresh_weapon_visible_row_from_meta(self, meta: Optional[Dict[str, Any]], *, update_detail: bool = True) -> None:
+        """Refresh the visible selected weapon row without rebuilding the whole tab."""
+        if not meta or not hasattr(self, "weapon_model"):
+            return
+        row_index = self._weapon_row_index_for_unit(meta.get("unit_id"))
+        if row_index < 0 or row_index >= len(getattr(self.weapon_model, "rows", [])):
+            return
+        row = self.weapon_model.rows[row_index]
+        weapon_hash = self._record_first_value(meta.get("hash_rec"), 0)
+        is_empty = weapon_hash in ("", 0, EMPTY_HASH)
+        if is_empty:
+            row[1], row[2], row[3] = "<Empty weapon slot>", "", ""
+            meta["is_empty"] = True
+            meta["is_known"] = False
+        else:
+            name, gbid, hx = self.hash_entry_parts(weapon_hash)
+            row[1], row[2], row[3] = name, gbid, hx
+            meta["is_empty"] = False
+            meta["is_known"] = bool(gbid)
+        row[4] = self._record_first_value(meta.get("xp_rec"), row[4] if len(row) > 4 else "")
+        row[5] = self._record_first_value(meta.get("cap_rec") or meta.get("unk_2805_rec"), row[5] if len(row) > 5 else "")
+        row[6] = self._record_first_value(meta.get("unk_2806_rec"), row[6] if len(row) > 6 else "")
+        row[7] = self._record_first_value(meta.get("unk_2807_rec"), row[7] if len(row) > 7 else "")
+        row[8] = self._record_first_value(meta.get("unk_2814_rec"), row[8] if len(row) > 8 else "")
+        row[9] = self._record_first_value(meta.get("flags_rec"), row[9] if len(row) > 9 else "")
+        row[10] = self._weapon_stone_display_from_value(self._record_first_value(meta.get("stone_rec"), EMPTY_HASH))
+        self._emit_model_row_changed(self.weapon_model, row_index)
+
+        combo = getattr(self, "weapon_cap_trait_weapon_combo", None)
+        if combo is not None:
+            try:
+                target = int(meta.get("unit_id", -1))
+                for i in range(combo.count()):
+                    if int(combo.itemData(i)) == target:
+                        combo.setItemText(i, self._weapon_meta_display_label(meta))
+                        break
+            except Exception:
+                pass
+        if update_detail:
+            self.update_weapon_detail()
+        else:
+            self.update_weapon_cap_trait_controls()
+
+    def _sync_weapon_cap_trait_weapon_combo(self) -> None:
+        combo = getattr(self, "weapon_cap_trait_weapon_combo", None)
+        if combo is None:
+            return
+        current_unit = combo.currentData()
+        if current_unit is None:
+            selected = self._selected_meta(self.weapon_table, self.weapon_rows_meta) if hasattr(self, "weapon_table") else None
+            current_unit = selected.get("unit_id") if selected else None
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for meta in getattr(self, "weapon_rows_meta", []) or []:
+                if meta.get("is_empty"):
+                    continue
+                combo.addItem(self._weapon_meta_display_label(meta), int(meta.get("unit_id", 0)))
+            if current_unit is not None:
+                for i in range(combo.count()):
+                    try:
+                        if int(combo.itemData(i)) == int(current_unit):
+                            combo.setCurrentIndex(i)
+                            break
+                    except Exception:
+                        pass
+        finally:
+            combo.blockSignals(False)
+        self.update_weapon_cap_trait_controls()
+
+    def _set_weapon_cap_trait_combo_unit(self, unit_id: Any) -> None:
+        combo = getattr(self, "weapon_cap_trait_weapon_combo", None)
+        if combo is None or unit_id is None:
+            return
+        try:
+            target = int(unit_id)
+        except Exception:
+            return
+        for i in range(combo.count()):
+            try:
+                if int(combo.itemData(i)) == target:
+                    if combo.currentIndex() != i:
+                        combo.blockSignals(True)
+                        combo.setCurrentIndex(i)
+                        combo.blockSignals(False)
+                    return
+            except Exception:
+                continue
+
+    def _select_weapon_row_by_unit(self, unit_id: int) -> None:
+        table = getattr(self, "weapon_table", None)
+        if table is None:
+            return
+        for row_index, meta in enumerate(getattr(self, "weapon_rows_meta", []) or []):
+            try:
+                if int(meta.get("unit_id", -1)) == int(unit_id):
+                    model_index = table.model().index(row_index, 0) if table.model() is not None else QModelIndex()
+                    table.selectRow(row_index)
+                    if model_index.isValid():
+                        table.setCurrentIndex(model_index)
+                        table.scrollTo(model_index)
+                    return
+            except Exception:
+                continue
+
+    def on_weapon_cap_trait_weapon_combo_changed(self) -> None:
+        combo = getattr(self, "weapon_cap_trait_weapon_combo", None)
+        if combo is None:
+            return
+        try:
+            unit_id = combo.currentData()
+            if unit_id is not None:
+                self._select_weapon_row_by_unit(int(unit_id))
+        except Exception:
+            pass
+        self.update_weapon_cap_trait_controls()
 
     def _selected_character_meta(self) -> Optional[Dict[str, Any]]:
         return self._selected_meta(self.character_table, self.character_rows_meta) if hasattr(self, "character_table") else None
@@ -8130,45 +10049,194 @@ class MainWindow(QMainWindow):
             text = str(fallback_hash or "").strip()
         self._set_line_edit_text_safely(name, text)
 
-    def apply_sigil_inline_edits(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
+    def _current_sigil_row_index_for_apply(self) -> int:
+        table = getattr(self, "sigil_table", None)
+        if table is None:
+            return -1
+        idx = table.currentIndex()
+        if not idx.isValid():
+            return -1
+        row = int(idx.row())
+        if row < 0 or row >= len(getattr(self, "sigil_rows_meta", []) or []):
+            return -1
+        return row
+
+    def _sigil_auto_value_ready(self, column: int, value: Any) -> bool:
+        text_value = str(value or "").strip()
+        col = int(column)
+        # Do not write numeric 0 just because the user temporarily cleared a box
+        # while typing a new number. Also avoid modal validation warnings during
+        # live typing; the explicit Apply/Resync path still reports bad values.
+        if col in {5, 9, 10, 11}:
+            return bool(text_value) and _parse_intish(text_value) is not None
+        if col in {2, 3, 4, 6, 7, 8, 12}:
+            if text_value.lower() in {"", "none", "clear", "empty", "0", "—", "-"}:
+                return True
+            return self._resolve_hash_from_text(text_value) is not None
+        return True
+
+    def _apply_selected_sigil_column_now(self, column: int, value: Any, label: str = "field", *, show_status: bool = True) -> bool:
+        """Apply one selected-sigil editor field immediately.
+
+        This avoids the old whole-form batch path, which could leave the visible
+        table/detail stale until the debounce timer or focus change completed.
+        """
+        if getattr(self, "_updating_sigil_detail", False):
+            return False
+        if getattr(self, "_sigil_auto_apply_in_progress", False):
+            return False
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return False
+        if not getattr(self, "save", None):
+            return False
+        row_index = self._current_sigil_row_index_for_apply()
+        if row_index < 0:
+            return False
+        if not self._sigil_auto_value_ready(int(column), value):
+            return False
+        self._sigil_auto_apply_in_progress = True
+        try:
+            ok = self.apply_sigil_table_cell_edit(row_index, int(column), value)
+            if ok:
+                try:
+                    self.update_sigil_detail()
+                except Exception:
+                    pass
+                if show_status:
+                    self.statusBar().showMessage(f"Auto-applied selected sigil {label}. Save when ready.", 3500)
+            return bool(ok)
+        finally:
+            self._sigil_auto_apply_in_progress = False
+
+    def _apply_selected_sigil_combo_column_now(self, column: int, combo: QComboBox, label: str = "trait") -> bool:
+        if combo is None:
+            return False
+        data = combo.currentData()
+        value = "" if data in (None, 0, EMPTY_HASH) else f"0x{int(data) & 0xFFFFFFFF:08X}"
+        return self._apply_selected_sigil_column_now(column, value, label)
+
+    def _schedule_sigil_field_auto_apply(self, column: int, value_func, label: str, delay_ms: int = 120) -> None:
+        if getattr(self, "_updating_sigil_detail", False):
             return
+        if getattr(self, "_sigil_auto_apply_in_progress", False):
+            return
+        if not getattr(self, "save", None):
+            return
+        row_index = self._current_sigil_row_index_for_apply()
+        if row_index < 0:
+            return
+        timers = getattr(self, "_sigil_field_auto_timers", None)
+        if not isinstance(timers, dict):
+            self._sigil_field_auto_timers = {}
+            timers = self._sigil_field_auto_timers
+        timer = timers.get(int(column))
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timers[int(column)] = timer
+        try:
+            timer.timeout.disconnect()
+        except Exception:
+            pass
+        timer.timeout.connect(lambda col=int(column), vf=value_func, lab=label: self._apply_selected_sigil_column_now(col, vf(), lab))
+        timer.start(max(25, int(delay_ms)))
+
+    def _schedule_sigil_inline_auto_apply(self) -> None:
+        if getattr(self, "_updating_sigil_detail", False):
+            return
+        if getattr(self, "_sigil_auto_apply_in_progress", False):
+            return
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return
+        if not getattr(self, "save", None):
+            return
+        table = getattr(self, "sigil_table", None)
+        if table is None:
+            return
+        idx = table.currentIndex()
+        if not idx.isValid():
+            return
+        timer = getattr(self, "_sigil_auto_apply_timer", None)
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(self._run_sigil_inline_auto_apply)
+            self._sigil_auto_apply_timer = timer
+        timer.start(120)
+
+    def _run_sigil_inline_auto_apply(self) -> None:
+        if getattr(self, "_updating_sigil_detail", False):
+            return
+        if getattr(self, "_sigil_auto_apply_in_progress", False):
+            return
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return
+        self.apply_sigil_inline_edits(auto=True, show_no_change=False)
+
+    def apply_sigil_inline_edits(self, *_args, auto: bool = False, show_no_change: bool = True) -> int:
+        if getattr(self, "_updating_sigil_detail", False) and auto:
+            return 0
+        if not self.save:
+            if show_no_change and not auto:
+                QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return 0
         row = self._selected_row(self.sigil_table, self.sigil_model) if hasattr(self, "sigil_table") else None
         if not row:
-            return
-        changes = 0
-        owner_text = self.sigil_worn_by_edit.text() if hasattr(self, "sigil_worn_by_edit") else ""
-        if not str(owner_text or "").strip() and hasattr(self, "sigil_worn_by_combo"):
-            owner_hash = self.sigil_worn_by_combo.currentData()
-            owner_text = "" if int(owner_hash or EMPTY_HASH) in (0, EMPTY_HASH) else f"0x{int(owner_hash) & 0xFFFFFFFF:08X}"
-        requests = [
-            (2, self.sigil_identity_edit.text() if hasattr(self, "sigil_identity_edit") else "", str(row[3] or row[4] or row[2] or "")),
-            (5, self.sigil_level_edit.text() if hasattr(self, "sigil_level_edit") else "", str(row[5] or "")),
-            (6, owner_text, str(row[7] or row[6] or "")),
-            (8, self.sigil_flags_edit.text() if hasattr(self, "sigil_flags_edit") else "", str(row[8] or "")),
-        ]
-        current_row = self.sigil_table.currentIndex().row()
-        for column, text, current in requests:
-            text = str(text or "").strip()
-            if text == str(current or "").strip():
-                continue
-            if self.apply_sigil_table_cell_edit(current_row, column, text):
-                changes += 1
-            else:
-                return
-        if changes:
-            self.statusBar().showMessage(f"Applied {changes} sigil field change{'s' if changes != 1 else ''} in memory. Save when ready.", 5000)
-        else:
-            self.statusBar().showMessage("No sigil field changes to apply.", 3000)
+            return 0
+        self._sigil_auto_apply_in_progress = True
+        try:
+            changes = 0
+            owner_text = self.sigil_worn_by_edit.text() if hasattr(self, "sigil_worn_by_edit") else ""
+            if not str(owner_text or "").strip() and hasattr(self, "sigil_worn_by_combo"):
+                owner_hash = self.sigil_worn_by_combo.currentData()
+                owner_text = "" if int(owner_hash or EMPTY_HASH) in (0, EMPTY_HASH) else f"0x{int(owner_hash) & 0xFFFFFFFF:08X}"
+            trait1_value = ""
+            trait2_value = ""
+            if hasattr(self, "sigil_trait1_combo"):
+                data = self.sigil_trait1_combo.currentData()
+                trait1_value = "" if data in (None, 0, EMPTY_HASH) else f"0x{int(data) & 0xFFFFFFFF:08X}"
+            if hasattr(self, "sigil_trait2_combo"):
+                data = self.sigil_trait2_combo.currentData()
+                trait2_value = "" if data in (None, 0, EMPTY_HASH) else f"0x{int(data) & 0xFFFFFFFF:08X}"
+            requests = [
+                (2, self.sigil_identity_edit.text() if hasattr(self, "sigil_identity_edit") else "", str(row[3] or row[4] or row[2] or "")),
+                (5, self.sigil_level_edit.text() if hasattr(self, "sigil_level_edit") else "", str(row[5] or "")),
+                (6, trait1_value, str(row[6] or "")),
+                (10, str(self.sigil_trait1_level_spin.value()) if hasattr(self, "sigil_trait1_level_spin") else "", str(row[10] or "")),
+                (7, trait2_value, str(row[7] or "")),
+                (11, str(self.sigil_trait2_level_spin.value()) if hasattr(self, "sigil_trait2_level_spin") else "", str(row[11] or "")),
+                (8, owner_text, str(row[12] or row[8] or "")),
+                (9, self.sigil_flags_edit.text() if hasattr(self, "sigil_flags_edit") else "", str(row[9] or "")),
+            ]
+            current_row = self.sigil_table.currentIndex().row()
+            for column, text, current in requests:
+                text = str(text or "").strip()
+                if text == str(current or "").strip():
+                    continue
+                if self.apply_sigil_table_cell_edit(current_row, column, text):
+                    changes += 1
+                else:
+                    return changes
+            if changes:
+                prefix = "Auto-applied" if auto else "Applied"
+                self.statusBar().showMessage(f"{prefix} {changes} sigil field change{'s' if changes != 1 else ''} in memory. Save when ready.", 5000)
+                try:
+                    self.update_sigil_detail()
+                except Exception:
+                    pass
+            elif show_no_change and not auto:
+                self.statusBar().showMessage("No sigil field changes to apply.", 3000)
+            return changes
+        finally:
+            self._sigil_auto_apply_in_progress = False
 
-    def apply_weapon_inline_edits(self) -> None:
+    def apply_weapon_inline_edits(self, *_args, show_no_change: bool = True) -> int:
         if not self.save:
             QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
+            return 0
         row = self._selected_row(self.weapon_table, self.weapon_model) if hasattr(self, "weapon_table") else None
         if not row:
-            return
+            return 0
         changes = 0
         requests = [
             (1, self.weapon_identity_edit.text() if hasattr(self, "weapon_identity_edit") else "", str(row[2] or row[3] or row[1] or "")),
@@ -8184,11 +10252,75 @@ class MainWindow(QMainWindow):
             if self.apply_weapon_table_cell_edit(current_row, column, text):
                 changes += 1
             else:
-                return
+                return changes
         if changes:
             self.statusBar().showMessage(f"Applied {changes} weapon field change{'s' if changes != 1 else ''} in memory. Save when ready.", 5000)
-        else:
+        elif show_no_change and not getattr(self, "_weapon_inline_recent_auto_sync", False):
             self.statusBar().showMessage("No weapon field changes to apply.", 3000)
+        return changes
+
+    def sync_weapon_detail_controls(self) -> None:
+        """Auto-apply the selected weapon form when a field is committed."""
+        if getattr(self, "_updating_weapon_detail", False):
+            return
+        if not getattr(self, "save", None) or not hasattr(self, "weapon_table"):
+            return
+        idx = self.weapon_table.currentIndex()
+        if not idx.isValid() or idx.row() < 0:
+            return
+        changed = self.apply_weapon_inline_edits(show_no_change=False)
+        if changed:
+            self._weapon_inline_recent_auto_sync = True
+            try:
+                QTimer.singleShot(250, lambda: setattr(self, "_weapon_inline_recent_auto_sync", False))
+            except Exception:
+                self._weapon_inline_recent_auto_sync = False
+
+    def _weapon_inline_auto_values_ready(self) -> bool:
+        row = self._selected_row(self.weapon_table, self.weapon_model) if hasattr(self, "weapon_table") else None
+        if not row:
+            return False
+        checks = [
+            (1, self.weapon_identity_edit.text() if hasattr(self, "weapon_identity_edit") else "", str(row[2] or row[3] or row[1] or "")),
+            (4, self.weapon_xp_edit.text() if hasattr(self, "weapon_xp_edit") else "", str(row[4] or "")),
+            (10, self.weapon_stone_edit.text() if hasattr(self, "weapon_stone_edit") else "", str(row[10] or "")),
+            (9, self.weapon_flags_edit.text() if hasattr(self, "weapon_flags_edit") else "", str(row[9] or "")),
+        ]
+        for column, text, current in checks:
+            text = str(text or "").strip()
+            if text == str(current or "").strip():
+                continue
+            if column in (4, 9):
+                if text == "" or _parse_intish(text) is None:
+                    return False
+            elif column in (1, 10):
+                if column == 10 and text.lower() in {"", "none", "clear", "empty", "0", "—", "-"}:
+                    continue
+                if column == 1 and text.lower() in {"", "none", "clear", "empty", "0", "—", "-"}:
+                    continue
+                if self._resolve_hash_from_text(text) is None:
+                    return False
+        return True
+
+    def _schedule_weapon_inline_auto_apply(self) -> None:
+        if getattr(self, "_updating_weapon_detail", False):
+            return
+        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
+            return
+        if not getattr(self, "save", None) or not hasattr(self, "weapon_table"):
+            return
+        idx = self.weapon_table.currentIndex()
+        if not idx.isValid() or idx.row() < 0:
+            return
+        if not self._weapon_inline_auto_values_ready():
+            return
+        timer = getattr(self, "_weapon_inline_auto_apply_timer", None)
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(self.sync_weapon_detail_controls)
+            self._weapon_inline_auto_apply_timer = timer
+        timer.start(220)
 
     def apply_character_inline_edits(self) -> None:
         """Compatibility hook for older buttons/hotkeys; current character controls sync live."""
@@ -8289,7 +10421,7 @@ class MainWindow(QMainWindow):
         self._updating_sigil_detail = True
         row = self._selected_row(self.sigil_table, self.sigil_model) if hasattr(self, "sigil_table") else None
         if not row:
-            text = "Select a sigil row. Use inline fields for sigil, level, equipped character, and lock/flags."
+            text = "Select a sigil row. Use inline fields for sigil, level, character assignment character, and lock/flags."
             if hasattr(self.sigil_detail_label, "setPlainText"):
                 self.sigil_detail_label.setPlainText(text)
             else:
@@ -8297,20 +10429,48 @@ class MainWindow(QMainWindow):
             for name in ("sigil_identity_edit", "sigil_level_edit", "sigil_worn_by_edit", "sigil_flags_edit"):
                 self._clear_line_edit_safely(name)
             self._set_owner_combo_by_hash(EMPTY_HASH)
+            if hasattr(self, "sigil_trait1_combo"):
+                self._set_hash_combo_current_value(self.sigil_trait1_combo, EMPTY_HASH)
+            if hasattr(self, "sigil_trait2_combo"):
+                self._set_hash_combo_current_value(self.sigil_trait2_combo, EMPTY_HASH)
+            for name in ("sigil_trait1_level_spin", "sigil_trait2_level_spin"):
+                spin = getattr(self, name, None)
+                if spin is not None:
+                    spin.blockSignals(True); spin.setValue(0); spin.blockSignals(False)
             self._updating_sigil_detail = False
             return
         self._raw_hash_editor_text("sigil_identity_edit", row[3], row[4])
         self._set_line_edit_text_safely("sigil_level_edit", row[5])
-        self._set_line_edit_text_safely("sigil_worn_by_edit", row[7] if str(row[6] or "").startswith("Unknown owner") else "")
+        self._set_line_edit_text_safely("sigil_worn_by_edit", row[12] if str(row[8] or "").startswith("Unknown") else "")
         self._set_owner_combo_by_hash(self._current_sigil_owner_hash())
-        self._set_line_edit_text_safely("sigil_flags_edit", row[8])
+        self._set_line_edit_text_safely("sigil_flags_edit", row[9])
         meta = self._selected_sigil_meta() if hasattr(self, "sigil_table") else None
         pair_note = str((meta or {}).get("level_pair_note") or "")
+        t1_hash = self._record_first_value((meta or {}).get("trait1_hash_rec"), EMPTY_HASH)
+        t2_hash = self._record_first_value((meta or {}).get("trait2_hash_rec"), EMPTY_HASH)
+        t1_level = self._record_first_value((meta or {}).get("trait1_level_rec"), 0)
+        t2_level = self._record_first_value((meta or {}).get("trait2_level_rec"), 0)
+        if hasattr(self, "sigil_trait1_combo"):
+            self._set_hash_combo_current_value(self.sigil_trait1_combo, t1_hash)
+        if hasattr(self, "sigil_trait2_combo"):
+            self._set_hash_combo_current_value(self.sigil_trait2_combo, t2_hash)
+        for spin_name, value in (("sigil_trait1_level_spin", t1_level), ("sigil_trait2_level_spin", t2_level)):
+            spin = getattr(self, spin_name, None)
+            if spin is not None:
+                try:
+                    ivalue = int(value or 0)
+                except Exception:
+                    ivalue = 0
+                spin.blockSignals(True)
+                spin.setValue(max(0, min(I32_MAX, ivalue)))
+                spin.blockSignals(False)
         text = (
             f"Sigil/Gem : {format_display_value(row[2], 'Sigil')}\n"
             f"Level     : {format_display_value(row[5], 'Level')}  (2704 / FF900A){pair_note}\n"
-            f"Equipped  : {format_display_value(row[6] or 'None / Unequipped', 'Worn By')}\n"
-            f"Flags     : {format_display_value(row[8], 'Flags')}\n"
+            f"Trait 1   : {format_display_value(row[6] or 'None', 'Trait 1')}  (120M lane 0: 1701/1702)\n"
+            f"Trait 2   : {format_display_value(row[7] or 'None', 'Trait 2')}  (120M lane 1: 1701/1702)\n"
+            f"Assigned Character: {format_display_value(row[8] or 'None / empty', 'Character Assignment')}\n"
+            f"Flags     : {format_display_value(row[9], 'Flags')}\n"
             f"Slot      : {format_display_value(row[1], 'Slot')}\n"
             f"GBID      : {format_display_value(row[3], 'GBID')}\n"
             f"Hash      : {format_hash_value(row[4])}  (2703 / FF8F0A)\n"
@@ -8325,31 +10485,41 @@ class MainWindow(QMainWindow):
     def update_weapon_detail(self) -> None:
         if not hasattr(self, "weapon_detail_label"):
             return
-        row = self._selected_row(self.weapon_table, self.weapon_model) if hasattr(self, "weapon_table") else None
-        if not row:
-            text = "Select a weapon row. Inline fields can edit weapon, XP, stone, and flags."
-            for name in ("weapon_identity_edit", "weapon_xp_edit", "weapon_stone_edit", "weapon_flags_edit"):
-                self._clear_line_edit_safely(name)
-        else:
-            self._raw_hash_editor_text("weapon_identity_edit", row[2], row[3])
-            self._set_line_edit_text_safely("weapon_xp_edit", row[4])
-            self._set_line_edit_text_safely("weapon_stone_edit", row[10])
-            self._set_line_edit_text_safely("weapon_flags_edit", row[9])
-            text = "\n".join([
-                f"Weapon: {format_display_value(row[1], 'Weapon')}",
-                f"GBID:   {format_display_value(row[2], 'GBID')}",
-                f"Hash:   {format_hash_value(row[3])}",
-                f"Slot:   {format_display_value(row[0], 'Slot')}",
-                f"XP:     {format_display_value(row[4], 'XP')}",
-                f"Stone:  {format_display_value(row[10] or 'none', 'Stone')}",
-                f"Flags:  {format_display_value(row[9], 'Flags')}",
-                "",
-                "Tip: edit the inline fields, press Enter, or click Apply Changes. Technical columns stay available in More / table editing.",
-            ])
-        if hasattr(self.weapon_detail_label, "setPlainText"):
-            self.weapon_detail_label.setPlainText(text)
-        else:
-            self.weapon_detail_label.setText(text)
+        self._updating_weapon_detail = True
+        try:
+            row = self._selected_row(self.weapon_table, self.weapon_model) if hasattr(self, "weapon_table") else None
+            if not row:
+                text = "Select a weapon row. Inline fields can edit weapon, XP, stone, and flags."
+                for name in ("weapon_identity_edit", "weapon_xp_edit", "weapon_stone_edit", "weapon_flags_edit"):
+                    self._clear_line_edit_safely(name)
+            else:
+                self._raw_hash_editor_text("weapon_identity_edit", row[2], row[3])
+                self._set_line_edit_text_safely("weapon_xp_edit", row[4])
+                self._set_line_edit_text_safely("weapon_stone_edit", row[10])
+                self._set_line_edit_text_safely("weapon_flags_edit", row[9])
+                text = "\n".join([
+                    f"Weapon: {format_display_value(row[1], 'Weapon')}",
+                    f"GBID:   {format_display_value(row[2], 'GBID')}",
+                    f"Hash:   {format_hash_value(row[3])}",
+                    f"Slot:   {format_display_value(row[0], 'Slot')}",
+                    f"XP:     {format_display_value(row[4], 'XP')}",
+                    f"Uncap:  {format_display_value(row[5], 'Uncap')}  (2805 / FFF50A00)",
+                    f"Trait+: {format_display_value(row[6], 'Trait +')}  (2806; appears as the + weapon-trait level bonus)",
+                    f"Stone:  {format_display_value(row[10] or 'none', 'Stone')}",
+                    f"Flags:  {format_display_value(row[9], 'Flags')}",
+                    "",
+                    "Tip: edit a field and it auto-applies after a short pause. Press Enter/leave the field to force a resync.",
+                ])
+            if hasattr(self.weapon_detail_label, "setPlainText"):
+                self.weapon_detail_label.setPlainText(text)
+            else:
+                self.weapon_detail_label.setText(text)
+        finally:
+            self._updating_weapon_detail = False
+        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta) if hasattr(self, "weapon_table") else None
+        if meta:
+            self._set_weapon_cap_trait_combo_unit(meta.get("unit_id"))
+        self.update_weapon_cap_trait_controls()
 
     def update_character_detail(self) -> None:
         if not hasattr(self, "character_detail_label"):
@@ -8420,7 +10590,7 @@ class MainWindow(QMainWindow):
             f"- Overall inventory risk: {'CHECK WARNINGS BEFORE SAVING' if inv_risky else 'no known crash pattern detected'}",
             "",
             "Sigil / gem equipment safety",
-            f"- Invalid equipped-owner references: {len(sigil_owner_issues)}",
+            f"- Invalid character assignment references: {len(sigil_owner_issues)}",
             f"- Overall sigil owner risk: {'CHECK WARNINGS BEFORE SAVING' if sigil_owner_issues else 'no invalid owner references detected'}",
             "",
             "Resolved data",
@@ -8973,7 +11143,7 @@ class MainWindow(QMainWindow):
             "6": "Dummy / Practice",
             "7": "Short Story / Misc",
         }
-        return labels.get(str(prefix or "")[:1], f"{prefix}xxxxx progression")
+        return labels.get(str(prefix or "")[:1], f"{prefix}00000-series progression")
 
     def cheat_complete_progression_group(self, prefix: str = "", label: str = "") -> None:
         """Complete mapped progression rows by quest ID group.
@@ -9413,7 +11583,7 @@ class MainWindow(QMainWindow):
             field_label = f"field {field_filter}" if field_filter is not None else "all fields"
             group_label = "all groups"
             if quest_prefix:
-                group_label = f"{quest_prefix}xxxxx"
+                group_label = self._progression_group_label_for_prefix(quest_prefix)
             limit_label = "all rows" if max_rows is None else f"first {max_rows:,} matches"
             self.progression_filter_status.setText(
                 f"Showing {len(rows):,} rows · section: {section} · {group_label} · {field_label} · {value_mode} · {limit_label}"
@@ -9743,7 +11913,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message + "  Use Refresh Current Page if you need a full rebuild.", 5000)
 
     def update_edit_hub_summary_light(self) -> None:
-        """Cheap Basic Editor summary used immediately after opening a save."""
+        """Cheap General summary used immediately after opening a save."""
         if not self.save:
             return
         try:
@@ -9817,9 +11987,22 @@ class MainWindow(QMainWindow):
         clean = q.removeprefix("0x").removeprefix("0X")
         try:
             if all(c in "0123456789abcdefABCDEF" for c in clean) and 1 <= len(clean) <= 8 and not clean.isdecimal():
-                return int(clean, 16) & 0xFFFFFFFF
+                value = int(clean, 16) & 0xFFFFFFFF
+                if self.item_db.lookup_hash(value):
+                    return value
+                if len(clean) == 8:
+                    rev = int.from_bytes(value.to_bytes(4, "big"), "little") & 0xFFFFFFFF
+                    if self.item_db.lookup_hash(rev):
+                        return rev
+                return value
             if q.lower().startswith("0x"):
-                return int(q, 16) & 0xFFFFFFFF
+                value = int(q, 16) & 0xFFFFFFFF
+                if self.item_db.lookup_hash(value):
+                    return value
+                rev = int.from_bytes(value.to_bytes(4, "big"), "little") & 0xFFFFFFFF
+                if self.item_db.lookup_hash(rev):
+                    return rev
+                return value
             if q.isdecimal():
                 return int(q, 10) & 0xFFFFFFFF
         except Exception:
@@ -9908,14 +12091,27 @@ class MainWindow(QMainWindow):
         return serial
 
     def _is_wrightstone_hash(self, item_hash: int) -> bool:
+        """True only for real Wrightstone database entries."""
         try:
-            entry = self.item_db.lookup_hash(int(item_hash) & 0xFFFFFFFF)
+            h = int(item_hash or EMPTY_HASH) & 0xFFFFFFFF
+        except Exception:
+            return False
+        if h in (0, EMPTY_HASH):
+            return False
+        try:
+            entry = self.item_db.lookup_hash(h)
         except Exception:
             entry = None
         if not entry:
             return False
         hay = " ".join(str(getattr(entry, name, "") or "") for name in ("item_id", "name", "display_name", "category", "aliases")).lower()
-        return "wrightstone" in hay or "whetstone" in hay or "wst" in hay
+        gbid = str(getattr(entry, "item_id", "") or "").upper()
+        return (
+            "wrightstone" in hay
+            or "whetstone" in hay
+            or "wst" in hay
+            or gbid.startswith(("ITEM_25_", "ITEM_26_", "ITEM_27_", "ITEM_28_", "ITEM_29_"))
+        )
 
     def _find_empty_item_slot(self) -> Optional[Dict[str, Any]]:
         if not self.save:
@@ -10312,6 +12508,79 @@ class MainWindow(QMainWindow):
             self._set_record_first_value(counter, serial, "sigil serial counter 2701")
         return serial
 
+    def _known_character_hashes_for_sigil_owner(self) -> set[int]:
+        hashes: set[int] = set()
+        if not self.save:
+            return hashes
+        try:
+            for rec in self.save.find(id_type=1301):
+                value = self._record_first_value(rec, 0)
+                if value not in (0, EMPTY_HASH):
+                    hashes.add(int(value) & 0xFFFFFFFF)
+        except Exception:
+            pass
+        return hashes
+
+    def _is_valid_sigil_inventory_hash(self, sigil_hash: int) -> bool:
+        value = int(sigil_hash) & 0xFFFFFFFF
+        if value in (0, EMPTY_HASH):
+            return False
+        entry = self.item_db.lookup_hash(value) if hasattr(self, "item_db") else None
+        if not entry:
+            # Unknown GEEN hashes can exist in newer saves, so do not treat
+            # unknown active rows as invalid during repair. Add paths still use
+            # the database/browser and therefore normally resolve to GEEN rows.
+            return True
+        item_id = str(getattr(entry, "item_id", "") or "").upper()
+        return self._is_sigil_db_entry(entry)
+
+    def _safe_sigil_level(self, value: Any, *, minimum: int = 1) -> int:
+        return self._clamp_sigil_level_value(value, minimum=minimum)
+
+    def _safe_sigil_owner_hash(self, owner_hash: Optional[int]) -> int:
+        if owner_hash in (None, "", 0, EMPTY_HASH):
+            return EMPTY_HASH
+        try:
+            owner = int(owner_hash) & 0xFFFFFFFF
+        except Exception:
+            return EMPTY_HASH
+        if owner in self._known_character_hashes_for_sigil_owner():
+            return owner
+        return EMPTY_HASH
+
+    def _safe_sigil_flags(self, current: Any = 0, *, locked: bool = True, assigned: bool = False) -> int:
+        try:
+            cur = int(current or 0)
+        except Exception:
+            cur = 0
+        # Uploaded Save Wizard sample pattern:
+        # - assigned to a character through 2706: low bits are 2
+        # - unassigned locked inventory rows: low bits are 3
+        # - unassigned normal inventory rows: low bits are 2
+        high = cur & ~3
+        low = 2 if assigned else (3 if locked else 2)
+        return high | low
+
+    def _sigil_meta_assigned_owner(self, meta: Dict[str, Any]) -> bool:
+        try:
+            owner = int(self._record_first_value(meta.get("worn_rec"), EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
+        except Exception:
+            owner = EMPTY_HASH
+        return owner not in (0, EMPTY_HASH)
+
+    def _sanitize_new_sigil_values(self, values: Dict[str, Any], *, locked: bool = True) -> Dict[str, Any]:
+        out = dict(values or {})
+        if "level_rec" in out:
+            out["level_rec"] = self._safe_sigil_level(out.get("level_rec"), minimum=1)
+        if "worn_rec" in out:
+            # Duplicated or pasted sigils should not inherit an character assignment.
+            # Duplicating an equipped row can exceed per-character slot limits
+            # and has been crash-prone in-game.
+            out["worn_rec"] = EMPTY_HASH
+        if "flags_rec" in out:
+            out["flags_rec"] = self._safe_sigil_flags(out.get("flags_rec"), locked=locked, assigned=False)
+        return out
+
     def _activate_sigil_slot(
         self,
         slot_meta: Dict[str, Any],
@@ -10320,73 +12589,147 @@ class MainWindow(QMainWindow):
         locked: bool = True,
         owner_hash: Optional[int] = None,
     ) -> bool:
+        sigil_hash = int(sigil_hash) & 0xFFFFFFFF
+        if not self._is_valid_sigil_inventory_hash(sigil_hash):
+            return False
+        level = self._safe_sigil_level(level, minimum=1)
         serial = self._set_sigil_serial(slot_meta)
-        ok_hash = self._set_record_first_value(slot_meta.get("hash_rec"), int(sigil_hash) & 0xFFFFFFFF, "sigil hash 2703")
-        ok_level = self._set_record_first_value(slot_meta.get("level_rec"), max(1, int(level)), "sigil level 2704 / FF900A")
+        ok_hash = self._set_record_first_value(slot_meta.get("hash_rec"), sigil_hash, "sigil hash 2703")
+        ok_level = self._set_record_first_value(slot_meta.get("level_rec"), level, "sigil level 2704 / FF900A")
+        owner = EMPTY_HASH
         if slot_meta.get("worn_rec") is not None:
-            owner = EMPTY_HASH if owner_hash in (None, 0) else int(owner_hash) & 0xFFFFFFFF
-            self._set_record_first_value(slot_meta.get("worn_rec"), owner, "sigil owner 2706")
+            owner = self._safe_sigil_owner_hash(owner_hash)
+            self._set_record_first_value(slot_meta.get("worn_rec"), owner, "sigil assigned character 2706")
         if slot_meta.get("flags_rec") is not None:
             cur = self._record_first_value(slot_meta.get("flags_rec"), 0)
-            # Preserve unknown high bits, but ensure a newly-added sigil has an
-            # active/visible flag. Existing game-created locked rows commonly
-            # use 3, unlocked/normal rows use 2, and older editor rows used 1.
-            new_flags = (cur | 3) if locked else ((cur | 2) & ~1)
+            assigned = owner not in (0, EMPTY_HASH)
+            new_flags = self._safe_sigil_flags(cur, locked=locked, assigned=assigned)
             self._set_record_first_value(slot_meta.get("flags_rec"), new_flags, "sigil flags 2707")
         return bool(ok_hash or ok_level or serial)
 
     def repair_added_sigil_slots(self, silent: bool = False) -> int:
-        """Assign valid 2702 serials to non-empty sigil rows left at zero.
+        """Repair/sanitize sigil inventory rows that can crash the game.
 
-        Older builds could add sigils that were visible in the editor but not
-        in-game because 2702 stayed zero and the 2701 counter was not advanced.
-        This repair is conservative: it only touches rows that already have a
-        real 2703 sigil hash and a missing/empty 2702 serial.
+        This conservative pass:
+        - assigns unique 2702 serials to active rows missing one
+        - fixes duplicate 2702 serials on active rows
+        - repairs invalid negative 2704 levels while preserving high signed-32-bit levels
+        - normalizes low active/lock bits in 2707
+        - clears invalid character assignment hashes in 2706
+        - clears half-active empty rows where hash is empty but level/flags/owner remain
         """
         if not self.save:
             if not silent:
                 QMessageBox.information(self, "No save loaded", "Open a save first.")
             return 0
-        grouped = self.save.group_by_unit([2701, 2702, 2703, 2704, 2707])
+
+        grouped = self.save.group_by_unit([2701, 2702, 2703, 2704, 2706, 2707])
+        counter = self._sigil_counter_record()
+        used_serials: set[int] = set()
+        max_serial = max(0, self._record_first_value(counter, 0) if counter is not None else 0)
         changed = 0
+        fixed_serials = fixed_levels = fixed_flags = fixed_owner = cleared_empty = 0
+
+        def next_serial() -> int:
+            nonlocal max_serial
+            max_serial = int(max_serial) + 1
+            while max_serial in used_serials or max_serial <= 0:
+                max_serial += 1
+            used_serials.add(max_serial)
+            return max_serial
+
         for unit_id, fields in sorted(grouped.items()):
-            if unit_id == 0:
+            if int(unit_id) == 0:
                 continue
             hash_rec = fields.get(2703)
             slot_rec = fields.get(2702)
-            if not hash_rec or not slot_rec:
-                continue
-            sigil_hash = self._record_first_value(hash_rec, 0) & 0xFFFFFFFF
-            serial = self._record_first_value(slot_rec, 0) & 0xFFFFFFFF
-            if sigil_hash in (0, EMPTY_HASH) or serial not in (0, EMPTY_HASH):
-                continue
-            meta = {"unit_id": unit_id, "slot_rec": slot_rec}
-            self._set_sigil_serial(meta)
-            # Rows added by the older editor often had flag=1. Make them look
-            # like normal visible inventory rows while preserving locked bit.
+            level_rec = self._sigil_level_record_for_new_slot(fields) or fields.get(2704)
+            owner_rec = fields.get(2706)
             flags_rec = fields.get(2707)
+
+            sigil_hash = self._record_first_value(hash_rec, 0) & 0xFFFFFFFF if hash_rec else 0
+            serial = self._record_first_value(slot_rec, 0) & 0xFFFFFFFF if slot_rec else 0
+            level = self._record_first_value(level_rec, 0) if level_rec else 0
+            owner = self._record_first_value(owner_rec, EMPTY_HASH) & 0xFFFFFFFF if owner_rec else EMPTY_HASH
+            flags = self._record_first_value(flags_rec, 0) if flags_rec else 0
+
+            active = sigil_hash not in (0, EMPTY_HASH)
+            if not active:
+                # Empty rows should not keep partial active-looking state.
+                if level_rec is not None and int(level or 0) != 0:
+                    if self._set_record_first_value(level_rec, 0, "clear empty sigil level 2704"):
+                        changed += 1; cleared_empty += 1
+                if owner_rec is not None and owner not in (0, EMPTY_HASH):
+                    if self._set_record_first_value(owner_rec, EMPTY_HASH, "clear empty sigil owner 2706"):
+                        changed += 1; cleared_empty += 1
+                if flags_rec is not None and int(flags or 0) != 0:
+                    if self._set_record_first_value(flags_rec, 0, "clear empty sigil flags 2707"):
+                        changed += 1; cleared_empty += 1
+                # Leave serials alone on empty rows; some saves use reusable bank
+                # slots with historical serials and the hash is what controls visibility.
+                continue
+
+            # Active rows need a unique, non-empty serial.
+            if slot_rec is not None:
+                if serial in (0, EMPTY_HASH) or serial in used_serials:
+                    new_serial = next_serial()
+                    if self._set_record_first_value(slot_rec, new_serial, "repair sigil serial/key 2702"):
+                        changed += 1; fixed_serials += 1
+                else:
+                    used_serials.add(serial)
+                    max_serial = max(max_serial, int(serial))
+
+            # Keep high sigil levels. Only repair obviously invalid negative values.
+            if level_rec is not None:
+                try:
+                    level_i = int(level or 0)
+                except Exception:
+                    level_i = 1
+                if level_i < 1:
+                    if self._set_record_first_value(level_rec, 1, "repair sigil level 2704 / FF900A"):
+                        changed += 1; fixed_levels += 1
+
+            # Normalize active/lock bits to the uploaded Save Wizard pattern.
+            # Assigned rows use low bits 2. Unassigned locked inventory rows keep 3.
             if flags_rec is not None:
-                cur = self._record_first_value(flags_rec, 0)
-                if cur in (0, 1):
-                    self._set_record_first_value(flags_rec, cur | 2, "sigil flags 2707")
-            changed += 1
+                assigned = owner not in (0, EMPTY_HASH)
+                locked = bool(int(flags or 0) & 1)
+                safe_flags = self._safe_sigil_flags(flags, locked=locked, assigned=assigned)
+                if int(flags or 0) != int(safe_flags):
+                    if self._set_record_first_value(flags_rec, safe_flags, "normalize sigil flags 2707"):
+                        changed += 1; fixed_flags += 1
+
+            # Clear owners that do not match an actual character hash.
+            if owner_rec is not None:
+                safe_owner = self._safe_sigil_owner_hash(owner)
+                if int(owner or 0) != int(safe_owner):
+                    if self._set_record_first_value(owner_rec, safe_owner, "clear invalid sigil owner 2706"):
+                        changed += 1; fixed_owner += 1
+
+        if counter is not None and max_serial > self._record_first_value(counter, 0):
+            if self._set_record_first_value(counter, max_serial, "sigil serial counter 2701"):
+                changed += 1; fixed_serials += 1
+
         if changed:
             if silent:
-                # Pre-save repairs must not rebuild heavy UI pages while the save
-                # operation is in progress. Older builds refreshed every tab here,
-                # which could make Save/Save As look like a crash on large files,
-                # especially with the Mastery page open. Mark the affected
-                # views stale and let the normal page refresh happen later.
                 self.dirty = True
                 self._invalidate_add_browser_indexes()
                 self._mark_stale_pages(["Sigils", "Save Health", "Welcome"])
             else:
-                self._after_editor_patch(f"Repaired {changed} added sigil slot serial(s).", refresh=True)
+                self._after_editor_patch(
+                    f"Sanitized sigils: {changed} field(s) changed "
+                    f"({fixed_serials} serial, {fixed_levels} level, {fixed_flags} flag, {fixed_owner} owner, {cleared_empty} empty-state).",
+                    refresh=True,
+                )
         if not silent:
             if changed:
-                QMessageBox.information(self, "Sigil repair complete", f"Assigned valid 2702 serials to {changed} existing added sigil row(s). Save As and test in-game.")
+                QMessageBox.information(
+                    self,
+                    "Sigil repair complete",
+                    f"Sanitized {changed} sigil field(s). Save As and test this copy in-game."
+                )
             else:
-                QMessageBox.information(self, "No repair needed", "No non-empty sigil rows with missing 2702 serials were found.")
+                QMessageBox.information(self, "No repair needed", "No unsafe sigil rows were found.")
         return changed
 
     def _find_empty_sigil_slot(self) -> Optional[Dict[str, Any]]:
@@ -10401,7 +12744,7 @@ class MainWindow(QMainWindow):
             cur_hash = self._record_first_value(hash_rec, 0)
             cur_level = self._record_first_value(level_rec, 0)
             if cur_hash in (0, EMPTY_HASH) and cur_level == 0:
-                return {
+                meta = {
                     "unit_id": unit_id,
                     "slot_rec": fields.get(2702),
                     "hash_rec": hash_rec,
@@ -10409,6 +12752,8 @@ class MainWindow(QMainWindow):
                     "worn_rec": fields.get(2706),
                     "flags_rec": fields.get(2707),
                 }
+                meta.update(self._sigil_trait_meta_records_for_unit(int(unit_id)))
+                return meta
         return None
 
     def count_empty_sigil_slots(self) -> int:
@@ -10498,7 +12843,7 @@ class MainWindow(QMainWindow):
             self,
             "Batch Add Sigils",
             "One sigil per line. Examples:\nDamage Cap V, 15 locked\nGEEN_020_04 lv15 unlock\nSupplementary DMG V, 15",
-            "Damage Cap V, 255 locked\nSupplementary DMG V, 255 locked",
+            "Damage Cap V, 15 locked\nSupplementary DMG V, 15 locked",
         )
         if not ok:
             return
@@ -10741,7 +13086,7 @@ class MainWindow(QMainWindow):
         ) == QMessageBox.StandardButton.Yes
 
     ITEM_SLOT_FIELDS = [("hash_rec", "item hash"), ("qty_rec", "quantity"), ("flag_rec", "flag")]
-    SIGIL_SLOT_FIELDS = [("hash_rec", "sigil hash"), ("level_rec", "level"), ("worn_rec", "worn-by"), ("flags_rec", "flags")]
+    SIGIL_SLOT_FIELDS = [("hash_rec", "sigil hash"), ("level_rec", "level"), ("trait1_hash_rec", "trait 1"), ("trait1_level_rec", "trait 1 level"), ("trait2_hash_rec", "trait 2"), ("trait2_level_rec", "trait 2 level"), ("worn_rec", "assigned character"), ("flags_rec", "flags")]
     WEAPON_SLOT_FIELDS = [("hash_rec", "weapon hash"), ("xp_rec", "XP"), ("flags_rec", "flags"), ("stone_rec", "stone")]
 
     def copy_selected_item_slot(self) -> None:
@@ -10814,7 +13159,8 @@ class MainWindow(QMainWindow):
         if not self._confirm_slot_action("Paste Sigil Slot", f"Paste copied sigil data into unit {meta.get('unit_id')}? This overwrites the selected slot in memory."):
             return
         was_empty = bool(meta.get("is_empty"))
-        patched = self._patch_meta_values(meta, self.sigil_slot_clipboard["values"], self.SIGIL_SLOT_FIELDS)
+        values = self._sanitize_new_sigil_values(self.sigil_slot_clipboard["values"], locked=True) if was_empty else dict(self.sigil_slot_clipboard["values"])
+        patched = self._patch_meta_values(meta, values, self.SIGIL_SLOT_FIELDS)
         if was_empty:
             serial = self._set_sigil_serial(meta)
             self._after_editor_patch(f"Pasted copied sigil slot into empty unit {meta.get('unit_id')} / serial {serial} ({patched} fields).")
@@ -10853,7 +13199,7 @@ class MainWindow(QMainWindow):
             return
         if not self._confirm_slot_action("Duplicate Sigil", f"Duplicate selected sigil into empty unit {slot.get('unit_id')}?"):
             return
-        values = self._meta_values(meta, [k for k, _ in self.SIGIL_SLOT_FIELDS])
+        values = self._sanitize_new_sigil_values(self._meta_values(meta, [k for k, _ in self.SIGIL_SLOT_FIELDS]), locked=True)
         self._patch_meta_values(slot, values, self.SIGIL_SLOT_FIELDS)
         serial = self._set_sigil_serial(slot)
         self._after_editor_patch(f"Duplicated sigil into empty unit {slot.get('unit_id')} / serial {serial}.")
@@ -10957,17 +13303,12 @@ class MainWindow(QMainWindow):
             if level_value is not None:
                 self.sigil_model.rows[row_index][5] = level_value
             if flags_value is not None:
-                self.sigil_model.rows[row_index][8] = flags_value
+                self.sigil_model.rows[row_index][9] = flags_value
             self._emit_model_row_changed(self.sigil_model, row_index)
         except Exception:
             pass
 
     def _refresh_sigil_auxiliary_views_light(self) -> None:
-        try:
-            if hasattr(self, "sigil_empty_model"):
-                self.refresh_sigil_empty_slot_rows()
-        except Exception:
-            pass
         try:
             if hasattr(self, "sigil_database_model"):
                 self.refresh_sigil_database_rows()
@@ -10988,8 +13329,8 @@ class MainWindow(QMainWindow):
         flags = meta.get("flags_rec")
         if flags is not None:
             cur = self._record_first_value(flags, 0)
-            flags_value = int(cur or 0) | 1
-            if self._set_record_first_value(flags, flags_value, "sigil flags"):
+            flags_value = self._safe_sigil_flags(cur, locked=True, assigned=self._sigil_meta_assigned_owner(meta))
+            if self._set_record_first_value(flags, flags_value, "sigil flags 2707"):
                 changed = True
         if changed:
             self._update_visible_sigil_level_flag_row(row_index, SIGIL_LEVEL_MAX, flags_value)
@@ -11011,8 +13352,8 @@ class MainWindow(QMainWindow):
             flags = meta.get("flags_rec")
             if flags is not None:
                 cur = self._record_first_value(flags, 0)
-                flags_value = int(cur or 0) | 1
-                if self._set_record_first_value(flags, flags_value, "sigil flags"):
+                flags_value = self._safe_sigil_flags(cur, locked=True, assigned=self._sigil_meta_assigned_owner(meta))
+                if self._set_record_first_value(flags, flags_value, "sigil flags 2707"):
                     flags_patched += 1
             if level_changed:
                 patched += 1
@@ -11039,6 +13380,7 @@ class MainWindow(QMainWindow):
                 if 0 <= row_index < len(self.weapon_model.rows):
                     self.weapon_model.rows[row_index][4] = WEAPON_XP_MAX
                     self._emit_model_row_changed(self.weapon_model, row_index)
+                    self._refresh_weapon_visible_row_from_meta(meta, update_detail=False)
             except Exception:
                 pass
             self._after_editor_patch(f"Selected weapon XP/progress set to {WEAPON_XP_MAX:,} and flags enabled.")
@@ -11156,9 +13498,9 @@ class MainWindow(QMainWindow):
     def _clamp_sigil_level_value(self, value: Any, *, minimum: int = 0) -> int:
         """Clamp sigil level writes to the signed 32-bit max.
 
-        The UI can accept pasted values. This keeps 2704 / FF900A writes inside
-        the largest signed 32-bit value and automatically snaps anything higher
-        down to 2,147,483,647 instead of failing or wrapping.
+        The game tolerates large 2704 / FF900A values without meaningful extra
+        effect, so the editor keeps the high-value cheat behavior while preventing
+        overflow/wrap.
         """
         try:
             ivalue = int(str(value).replace(",", "").strip())
@@ -11174,11 +13516,20 @@ class MainWindow(QMainWindow):
         if not self.save or row_index >= len(self.sigil_rows_meta):
             return False
         meta = self.sigil_rows_meta[row_index]
+        ok = False
+        resolved = None
+        parsed = None
+
         if column in (2, 3, 4):
             resolved = self._resolve_edit_hash(value, "sigil", allow_empty=True)
             if resolved is None:
                 return False
-            ok = self._set_record_first_value(meta.get("hash_rec"), resolved, "sigil hash")
+            ok = self._set_record_first_value(meta.get("hash_rec"), resolved, "sigil hash 2703 / FF8F0A")
+            if ok and resolved in (0, EMPTY_HASH):
+                self._set_record_first_value(meta.get("trait1_hash_rec"), EMPTY_HASH, "sigil trait 1 ID 1701")
+                self._set_record_first_value(meta.get("trait1_level_rec"), 0, "sigil trait 1 level 1702")
+                self._set_record_first_value(meta.get("trait2_hash_rec"), EMPTY_HASH, "sigil trait 2 ID 1701")
+                self._set_record_first_value(meta.get("trait2_level_rec"), 0, "sigil trait 2 level 1702")
         elif column == 5:
             parsed = self._parse_edit_int(value, "Sigil level 2704 / FF900A")
             if parsed is None:
@@ -11187,38 +13538,434 @@ class MainWindow(QMainWindow):
             if hasattr(self, "sigil_level_edit"):
                 self._set_line_edit_text_safely("sigil_level_edit", str(parsed))
             ok = self._set_record_first_value(meta.get("level_rec"), parsed, "sigil level 2704 / FF900A")
-        elif column in (6, 7):
-            resolved = self._resolve_edit_hash(value, "worn-by character", allow_empty=True)
+        elif column == 6:
+            resolved = self._resolve_edit_hash(value, "sigil trait 1", allow_empty=True)
             if resolved is None:
                 return False
-            if not self._sigil_owner_assignment_allowed(row_index, resolved, show_message=True):
+            ok = self._set_record_first_value(meta.get("trait1_hash_rec"), resolved, "sigil trait 1 ID 1701 / FFA50600")
+        elif column == 7:
+            resolved = self._resolve_edit_hash(value, "sigil trait 2", allow_empty=True)
+            if resolved is None:
                 return False
-            ok = self._set_record_first_value(meta.get("worn_rec"), resolved, "sigil worn-by hash")
-        elif column == 8:
+            ok = self._set_record_first_value(meta.get("trait2_hash_rec"), resolved, "sigil trait 2 ID 1701 / FFA50600")
+        elif column == 8 or column == 12:
+            resolved = self._resolve_edit_hash(value, "assigned character", allow_empty=True)
+            if resolved is None:
+                return False
+            ok = self._apply_sigil_owner_to_meta(meta, resolved, row_index=row_index, show_message=True)
+        elif column == 9:
             parsed = self._parse_edit_int(value, "Sigil flags")
             if parsed is None:
                 return False
-            ok = self._set_record_first_value(meta.get("flags_rec"), parsed, "sigil flags")
+            ok = self._set_record_first_value(meta.get("flags_rec"), parsed, "sigil flags 2707")
+        elif column == 10:
+            parsed = self._parse_edit_int(value, "sigil trait 1 level 1702 / FFA60600")
+            if parsed is None:
+                return False
+            ok = self._set_record_first_value(meta.get("trait1_level_rec"), max(0, min(I32_MAX, int(parsed))), "sigil trait 1 level 1702 / FFA60600")
+        elif column == 11:
+            parsed = self._parse_edit_int(value, "sigil trait 2 level 1702 / FFA60600")
+            if parsed is None:
+                return False
+            ok = self._set_record_first_value(meta.get("trait2_level_rec"), max(0, min(I32_MAX, int(parsed))), "sigil trait 2 level 1702 / FFA60600")
         else:
             return False
+
         if ok:
             try:
+                t1_hash = self._record_first_value(meta.get("trait1_hash_rec"), EMPTY_HASH)
+                t1_lv = self._record_first_value(meta.get("trait1_level_rec"), 0)
+                t2_hash = self._record_first_value(meta.get("trait2_hash_rec"), EMPTY_HASH)
+                t2_lv = self._record_first_value(meta.get("trait2_level_rec"), 0)
                 if column in (2, 3, 4):
                     self._patch_visible_hash_row(self.sigil_model, row_index, 2, 3, 4, resolved)
                     meta["is_empty"] = resolved in (0, EMPTY_HASH)
                     meta["is_known"] = bool(self.item_db.lookup_hash(resolved))
+                    if resolved in (0, EMPTY_HASH):
+                        self.sigil_model.rows[row_index][6] = "—"
+                        self.sigil_model.rows[row_index][7] = "—"
+                        self.sigil_model.rows[row_index][10] = ""
+                        self.sigil_model.rows[row_index][11] = ""
                 elif column == 5:
                     self.sigil_model.rows[row_index][5] = parsed
-                elif column in (6, 7):
-                    self.sigil_model.rows[row_index][6] = "" if resolved in (0, EMPTY_HASH) else self._character_owner_name_for_hash(resolved)
-                    self.sigil_model.rows[row_index][7] = self._character_owner_gbid_for_hash(resolved)
-                elif column == 8:
-                    self.sigil_model.rows[row_index][8] = parsed
+                elif column in (6, 10):
+                    self.sigil_model.rows[row_index][6] = self._sigil_trait_display(t1_hash, self._record_first_value(meta.get("trait1_level_rec"), 0))
+                    self.sigil_model.rows[row_index][10] = self._record_first_value(meta.get("trait1_level_rec"), "")
+                elif column in (7, 11):
+                    self.sigil_model.rows[row_index][7] = self._sigil_trait_display(t2_hash, self._record_first_value(meta.get("trait2_level_rec"), 0))
+                    self.sigil_model.rows[row_index][11] = self._record_first_value(meta.get("trait2_level_rec"), "")
+                elif column in (8, 12):
+                    self.sigil_model.rows[row_index][8] = "" if resolved in (0, EMPTY_HASH) else self._character_owner_name_for_hash(resolved)
+                    self.sigil_model.rows[row_index][12] = self._character_owner_gbid_for_hash(resolved)
+                elif column == 9:
+                    self.sigil_model.rows[row_index][9] = parsed
                 self._emit_model_row_changed(self.sigil_model, row_index)
             except Exception:
                 pass
-            self._after_editor_patch("Sigil/gem cell updated in memory.")
+            self._mark_stale_pages(["Sigils", "Save Health"])
+            self._after_editor_patch("Sigil/gem cell updated in memory.", refresh=False)
         return bool(ok)
+
+    def _selected_weapon_meta(self) -> Optional[Dict[str, Any]]:
+        combo = getattr(self, "weapon_cap_trait_weapon_combo", None)
+        if combo is not None:
+            try:
+                unit_id = combo.currentData()
+                if unit_id is not None:
+                    meta = self._weapon_meta_by_unit(int(unit_id))
+                    if meta:
+                        return meta
+            except Exception:
+                pass
+        table_meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta) if hasattr(self, "weapon_table") else None
+        if table_meta:
+            return table_meta
+        return None
+
+    def _weapon_cap_value_from_combo(self) -> int:
+        combo = getattr(self, "weapon_cap_combo", None)
+        if combo is not None and combo.currentData() is not None:
+            try:
+                return int(combo.currentData())
+            except Exception:
+                pass
+        return 5
+
+    def _set_weapon_cap_combo_to_value(self, value: Any) -> None:
+        combo = getattr(self, "weapon_cap_combo", None)
+        if combo is None:
+            return
+        try:
+            target = int(value)
+        except Exception:
+            target = 5
+        for i in range(combo.count()):
+            try:
+                if int(combo.itemData(i)) == target:
+                    combo.blockSignals(True)
+                    combo.setCurrentIndex(i)
+                    combo.blockSignals(False)
+                    return
+            except Exception:
+                pass
+
+    def _weapon_trait_choices(self) -> List[Dict[str, Any]]:
+        cached = getattr(self, "weapon_trait_choices_cache", None)
+        if cached is not None:
+            return cached
+        choices: List[Dict[str, Any]] = [{"label": "None / Clear", "hash": EMPTY_HASH, "gbid": "", "name": "None / Clear"}]
+        try:
+            entries = []
+            for entry in self.item_db.by_hash.values():
+                gbid = str(getattr(entry, "item_id", "") or "").upper()
+                cat = str(getattr(entry, "category", "") or "")
+                if gbid.startswith("SKILL") or "trait" in cat.lower() or "skill" in cat.lower():
+                    entries.append(entry)
+            def _sort_key(entry):
+                gbid = str(getattr(entry, "item_id", "") or "").upper()
+                m = re.search(r"(\d+)", gbid)
+                return (int(m.group(1)) if m else 999999, gbid)
+            for entry in sorted(entries, key=_sort_key):
+                choices.append({
+                    "label": f"{entry.display_name} ({entry.item_id})",
+                    "hash": int(entry.hash_value) & 0xFFFFFFFF,
+                    "gbid": str(entry.item_id),
+                    "name": str(entry.display_name),
+                })
+        except Exception:
+            pass
+        self.weapon_trait_choices_cache = choices
+        return choices
+
+    def refresh_weapon_trait_choices(self) -> None:
+        combo = getattr(self, "weapon_trait_combo", None)
+        if combo is None:
+            return
+        current = combo.currentData()
+        combo.blockSignals(True)
+        combo.clear()
+        for choice in self._weapon_trait_choices():
+            combo.addItem(str(choice.get("label")), int(choice.get("hash", EMPTY_HASH)) & 0xFFFFFFFF)
+        if current is not None:
+            for i in range(combo.count()):
+                try:
+                    if int(combo.itemData(i)) == int(current):
+                        combo.setCurrentIndex(i)
+                        break
+                except Exception:
+                    pass
+        combo.blockSignals(False)
+
+    def _set_weapon_trait_combo_to_hash(self, value: Any) -> None:
+        combo = getattr(self, "weapon_trait_combo", None)
+        if combo is None:
+            return
+        try:
+            target = int(value or EMPTY_HASH) & 0xFFFFFFFF
+        except Exception:
+            target = EMPTY_HASH
+        for i in range(combo.count()):
+            data = combo.itemData(i)
+            try:
+                if data is not None and int(data) == target:
+                    combo.blockSignals(True)
+                    combo.setCurrentIndex(i)
+                    combo.blockSignals(False)
+                    return
+            except Exception:
+                pass
+        if combo.count():
+            combo.blockSignals(True)
+            combo.setCurrentIndex(0)
+            combo.blockSignals(False)
+
+    def _set_weapon_trait_bonus_spin_to_value(self, value: Any) -> None:
+        spin = getattr(self, "weapon_trait_bonus_spin", None)
+        if spin is None:
+            return
+        try:
+            spin.blockSignals(True)
+            spin.setValue(max(0, min(999, int(value or 0))))
+        except Exception:
+            pass
+        finally:
+            try:
+                spin.blockSignals(False)
+            except Exception:
+                pass
+
+    def _weapon_meta_saved_values(self, meta: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "xp": self._record_first_value(meta.get("xp_rec"), 0),
+            "cap": self._record_first_value(meta.get("cap_rec") or meta.get("unk_2805_rec"), 0),
+            "trait_bonus": self._record_first_value(meta.get("unk_2806_rec"), 0),
+            "field_2807": self._record_first_value(meta.get("unk_2807_rec"), 0),
+            "field_2814": self._record_first_value(meta.get("unk_2814_rec"), 0),
+            "owned_flag": self._record_first_value(meta.get("flags_rec"), 0),
+            "stone": self._record_first_value(meta.get("stone_rec"), EMPTY_HASH),
+        }
+
+    def _update_weapon_builtin_trait_summary(self, meta: Optional[Dict[str, Any]]) -> None:
+        label = getattr(self, "weapon_builtin_trait_summary", None)
+        if label is None:
+            return
+        if not meta:
+            label.setText("Select a weapon to inspect its saved uncap/trait-bonus fields.")
+            return
+        values = self._weapon_meta_saved_values(meta)
+        h = self._record_first_value(meta.get("hash_rec"), 0)
+        name, gbid, hash_hex = self.hash_entry_parts(h)
+        stone_value = values.get("stone")
+        stone_name, stone_gbid, stone_hash = self.hash_entry_parts(stone_value)
+        try:
+            stone_text = "none" if int(stone_value) in (0, EMPTY_HASH) else (stone_name if stone_gbid else stone_hash)
+        except Exception:
+            stone_text = str(stone_value)
+        label.setText(
+            f"{format_display_value(name, 'Weapon')} ({gbid or hash_hex})  •  "
+            f"XP/progress 2804: {values['xp']}  •  "
+            f"Uncap/max-level 2805: {values['cap']}  •  "
+            f"Trait + bonus 2806: {values['trait_bonus']}  •  "
+            f"2807: {values['field_2807']}  •  "
+            f"2814: {values['field_2814']}  •  "
+            f"Owned/flag 2815: {values['owned_flag']}  •  "
+            f"Stone/Wrightstone 2816: {stone_text}"
+        )
+
+    def _apply_weapon_trait_bonus_to_meta(self, meta: Dict[str, Any], value: int) -> bool:
+        return self._set_record_first_value(meta.get("unk_2806_rec"), max(0, min(999, int(value))), "weapon trait + bonus 2806")
+
+    def apply_weapon_trait_bonus_selected(self) -> None:
+        meta = self._selected_weapon_meta()
+        if not meta:
+            self.statusBar().showMessage("Select a weapon first.", 3000)
+            return
+        value = int(getattr(self, "weapon_trait_bonus_spin").value()) if hasattr(self, "weapon_trait_bonus_spin") else 0
+        if self._apply_weapon_trait_bonus_to_meta(meta, value):
+            self._mark_stale_pages(["Weapons", "Save Health"])
+            self._refresh_weapon_visible_row_from_meta(meta)
+            self.statusBar().showMessage(f"Weapon trait + bonus set to {value}. Save As to test in-game.", 6000)
+
+    def apply_weapon_trait_bonus_visible(self) -> None:
+        if not self.save:
+            QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return
+        value = int(getattr(self, "weapon_trait_bonus_spin").value()) if hasattr(self, "weapon_trait_bonus_spin") else 0
+        changed = 0
+        missing = 0
+        for meta in getattr(self, "weapon_rows_meta", []) or []:
+            if meta.get("is_empty"):
+                continue
+            if meta.get("unk_2806_rec") is None:
+                missing += 1
+                continue
+            if self._apply_weapon_trait_bonus_to_meta(meta, value):
+                changed += 1
+        self._mark_stale_pages(["Weapons", "Save Health"])
+        self.refresh_weapon_rows()
+        msg = f"Visible weapon trait + bonus set to {value}: {changed} changed"
+        if missing:
+            msg += f", {missing} missing"
+        self.statusBar().showMessage(msg + ". Save As to test.", 7000)
+
+    def update_weapon_cap_trait_controls(self) -> None:
+        if not hasattr(self, "weapon_cap_trait_status"):
+            return
+        if hasattr(self, "weapon_trait_combo") and self.weapon_trait_combo.count() == 0:
+            self.refresh_weapon_trait_choices()
+        meta = self._selected_weapon_meta()
+        if not meta:
+            self.weapon_cap_trait_status.setText("Select a weapon above or in Current Weapons first.")
+            self._update_weapon_builtin_trait_summary(None)
+            return
+        cap = self._record_first_value(meta.get("cap_rec") or meta.get("unk_2805_rec"), 0)
+        bonus = self._record_first_value(meta.get("unk_2806_rec"), 0)
+        self._set_weapon_cap_combo_to_value(cap)
+        if hasattr(self, "weapon_cap_custom_spin"):
+            try:
+                self.weapon_cap_custom_spin.blockSignals(True)
+                self.weapon_cap_custom_spin.setValue(max(0, min(255, int(cap))))
+                self.weapon_cap_custom_spin.blockSignals(False)
+            except Exception:
+                pass
+        self._set_weapon_trait_bonus_spin_to_value(bonus)
+        self._update_weapon_builtin_trait_summary(meta)
+        trait_hash = self._record_first_value(meta.get("trait_id_rec"), EMPTY_HASH)
+        trait_level = self._record_first_value(meta.get("trait_level_rec"), 0)
+        self._set_weapon_trait_combo_to_hash(trait_hash)
+        if hasattr(self, "weapon_trait_level_spin"):
+            try:
+                self.weapon_trait_level_spin.blockSignals(True)
+                self.weapon_trait_level_spin.setValue(max(0, min(I32_MAX, int(trait_level or 0))))
+                self.weapon_trait_level_spin.blockSignals(False)
+            except Exception:
+                pass
+        trait_state = "direct 1701/1702 records found" if meta.get("trait_id_rec") is not None or meta.get("trait_level_rec") is not None else "in-game ATK/HP traits are derived; no direct 1701/1702 rows on this weapon"
+        self.weapon_cap_trait_status.setText(f"Selected unit {meta.get('unit_id')}: uncap 2805={cap}, trait + 2806={bonus}. {trait_state}.")
+
+    def _apply_weapon_cap_to_meta(self, meta: Dict[str, Any], cap_value: int) -> bool:
+        cap_value = max(0, min(255, int(cap_value)))
+        rec = meta.get("cap_rec") or meta.get("unk_2805_rec")
+        return self._set_record_first_value(rec, cap_value, "weapon cap 2805 / FFF50A00")
+
+    def apply_weapon_cap_preset_selected(self) -> None:
+        meta = self._selected_weapon_meta()
+        if not meta:
+            self.statusBar().showMessage("Select a weapon first.", 3000)
+            return
+        cap = self._weapon_cap_value_from_combo()
+        if self._apply_weapon_cap_to_meta(meta, cap):
+            self._mark_stale_pages(["Weapons", "Save Health"])
+            self._refresh_weapon_visible_row_from_meta(meta)
+            self.statusBar().showMessage(f"Weapon uncap set to stage {cap}. Save As to test.", 5000)
+
+    def apply_weapon_cap_custom_selected(self) -> None:
+        meta = self._selected_weapon_meta()
+        if not meta:
+            self.statusBar().showMessage("Select a weapon first.", 3000)
+            return
+        cap = int(getattr(self, "weapon_cap_custom_spin").value()) if hasattr(self, "weapon_cap_custom_spin") else 5
+        if self._apply_weapon_cap_to_meta(meta, cap):
+            self._mark_stale_pages(["Weapons", "Save Health"])
+            self._refresh_weapon_visible_row_from_meta(meta)
+            self.statusBar().showMessage(f"Weapon uncap set to custom value {cap}. Save As to test.", 5000)
+
+    def apply_weapon_cap_preset_visible(self) -> None:
+        if not self.save:
+            QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return
+        cap = self._weapon_cap_value_from_combo()
+        changed = 0
+        missing = 0
+        for meta in getattr(self, "weapon_rows_meta", []) or []:
+            if meta.get("is_empty"):
+                continue
+            rec = meta.get("cap_rec") or meta.get("unk_2805_rec")
+            if rec is None:
+                missing += 1
+                continue
+            if self._set_record_first_value(rec, cap, "weapon cap 2805 / FFF50A00"):
+                changed += 1
+        self._mark_stale_pages(["Weapons", "Save Health"])
+        self.refresh_weapon_rows()
+        msg = f"Visible weapon uncaps set to stage {cap}: {changed} changed"
+        if missing:
+            msg += f", {missing} missing"
+        self.statusBar().showMessage(msg + ". Save As to test.", 6000)
+
+    def open_wrightstones_for_selected_weapon(self) -> None:
+        """Route weapon-trait editing to the correct Wrightstones workflow."""
+        meta = self._selected_weapon_meta()
+        stone_value = EMPTY_HASH
+        if meta:
+            try:
+                stone_value = int(self._record_first_value(meta.get("stone_rec"), EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
+            except Exception:
+                stone_value = EMPTY_HASH
+        self._show_page("Wrightstones")
+        if hasattr(self, "wrightstone_filter_edit"):
+            try:
+                if stone_value not in (0, EMPTY_HASH):
+                    self.wrightstone_filter_edit.setText(f"{stone_value:08X}")
+                else:
+                    self.wrightstone_filter_edit.clear()
+                self.refresh_wrightstone_rows()
+            except Exception:
+                pass
+        if meta and stone_value not in (0, EMPTY_HASH):
+            self.statusBar().showMessage(
+                f"Opened Wrightstones for weapon unit {meta.get('unit_id')} / stone 0x{stone_value:08X}. Edit Trait 1/2/3 there.",
+                8000,
+            )
+        elif meta:
+            self.statusBar().showMessage(
+                f"Weapon unit {meta.get('unit_id')} has no direct trait records and no mapped stone hash yet. Edit owned Wrightstones from this page, or assign/link a stone once that relation is confirmed.",
+                9000,
+            )
+        else:
+            self.statusBar().showMessage("Opened Wrightstones. Select a weapon first to route from Weapons.", 6000)
+
+    def apply_weapon_trait_selected(self) -> None:
+        meta = self._selected_weapon_meta()
+        if not meta:
+            self.statusBar().showMessage("Select a weapon first.", 3000)
+            return
+        trait_rec = meta.get("trait_id_rec")
+        level_rec = meta.get("trait_level_rec")
+        if trait_rec is None and level_rec is None:
+            self.open_wrightstones_for_selected_weapon()
+            return
+        combo = getattr(self, "weapon_trait_combo", None)
+        trait_hash = int(combo.currentData()) & 0xFFFFFFFF if combo is not None and combo.currentData() is not None else EMPTY_HASH
+        level = int(getattr(self, "weapon_trait_level_spin").value()) if hasattr(self, "weapon_trait_level_spin") else 0
+        changed = 0
+        if trait_rec is not None and self._set_record_first_value(trait_rec, trait_hash, "weapon trait ID 1701 / FFA50600"):
+            changed += 1
+        if level_rec is not None and self._set_record_first_value(level_rec, level, "weapon trait level 1702 / FFA60600"):
+            changed += 1
+        self._mark_stale_pages(["Weapons", "Save Health"])
+        self.refresh_weapon_rows()
+        self.statusBar().showMessage(f"Weapon trait applied: {changed} field(s) changed. Save As to test.", 6000)
+
+    def clear_weapon_trait_selected(self) -> None:
+        meta = self._selected_weapon_meta()
+        if not meta:
+            self.statusBar().showMessage("Select a weapon first.", 3000)
+            return
+        trait_rec = meta.get("trait_id_rec")
+        level_rec = meta.get("trait_level_rec")
+        if trait_rec is None and level_rec is None:
+            self.open_wrightstones_for_selected_weapon()
+            return
+        changed = 0
+        if trait_rec is not None and self._set_record_first_value(trait_rec, EMPTY_HASH, "weapon trait ID 1701 / FFA50600"):
+            changed += 1
+        if level_rec is not None and self._set_record_first_value(level_rec, 0, "weapon trait level 1702 / FFA60600"):
+            changed += 1
+        self._mark_stale_pages(["Weapons", "Save Health"])
+        self.refresh_weapon_rows()
+        self.statusBar().showMessage(f"Weapon trait cleared: {changed} field(s) changed. Save As to test.", 6000)
+
 
     def _clamp_weapon_xp_value(self, value: Any) -> int:
         """Clamp weapon XP/progress to the editor's safe max."""
@@ -11232,7 +13979,7 @@ class MainWindow(QMainWindow):
         if not self.save or row_index >= len(self.weapon_rows_meta):
             return False
         meta = self.weapon_rows_meta[row_index]
-        field_map = {4: ("xp_rec", "weapon XP"), 5: ("unk_2805_rec", "weapon field 2805"), 6: ("unk_2806_rec", "weapon field 2806"), 7: ("unk_2807_rec", "weapon field 2807"), 8: ("unk_2814_rec", "weapon field 2814"), 9: ("flags_rec", "weapon flags")}
+        field_map = {4: ("xp_rec", "weapon XP/progress 2804"), 5: ("cap_rec", "weapon uncap/max-level 2805 / FFF50A00"), 6: ("unk_2806_rec", "weapon trait + bonus 2806"), 7: ("unk_2807_rec", "weapon field 2807"), 8: ("unk_2814_rec", "weapon field 2814"), 9: ("flags_rec", "weapon owned/flags 2815")}
         if column in (1, 2, 3):
             resolved = self._resolve_edit_hash(value, "weapon", allow_empty=True)
             if resolved is None:
@@ -11266,9 +14013,10 @@ class MainWindow(QMainWindow):
                 elif column in field_map:
                     self.weapon_model.rows[row_index][column] = parsed
                 self._emit_model_row_changed(self.weapon_model, row_index)
+                self._refresh_weapon_visible_row_from_meta(meta, update_detail=False)
             except Exception:
                 pass
-            self._after_editor_patch("Weapon cell updated in memory.")
+            self._after_editor_patch("Weapon cell updated in memory.", refresh=False)
         return bool(ok)
 
     def apply_character_table_cell_edit(self, row_index: int, column: int, value: Any) -> bool:
@@ -11345,7 +14093,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "No character list", "No character owner list is loaded yet.")
             return
         labels = [str(c.get("label") or c.get("name") or f"0x{int(c.get('hash', EMPTY_HASH)) & 0xFFFFFFFF:08X}") for c in choices]
-        current_label = "None / Unequipped"
+        current_label = "None / Unassigned"
         try:
             owner_hash = self._current_sigil_owner_hash()
             current_label = self._character_owner_name_for_hash(owner_hash)
@@ -11371,17 +14119,23 @@ class MainWindow(QMainWindow):
         if not visible_metas:
             QMessageBox.information(self, "No visible sigils", "There are no visible non-empty sigil rows to equip.")
             return
-        if not self._sigil_owner_assignment_allowed(0, target_hash, show_message=True):
-            return
         if target_hash not in (0, EMPTY_HASH):
             counts = self._sigil_owner_counts_by_hash()
+            already_target = 0
+            to_change_count = 0
+            for meta in visible_metas:
+                cur_owner = int(self._record_first_value(meta.get("worn_rec"), EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
+                if cur_owner == target_hash:
+                    already_target += 1
+                else:
+                    to_change_count += 1
             remaining = max(0, SIGIL_MAX_EQUIPPED_PER_OWNER - counts.get(target_hash, 0))
-            if len(visible_metas) > remaining:
+            if to_change_count > remaining:
                 QMessageBox.warning(
                     self,
                     "Bulk equip capped",
-                    f"Only {remaining} more sigil(s) can be equipped to this owner before reaching the safe cap of {SIGIL_MAX_EQUIPPED_PER_OWNER}. "
-                    "Reduce the visible rows or clear existing equipped refs first."
+                    f"Only {remaining} more sigil(s) can be assigned to this owner before reaching the safe cap of {SIGIL_MAX_EQUIPPED_PER_OWNER}. "
+                    "Reduce the visible rows or clear existing character assignments first."
                 )
                 return
         preview_name = self._character_owner_name_for_hash(target_hash)
@@ -11397,23 +14151,24 @@ class MainWindow(QMainWindow):
             return
         changed = 0
         skipped = 0
-        for meta in visible_metas:
-            worn_rec = meta.get("worn_rec")
-            if worn_rec is None:
-                skipped += 1
-                continue
+        for idx, meta in enumerate(visible_metas):
             try:
-                current = int(self._record_first_value(worn_rec, EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
+                current = int(self._record_first_value(meta.get("worn_rec"), EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
             except Exception:
                 current = EMPTY_HASH
             if current == target_hash:
                 continue
-            if self._set_record_first_value(worn_rec, target_hash, "sigil worn-by hash"):
+            row_index = -1
+            try:
+                row_index = self.sigil_rows_meta.index(meta)
+            except Exception:
+                row_index = -1
+            if self._apply_sigil_owner_to_meta(meta, target_hash, row_index=row_index, show_message=False):
                 changed += 1
             else:
                 skipped += 1
         self.refresh_sigil_rows()
-        self._after_editor_patch(f"Equipped {changed} visible sigil row(s) to {preview_name}. Skipped {skipped}.", refresh=False)
+        self._after_editor_patch(f"Assigned {changed} visible sigil row(s) to {preview_name} using 2706 character hash / 2707=2. Skipped {skipped}.", refresh=False)
 
     def equip_selected_sigil_to_selected_character(self) -> None:
         if not self.save:
@@ -11432,8 +14187,9 @@ class MainWindow(QMainWindow):
         row_index = self.sigil_table.currentIndex().row() if hasattr(self, "sigil_table") else -1
         if not self._sigil_owner_assignment_allowed(row_index, char_hash, show_message=True):
             return
-        if self._set_record_first_value(sigil_meta.get("worn_rec"), char_hash, "sigil worn-by hash"):
-            self._after_editor_patch(f"Equipped selected sigil to character slot {char_meta.get('slot')} in memory.")
+        if self._apply_sigil_owner_to_meta(sigil_meta, char_hash, row_index=row_index, show_message=True):
+            self.refresh_sigil_rows()
+            self._after_editor_patch(f"Assigned selected sigil to character slot {char_meta.get('slot')} using 2706 character hash / 2707=2.", refresh=False)
 
     def equip_copied_sigil_to_selected_character(self) -> None:
         if not self.save:
@@ -11462,8 +14218,9 @@ class MainWindow(QMainWindow):
             pass
         if not self._sigil_owner_assignment_allowed(row_index, char_hash, show_message=True):
             return
-        if self._set_record_first_value(sigil_meta.get("worn_rec"), char_hash, "sigil worn-by hash"):
-            self._after_editor_patch(f"Equipped copied sigil to character slot {char_meta.get('slot')} in memory.")
+        if self._apply_sigil_owner_to_meta(sigil_meta, char_hash, row_index=row_index, show_message=True):
+            self.refresh_sigil_rows()
+            self._after_editor_patch(f"Assigned copied sigil to character slot {char_meta.get('slot')} using 2706 character hash / 2707=2.", refresh=False)
 
     def clear_selected_sigil_worn_by(self) -> None:
         if not self.save:
@@ -11471,8 +14228,81 @@ class MainWindow(QMainWindow):
         meta = self._selected_meta(self.sigil_table, self.sigil_rows_meta)
         if not meta:
             return
-        if self._set_record_first_value(meta.get("worn_rec"), EMPTY_HASH, "sigil worn-by hash"):
-            self._after_editor_patch("Selected sigil unequipped in memory.")
+        row_index = self.sigil_table.currentIndex().row() if hasattr(self, "sigil_table") else -1
+        if self._apply_sigil_owner_to_meta(meta, EMPTY_HASH, row_index=row_index, show_message=True):
+            self.refresh_sigil_rows()
+            self._after_editor_patch("Selected sigil character assignment cleared in memory.", refresh=False)
+
+    def _clear_sigil_meta_to_empty(self, meta: Dict[str, Any]) -> int:
+        """Turn a sigil row back into a reusable empty 270x slot.
+
+        A reusable empty sigil slot is hash-empty and level-zero.  We also clear
+        the owner/flags and both linked 120M trait lanes so the next Add Sigil
+        operation starts from a clean game-compatible row.
+        """
+        if not self.save or not meta:
+            return 0
+        patched = 0
+        clear_values = [
+            ("slot_rec", 0, "sigil serial/key 2702"),
+            ("hash_rec", EMPTY_HASH, "sigil hash 2703 / FF8F0A"),
+            ("level_rec", 0, "sigil level 2704 / FF900A"),
+            ("trait1_hash_rec", EMPTY_HASH, "sigil trait 1 ID 1701 / FFA50600"),
+            ("trait1_level_rec", 0, "sigil trait 1 level 1702 / FFA60600"),
+            ("trait2_hash_rec", EMPTY_HASH, "sigil trait 2 ID 1701 / FFA50600"),
+            ("trait2_level_rec", 0, "sigil trait 2 level 1702 / FFA60600"),
+            ("worn_rec", EMPTY_HASH, "sigil assigned character 2706 / FF920A"),
+            ("flags_rec", 0, "sigil flags 2707"),
+        ]
+        for key, value, label in clear_values:
+            rec = meta.get(key)
+            if rec is None:
+                continue
+            try:
+                current = self._record_first_value(rec, None)
+            except Exception:
+                current = None
+            if current == value:
+                continue
+            if self._set_record_first_value(rec, value, label):
+                patched += 1
+        return patched
+
+    def remove_selected_sigil_to_empty_slot(self) -> None:
+        if not self.save:
+            return
+        meta = self._selected_meta(self.sigil_table, self.sigil_rows_meta)
+        if not meta:
+            return
+        try:
+            sigil_hash = int(self._record_first_value(meta.get("hash_rec"), 0) or 0) & 0xFFFFFFFF
+        except Exception:
+            sigil_hash = 0
+        if sigil_hash in (0, EMPTY_HASH) and bool(meta.get("is_empty")):
+            self.statusBar().showMessage("Selected sigil row is already empty.", 4000)
+            return
+        name, gbid, hx = self.hash_entry_parts(sigil_hash) if sigil_hash not in (0, EMPTY_HASH) else ("selected sigil", "", "")
+        display = name or gbid or hx or "selected sigil"
+        if QMessageBox.question(
+            self,
+            "Remove Sigil",
+            f"Turn {display} in unit {meta.get('unit_id')} back into a reusable empty sigil slot?\n\n"
+            "This clears 2702/2703/2704/2706/2707 and both linked 120M trait lanes.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        patched = self._clear_sigil_meta_to_empty(meta)
+        if patched <= 0:
+            self.statusBar().showMessage("No sigil fields changed; the row may already be empty.", 5000)
+            return
+        # Show empty rows after removal so the user can immediately see the
+        # cleared reusable slot rather than watching the row disappear.
+        try:
+            if hasattr(self, "sigil_show_empty_check"):
+                self.sigil_show_empty_check.setChecked(True)
+        except Exception:
+            pass
+        self._after_editor_patch(f"Removed {display}; unit {meta.get('unit_id')} is now a reusable empty sigil slot ({patched} field(s) cleared).")
 
     def edit_selected_character_hash(self) -> None:
         if not self.save:
@@ -11904,10 +14734,11 @@ class MainWindow(QMainWindow):
         if not meta:
             return
         rec = meta.get("worn_rec")
-        value = self._prompt_hash("Set Sigil Worn-By Character Hash", self._record_first_value(rec, 0))
+        value = self._prompt_hash("Set Sigil Assigned Character Hash 2706", self._record_first_value(rec, 0))
         row_index = self.sigil_table.currentIndex().row() if hasattr(self, "sigil_table") else -1
-        if value is not None and self._sigil_owner_assignment_allowed(row_index, value, show_message=True) and self._set_record_first_value(rec, value, "sigil worn-by hash"):
-            self._after_editor_patch("Sigil worn-by hash updated in memory.")
+        if value is not None and self._apply_sigil_owner_to_meta(meta, value, row_index=row_index, show_message=True):
+            self.refresh_sigil_rows()
+            self._after_editor_patch("Sigil character assignment updated using 2706 character hash / 2707=2.", refresh=False)
 
     def edit_selected_weapon_xp(self) -> None:
         if not self.save:
@@ -11921,7 +14752,8 @@ class MainWindow(QMainWindow):
         if ok:
             value = self._clamp_weapon_xp_value(value)
             if self._set_record_first_value(rec, value, "weapon XP"):
-                self._after_editor_patch("Weapon XP updated in memory.")
+                self._refresh_weapon_visible_row_from_meta(meta)
+                self._after_editor_patch("Weapon XP updated in memory.", refresh=False)
 
     def bulk_set_visible_weapon_xp(self) -> None:
         if not self.save:
@@ -11986,7 +14818,8 @@ class MainWindow(QMainWindow):
             return
         rec = meta.get("stone_rec")
         if self._set_record_first_value(rec, EMPTY_HASH, "weapon stone hash"):
-            self._after_editor_patch("Weapon stone hash cleared in memory.")
+            self._refresh_weapon_visible_row_from_meta(meta)
+            self._after_editor_patch("Weapon stone hash cleared in memory.", refresh=False)
 
     def choose_compare_path(self, before: bool) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Choose before save" if before else "Choose after save", "", "GBFR saves (*.dat GameData*);;All files (*)")
@@ -12045,7 +14878,7 @@ class MainWindow(QMainWindow):
         if bool(getattr(self, "_load_in_progress", False)):
             return
         self._stop_pending_ui_timers_before_save()
-        path, _ = QFileDialog.getOpenFileName(self, "Open GBFR save", "", "GBFR SaveData (GameData* SaveData*);;All files (*)")
+        path, _ = QFileDialog.getOpenFileName(self, "Open GBFR save", "", "All files (*)")
         if not path:
             return
         self._open_save_path(path)
@@ -12086,7 +14919,11 @@ class MainWindow(QMainWindow):
             _debug_log("open_save: complete")
         except Exception as exc:
             _debug_log("open_save: FAILED\n" + traceback.format_exc())
-            QMessageBox.critical(self, "Open failed", f"{exc}\n\nDebug log:\n{_debug_log_path()}")
+            QMessageBox.critical(
+                self,
+                "Open failed",
+                f"{exc}\n\nMake sure this is the decrypted GBFR GameData/SaveData payload, not an encrypted PS4 container, cloud metadata file, or incomplete copy.\n\nDebug log:\n{_debug_log_path()}",
+            )
         finally:
             try:
                 QApplication.restoreOverrideCursor()
@@ -12265,10 +15102,27 @@ class MainWindow(QMainWindow):
     def _iter_pending_ui_timers(self) -> List[Any]:
         timers: List[Any] = []
 
-        for attr in ("_add_browser_refresh_timer", "_progression_edit_refresh_timer"):
+        for attr in (
+            "_add_browser_refresh_timer",
+            "_progression_edit_refresh_timer",
+            "_item_qty_auto_apply_timer",
+            "_weapon_inline_auto_apply_timer",
+            "_wrightstone_auto_apply_timer",
+            "_sigil_auto_apply_timer",
+            "_overmastery_auto_apply_timer",
+            "_general_party_auto_apply_timer",
+        ):
             timer = getattr(self, attr, None)
             if timer is not None:
                 timers.append(timer)
+
+        sigil_field_timers = getattr(self, "_sigil_field_auto_timers", None)
+        if isinstance(sigil_field_timers, dict):
+            timers.extend(list(sigil_field_timers.values()))
+
+        general_value_timers = getattr(self, "_general_value_timers", None)
+        if isinstance(general_value_timers, dict):
+            timers.extend(list(general_value_timers.values()))
 
         timers_obj = getattr(self, "_filter_timers", None)
         if isinstance(timers_obj, dict):
@@ -13475,15 +16329,29 @@ class MainWindow(QMainWindow):
             choices.extend(self._load_mastery_mod_choices_from_csv(path, source))
         if not choices:
             fallback = [
-                (0x45C65767, "Critical Rate", "Overmastery"),
                 (0xC4925BD7, "Attack Power Up", "Overmastery"),
-                (0x43B7581D, "Normal Damage Cap Up", "Overmastery"),
-                (0x9C555433, "Skill Damage Cap Up", "Overmastery"),
-                (0x9A97C049, "Skill Damage Up", "Overmastery"),
+                (0x68B39018, "Chain Burst Damage Up", "Overmastery"),
+                (0x45C65767, "Critical Rate", "Overmastery"),
+                (0x54929589, "Healing Cap Up", "Overmastery"),
                 (0x52A207B5, "Health Up", "Overmastery"),
-                (0x6CB38EF3, "Stun Power Up", "Overmastery"),
+                (0x43B7581D, "Normal Damage Cap Up", "Overmastery"),
                 (0x4A4C093D, "SBA Damage Cap Up", "Overmastery"),
                 (0x4E42646B, "SBA Damage Up", "Overmastery"),
+                (0x9C555433, "Skill Damage Cap Up", "Overmastery"),
+                (0x9A97C049, "Skill Damage Up", "Overmastery"),
+                (0x6CB38EF3, "Stun Power Up", "Overmastery"),
+                (0x7B727910, "Sigil Slot Add / Restore (danger: >13 slots breaks game)", "Layout Safety"),
+                (0xD75B92C4, "Attack Power Up (OP right-table variant)", "Overmastery Variant"),
+                (0x1890B368, "Chain Burst Damage Up (OP right-table variant)", "Overmastery Variant"),
+                (0x6757C645, "Critical Rate (OP right-table variant)", "Overmastery Variant"),
+                (0x89959254, "Healing Cap Up (OP right-table variant)", "Overmastery Variant"),
+                (0xB507A252, "Health Up (OP right-table variant)", "Overmastery Variant"),
+                (0x1D58B743, "Normal Damage Cap Up (OP right-table variant)", "Overmastery Variant"),
+                (0x3D094C4A, "SBA Damage Cap Up (OP right-table variant)", "Overmastery Variant"),
+                (0x6B64424E, "SBA Damage Up (OP right-table variant)", "Overmastery Variant"),
+                (0x3354559C, "Skill Damage Cap Up (OP right-table variant)", "Overmastery Variant"),
+                (0x49C0979A, "Skill Damage Up (OP right-table variant)", "Overmastery Variant"),
+                (0xF38EB36C, "Stun Power Up (OP right-table variant)", "Overmastery Variant"),
             ]
             choices = [{"value": v, "name": n, "category": c, "notes": "Built-in fallback label", "label": f"{n} · 0x{v:08X}"} for v, n, c in fallback]
         # De-dupe by 1606 value while preserving the first source.  Downloaded
@@ -13539,22 +16407,34 @@ class MainWindow(QMainWindow):
         choices = self._load_mastery_mod_choices()
         short_names = {
             0xC4925BD7: "Attack Power",
+            0x68B39018: "Chain Burst Dmg",
             0x45C65767: "Critical Rate",
+            0x54929589: "Healing Cap",
+            0x52A207B5: "Health",
             0x43B7581D: "Normal Cap",
-            0x9C555433: "Skill Cap",
             0x4A4C093D: "SBA Cap",
             0x4E42646B: "SBA Damage",
-            0x68B39018: "Chain Burst",
-            0x6CB38EF3: "Stun Power",
-            0x52A207B5: "Health",
-            0x54929589: "Healing Cap",
+            0x9C555433: "Skill Cap",
             0x9A97C049: "Skill Damage",
+            0x6CB38EF3: "Stun Power",
+            0x7B727910: "Sigil Slot Add (danger)",
+            0xD75B92C4: "Attack Power Alt",
+            0x1890B368: "Chain Burst Alt",
+            0x6757C645: "Crit Rate Alt",
+            0x89959254: "Healing Cap Alt",
+            0xB507A252: "Health Alt",
+            0x1D58B743: "Normal Cap Alt",
+            0x3D094C4A: "SBA Cap Alt",
+            0x6B64424E: "SBA Dmg Alt",
+            0x3354559C: "Skill Cap Alt",
+            0x49C0979A: "Skill Dmg Alt",
+            0xF38EB36C: "Stun Power Alt",
         }
         preferred = [
             0xC4925BD7,  # Attack Power
+            0x43B7581D,  # Normal Damage Cap
+            0x9C555433,  # Skill Damage Cap
             0x45C65767,  # Critical Rate
-            0x43B7581D,  # Normal Cap
-            0x9C555433,  # Skill Cap
         ]
         for idx, combo in enumerate(combos):
             current = combo.currentData()
@@ -13589,6 +16469,215 @@ class MainWindow(QMainWindow):
                         break
             combo.blockSignals(False)
 
+    def _populate_basic_mastery_effect_combo(self) -> None:
+        combo = getattr(self, "mastery_basic_effect_combo", None)
+        if combo is None:
+            return
+        current = combo.currentData()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem("Pick Basic Mastery ID", None)
+        for choice in self._load_mastery_mod_choices():
+            try:
+                value = int(choice.get("value", 0)) & 0xFFFFFFFF
+            except Exception:
+                continue
+            combo.addItem(self._mastery_mod_choice_label(choice, show_hash=True), value)
+        if current is not None:
+            for i in range(combo.count()):
+                data = combo.itemData(i)
+                if data is not None and int(data) == int(current):
+                    combo.setCurrentIndex(i)
+                    break
+        combo.blockSignals(False)
+
+    def _set_overmastery_combo_to_value(self, combo: QComboBox, value: Optional[int]) -> bool:
+        if combo is None:
+            return False
+        combo.blockSignals(True)
+        try:
+            target = None if value is None else (int(value) & 0xFFFFFFFF)
+            if target is None or target in (0, EMPTY_HASH):
+                combo.setCurrentIndex(0 if combo.count() else -1)
+                return False
+            for i in range(combo.count()):
+                data = combo.itemData(i)
+                if data is not None and (int(data) & 0xFFFFFFFF) == target:
+                    combo.setCurrentIndex(i)
+                    return True
+            # If the save contains a valid but currently unknown 1606 value, add it
+            # so switching characters never leaves the previous character's visible
+            # stat in place.
+            label = self._mastery_effect_name(target)
+            if label.lower().startswith("unknown"):
+                label = f"Unknown 0x{target:08X}"
+            combo.addItem(label, target)
+            combo.setCurrentIndex(combo.count() - 1)
+            return True
+        finally:
+            combo.blockSignals(False)
+
+    def refresh_overmastery_matrix_preview(self) -> None:
+        """Show the selected character's confirmed 4-lane 1606/1607 pairing.
+
+        This is display-only. Edits still flow through the four dropdowns/value
+        box and the paired write helpers, but this preview makes the Save Wizard
+        mapping visible to the user:
+
+            lane unit = 10000000 + character_index * 1000 + lane
+            1606 / FF460600 = selected stat/effect ID
+            1607 / FF470600 = paired amount/value
+        """
+        model = getattr(self, "mastery_overmastery_matrix_model", None)
+        if model is None:
+            return
+        rows: List[List[Any]] = []
+        metas: List[Dict[str, Any]] = []
+        if self.save:
+            group_index = self._mastery_current_overmastery_group_index()
+        else:
+            group_index = None
+        if group_index is not None:
+            for lane in range(OVERMASTERY_LANE_COUNT):
+                unit_id = self._mastery_overmastery_unit_id(group_index, lane)
+                effect_rec = self._mastery_overmastery_record(group_index, lane, MASTERY_EFFECT_FIELD_ID)
+                value_rec = self._mastery_overmastery_record(group_index, lane, MASTERY_VALUE_FIELD_ID)
+
+                effect_raw = self._record_first_value(effect_rec, EMPTY_HASH) if effect_rec is not None else EMPTY_HASH
+                effect_u32 = int(effect_raw or EMPTY_HASH) & 0xFFFFFFFF
+                if effect_rec is None:
+                    effect_label = "Missing 1606 row"
+                elif effect_u32 in (0, EMPTY_HASH):
+                    effect_label = "Empty / keep current"
+                else:
+                    effect_label = f"{self._mastery_effect_name(effect_u32)} · 0x{effect_u32:08X}"
+
+                amount_raw = self._record_first_value(value_rec, None) if value_rec is not None else None
+                amount_label = "Missing 1607 row" if value_rec is None else self._mastery_amount_label(amount_raw)
+
+                def row_ref(rec: Optional[UnitRecord], field_id: int) -> str:
+                    if rec is None:
+                        return f"{field_id}: missing"
+                    try:
+                        off = int(getattr(rec, "value_data_offset", 0))
+                        return f"{field_id} · {rec.kind}[{rec.index}] · 0x{off:X}"
+                    except Exception:
+                        return f"{field_id} · row"
+
+                rows.append([
+                    f"Lane {lane + 1}",
+                    unit_id,
+                    effect_label,
+                    row_ref(effect_rec, MASTERY_EFFECT_FIELD_ID),
+                    amount_label,
+                    row_ref(value_rec, MASTERY_VALUE_FIELD_ID),
+                    f"+0x{lane * OVERMASTERY_SAVEWIZARD_ROW_STRIDE:02X}",
+                ])
+                metas.append({
+                    "group_index": int(group_index),
+                    "lane": int(lane),
+                    "unit_id": int(unit_id),
+                    "effect_rec": effect_rec,
+                    "value_rec": value_rec,
+                    "effect": effect_u32,
+                    "amount": amount_raw,
+                })
+        self.mastery_overmastery_matrix_rows_meta = metas
+        model.set_rows(rows)
+        self._configure_overmastery_matrix_table()
+
+
+    def _clear_overmastery_controls_for_character(self, message: str = "") -> None:
+        self._mastery_mod_loading = True
+        try:
+            for combo in list(getattr(self, "mastery_overmastery_combos", []) or []):
+                try:
+                    combo.blockSignals(True)
+                    combo.setCurrentIndex(0 if combo.count() else -1)
+                    combo.blockSignals(False)
+                except Exception:
+                    pass
+            edit = getattr(self, "mastery_overmastery_value_edit", None)
+            if edit is not None:
+                edit.blockSignals(True)
+                edit.setText("1023")
+                edit.blockSignals(False)
+        finally:
+            self._mastery_mod_loading = False
+        self.refresh_overmastery_matrix_preview()
+        if hasattr(self, "mastery_sw_lab_status"):
+            self.mastery_sw_lab_status.setText(message or "No Overmastery four-stat rows found for this character/group.")
+
+    def load_overmastery_controls_for_current_character(self) -> None:
+        """Load the four Overmastery picker slots from the selected character.
+
+        Earlier builds refreshed only the raw Rows/Edit table when the character
+        changed. If the newly selected character had no overmastery records, the
+        four dropdowns kept showing the previous character's stats. This method
+        always reloads or clears the controls so the display matches the selected
+        character.
+        """
+        if not hasattr(self, "mastery_overmastery_combos"):
+            return
+        if not self.save:
+            self._clear_overmastery_controls_for_character("Open a save to load Overmastery rows.")
+            return
+        group_index = self._mastery_current_overmastery_group_index()
+        combo = getattr(self, "mastery_mod_character_combo", None)
+        char_label = combo.currentText() if combo is not None else "selected character"
+        if group_index is None:
+            self._clear_overmastery_controls_for_character(f"{char_label}: no four-stat Overmastery group is mapped for this selection.")
+            return
+
+        loaded_effects = 0
+        loaded_values = []
+        missing_lanes = []
+        self._mastery_mod_loading = True
+        try:
+            for lane, combo in enumerate(list(getattr(self, "mastery_overmastery_combos", []) or [])[:4]):
+                rec = self._mastery_overmastery_record(group_index, lane, 1606)
+                effect_value = self._record_first_value(rec, EMPTY_HASH) if rec is not None else EMPTY_HASH
+                if rec is not None and int(effect_value or EMPTY_HASH) & 0xFFFFFFFF not in (0, EMPTY_HASH):
+                    if self._set_overmastery_combo_to_value(combo, int(effect_value) & 0xFFFFFFFF):
+                        loaded_effects += 1
+                else:
+                    self._set_overmastery_combo_to_value(combo, None)
+                    missing_lanes.append(lane + 1)
+
+                vrec = self._mastery_overmastery_record(group_index, lane, 1607)
+                if vrec is not None:
+                    value = self._record_first_value(vrec, None)
+                    if value is not None:
+                        loaded_values.append(int(value))
+            edit = getattr(self, "mastery_overmastery_value_edit", None)
+            if edit is not None:
+                edit.blockSignals(True)
+                if loaded_values:
+                    first = loaded_values[0]
+                    if int(first) == -1 or (int(first) & 0xFFFFFFFF) == 0xFFFFFFFF:
+                        edit.setText("-1")
+                    else:
+                        edit.setText(str(int(first)))
+                else:
+                    edit.setText("1023")
+                edit.blockSignals(False)
+        finally:
+            self._mastery_mod_loading = False
+
+        self.refresh_overmastery_matrix_preview()
+        if hasattr(self, "mastery_sw_lab_status"):
+            if loaded_effects == 0 and not loaded_values:
+                self.mastery_sw_lab_status.setText(f"{char_label}: no existing Overmastery four-stat rows found; controls cleared.")
+            else:
+                missing = f" Missing lane(s): {', '.join(map(str, missing_lanes))}." if missing_lanes else ""
+                amount = self._mastery_amount_label(loaded_values[0]) if loaded_values else "no 1607 value rows"
+                self.mastery_sw_lab_status.setText(f"{char_label}: loaded {loaded_effects}/4 Overmastery stat lane(s). Amount: {amount}.{missing}")
+
+    def _on_mastery_mod_character_changed(self) -> None:
+        self.refresh_mastery_mod_rows()
+        self.load_overmastery_controls_for_current_character()
+        self.refresh_basic_mastery_sweep_status()
+
     def _populate_mastery_mod_character_combo(self) -> None:
         combo = getattr(self, "mastery_mod_character_combo", None)
         if combo is None:
@@ -13603,6 +16692,8 @@ class MainWindow(QMainWindow):
             if int(combo.itemData(i)) == target:
                 combo.setCurrentIndex(i); break
         combo.blockSignals(False)
+        self.load_overmastery_controls_for_current_character()
+        self.refresh_basic_mastery_sweep_status()
 
     def _mastery_mod_current_character_unit(self) -> int:
         combo = getattr(self, "mastery_mod_character_combo", None)
@@ -13622,16 +16713,34 @@ class MainWindow(QMainWindow):
         if h in (0, EMPTY_HASH):
             return "Empty"
         if s == -1:
-            return "FFFFFFFF / 80% (-1 signed)"
+            return "Legacy FFFFFFFF sentinel (-1 signed)"
         if s == 0xFFFFFFFF:
-            return "FFFFFFFF / 80%"
+            return "Legacy FFFFFFFF sentinel"
         if s == 1023:
-            return "1023 (Max)"
+            return "1023 / 0x03FF / Max 80%"
+        if s == 512:
+            return "512 / 0x0200 / Normal 20%"
         if s == 1:
             return "1 (Active)"
         if s == 0:
             return "0 (Off)"
-        return str(s)
+        return self._mastery_amount_label(s)
+
+    def _mastery_amount_label(self, amount: Any) -> str:
+        try:
+            raw = int(amount or 0)
+        except Exception:
+            return str(amount or "")
+        unsigned = raw & 0xFFFFFFFF
+        if raw == -1 or unsigned == 0xFFFFFFFF:
+            return "Legacy FFFFFFFF sentinel (-1 signed)"
+        if unsigned == 0x03FF:
+            return "1023 / 0x03FF / Max 80%"
+        if unsigned == 0x0200:
+            return "512 / 0x0200 / Normal 20%"
+        if unsigned == 0:
+            return "0 / Off"
+        return f"{raw:,} / 0x{unsigned:08X}"
 
     def _mastery_mod_optional_amount_display(self, amount: Any) -> str:
         if amount is None:
@@ -13802,29 +16911,28 @@ class MainWindow(QMainWindow):
         """
         return [
             {
-                "name": "Normal max",
+                "name": "Normal max / 20%",
                 "value": 0x00000200,
                 "risk": "Safer",
-                "note": "Save Wizard 'All Masteries Maxed Normal' value. Good first test.",
+                "note": "Sheet value 00000200. Normal max for OP amount rows.",
             },
             {
-                "name": "OP test max",
-                "value": 1023,
-                "risk": "OP / tested",
-                "note": "Observed in the Method/Nail after-save. Good pairing with the recommended pattern.",
+                "name": "Max / 80%",
+                "value": 0x000003FF,
+                "risk": "Recommended OP",
+                "note": "Sheet value 000003FF. Max overmastery amount; preferred over raw FFFFFFFF for normal use.",
+            },
+            {
+                "name": "Raw FFFFFFFF / 80% sentinel",
+                "value": 0xFFFFFFFF,
+                "risk": "Experimental",
+                "note": "Older Save Wizard/testing value. Writer stores it as signed -1 where the row is signed.",
             },
             {
                 "name": "More than normal",
                 "value": 0x05F5E0FF,
                 "risk": "Risky",
                 "note": "Save Wizard 'MORE than normal' value. May cap, glitch damage, or behave oddly.",
-            },
-            {
-                "name": "WTF maybe",
-                "value": MASTERY_1607_SAFE_MAX,
-                "risk": "Blocked",
-                "disabled": True,
-                "note": "Blocked in this editor because it can crash save/write paths. Use 'More than normal' instead.",
             },
         ]
 
@@ -14059,6 +17167,7 @@ class MainWindow(QMainWindow):
             self.mastery_mod_choices_cache = None
             self._populate_mastery_mod_effect_combo()
             self._populate_overmastery_effect_combos()
+            self._populate_basic_mastery_effect_combo()
             self.refresh_mastery_mod_reference_rows()
             self.refresh_mastery_mod_preset_rows()
             self.statusBar().showMessage(f"Downloaded {len(choices)} Mastery ID/Search row(s) and cached {out_path.name}.", 6500)
@@ -15123,7 +18232,11 @@ class MainWindow(QMainWindow):
         check = getattr(self, "mastery_overmastery_auto_apply_check", None)
         if check is None or not check.isChecked() or not self.save:
             return
-        self.apply_overmastery_four_stats_all(auto=True)
+        all_check = getattr(self, "mastery_overmastery_apply_all_auto_check", None)
+        if all_check is not None and all_check.isChecked():
+            self.apply_overmastery_four_stats_all(auto=True)
+        else:
+            self.apply_overmastery_four_stats_selected(auto=True)
 
     def _selected_overmastery_effect_values(self) -> List[Optional[int]]:
         values: List[Optional[int]] = []
@@ -15133,6 +18246,181 @@ class MainWindow(QMainWindow):
         while len(values) < 4:
             values.append(None)
         return values[:4]
+
+    def _basic_mastery_rows_for_character(self, char_unit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Return the selected character's normal/basic 1606/1607 rows.
+
+        This supports the newer community template:
+            4ENNNNNN XXXXXXXX
+            02580018 00000000
+
+        The first visible Basic Mastery row supplies N.  Overmastery rows are
+        excluded because the four explicit NNNNNNNN lines handle those lanes.
+        """
+        if not self.save:
+            return []
+        try:
+            cu = int(self._mastery_mod_current_character_unit() if char_unit is None else char_unit)
+        except Exception:
+            cu = 10000
+        if cu < 0:
+            return []
+        try:
+            _rows, metas = self._mastery_mod_build_rows_for_character(cu)
+        except Exception:
+            metas = []
+        basic: List[Dict[str, Any]] = []
+        for meta in metas or []:
+            try:
+                unit_id = int(meta.get("unit_id", 0) or 0)
+            except Exception:
+                continue
+            if self._mastery_overmastery_slot_for_unit(unit_id) is not None:
+                continue
+            # Normal/basic mastery rows for a PL group are char_unit * 10000 + ...
+            if unit_id < 100000000 or int(unit_id) // 10000 != cu:
+                continue
+            if meta.get("mastery_rec") is None and meta.get("state_rec") is None:
+                continue
+            basic.append(meta)
+        basic.sort(key=lambda m: (
+            1 if m.get("sw_rel_int") is None else 0,
+            int(m.get("sw_rel_int") or 0),
+            int(m.get("unit_id") or 0),
+        ))
+        return basic[:BASIC_MASTERY_SW_SLOT_COUNT]
+
+    def _basic_mastery_sweep_first_relative(self, rows: Optional[List[Dict[str, Any]]] = None) -> Optional[int]:
+        rows = rows if rows is not None else self._basic_mastery_rows_for_character()
+        for meta in rows or []:
+            rel = meta.get("sw_rel_int")
+            if rel is not None:
+                try:
+                    return int(rel)
+                except Exception:
+                    continue
+        return None
+
+    def refresh_basic_mastery_sweep_status(self) -> None:
+        label = getattr(self, "mastery_basic_status_label", None)
+        if label is None:
+            return
+        if not self.save:
+            label.setText("Open a save to preview the first Basic Mastery SlotINFO row.")
+            return
+        try:
+            char_unit = int(self._mastery_mod_current_character_unit())
+        except Exception:
+            char_unit = 10000
+        if char_unit < 0:
+            label.setText("Pick a single character/group. The 0x258 Basic Masteries sweep is not available from the raw all-row scan.")
+            return
+        rows = self._basic_mastery_rows_for_character(char_unit)
+        first_rel = self._basic_mastery_sweep_first_relative(rows)
+        char_text = getattr(self, "mastery_mod_character_combo", None).currentText() if hasattr(self, "mastery_mod_character_combo") else f"unit {char_unit}"
+        if not rows:
+            label.setText(f"{char_text}: no Basic Mastery rows were found for this character/group.")
+            return
+        if first_rel is None:
+            label.setText(f"{char_text}: found {len(rows)} Basic Mastery row(s), but no Save Wizard N offset was resolved. Apply will use parsed rows only.")
+            return
+        direct_write = 0x28000000 | (int(first_rel) & 0x00FFFFFF)
+        repeat_write = 0x4E000000 | (int(first_rel) & 0x00FFFFFF)
+        label.setText(
+            f"{char_text}: first Basic Mastery SlotINFO N = 0x{first_rel:06X}. "
+            f"Single-code form: 0x{direct_write:08X}; repeat-code form: 0x{repeat_write:08X}. "
+            f"Apply targets 0x{BASIC_MASTERY_SW_SLOT_COUNT:03X} rows with +0x{BASIC_MASTERY_SW_ROW_STRIDE:02X} stride; parsed rows visible: {len(rows)}."
+        )
+
+    def _apply_basic_mastery_sweep(self, char_unit: int, effect_value: Optional[int], value: int, *, write_effect: bool, write_value: bool) -> Dict[str, int]:
+        rows = self._basic_mastery_rows_for_character(char_unit)
+        first_rel = self._basic_mastery_sweep_first_relative(rows)
+        count = BASIC_MASTERY_SW_SLOT_COUNT if first_rel is not None else len(rows)
+        value = self._mastery_sw_normalize_write_value(value)
+        effect_u32 = None if effect_value is None else int(effect_value) & 0xFFFFFFFF
+        stats = {
+            "effect_found": 0, "effect_changed": 0, "effect_missing": 0,
+            "value_found": 0, "value_changed": 0, "value_missing": 0,
+            "checked": int(count), "parsed_rows": len(rows),
+        }
+        if count <= 0:
+            return stats
+        meta_by_index = {i: meta for i, meta in enumerate(rows)}
+        for i in range(int(count)):
+            meta = meta_by_index.get(i, {})
+            rel = int(first_rel) + i * BASIC_MASTERY_SW_ROW_STRIDE if first_rel is not None else meta.get("sw_rel_int")
+            if write_effect and effect_u32 is not None:
+                erec = None
+                if rel is not None:
+                    try:
+                        erec = self._mastery_sw_effect_record_for_relative(int(rel))
+                    except Exception:
+                        erec = None
+                if erec is None:
+                    erec = meta.get("mastery_rec")
+                exists, changed = self._set_record_first_value_quiet(erec, effect_u32)
+                stats["effect_found"] += 1 if exists else 0
+                stats["effect_changed"] += 1 if changed else 0
+                stats["effect_missing"] += 0 if exists else 1
+            if write_value:
+                vrec = None
+                if rel is not None:
+                    try:
+                        vrec = self._mastery_sw_value_record_for_relative(int(rel))
+                    except Exception:
+                        vrec = None
+                if vrec is None:
+                    vrec = meta.get("state_rec")
+                exists, changed = self._set_record_first_value_quiet(vrec, value)
+                stats["value_found"] += 1 if exists else 0
+                stats["value_changed"] += 1 if changed else 0
+                stats["value_missing"] += 0 if exists else 1
+        return stats
+
+    def apply_basic_mastery_sweep_selected(self) -> None:
+        if not self.save:
+            return
+        try:
+            char_unit = int(self._mastery_mod_current_character_unit())
+        except Exception:
+            char_unit = 10000
+        if char_unit < 0:
+            QMessageBox.warning(self, "Basic Masteries sweep", "Pick a single character/group first. The 0x258 Basic Masteries sweep is disabled for the raw all-row scan.")
+            return
+        write_effect = bool(getattr(self, "mastery_basic_write_effect_check", None) is None or self.mastery_basic_write_effect_check.isChecked())
+        write_value = bool(getattr(self, "mastery_basic_write_value_check", None) is None or self.mastery_basic_write_value_check.isChecked())
+        if not write_effect and not write_value:
+            self.statusBar().showMessage("Nothing selected to write. Enable 1606 IDs and/or 1607 values.", 4500)
+            return
+        effect_value = None
+        if write_effect:
+            combo = getattr(self, "mastery_basic_effect_combo", None)
+            effect_value = combo.currentData() if combo is not None else None
+            if effect_value is None:
+                QMessageBox.warning(self, "Basic Masteries sweep", "Pick a Basic Mastery ID before writing 1606 IDs.")
+                return
+        value_text = getattr(self, "mastery_basic_value_edit", None).text() if hasattr(self, "mastery_basic_value_edit") else str(OVERMASTERY_VALUE_MAX)
+        value = self._parse_mastery_u32_text(value_text, OVERMASTERY_VALUE_MAX)
+        stats = self._apply_basic_mastery_sweep(char_unit, effect_value, value, write_effect=write_effect, write_value=write_value)
+        self._refresh_mastery_after_bulk_write()
+        self.refresh_basic_mastery_sweep_status()
+        try:
+            tabs = getattr(self, "mastery_value_tabs", None)
+            if tabs is not None and tabs.currentIndex() == 1:
+                self.refresh_mastery_mod_rows()
+        except Exception:
+            pass
+        char_text = getattr(self, "mastery_mod_character_combo", None).currentText() if hasattr(self, "mastery_mod_character_combo") else f"unit {char_unit}"
+        parts = []
+        if write_effect:
+            parts.append(f"1606 IDs {stats['effect_changed']} changed / {stats['effect_found']} found")
+        if write_value:
+            parts.append(f"1607 values {stats['value_changed']} changed / {stats['value_found']} found")
+        shown_value = self._mastery_amount_label(value)
+        msg = f"Basic Masteries sweep for {char_text}: " + "; ".join(parts) + f". Value {shown_value}. Checked {stats['checked']} row(s)."
+        if getattr(self, "mastery_sw_lab_status", None) is not None:
+            self.mastery_sw_lab_status.setText(msg)
+        self.statusBar().showMessage(msg + " Save As to test in game.", 9000)
 
     def _apply_overmastery_four_stats_to_group(self, group_index: int, effects: List[Optional[int]], value: int, write_value: bool = True) -> Dict[str, int]:
         stats = {"effect_changed": 0, "value_changed": 0, "effect_found": 0, "value_found": 0}
@@ -15149,7 +18437,7 @@ class MainWindow(QMainWindow):
                 stats["value_changed"] += 1 if changed else 0
         return stats
 
-    def apply_overmastery_four_stats_selected(self) -> None:
+    def apply_overmastery_four_stats_selected(self, auto: bool = False) -> None:
         if not self.save:
             return
         group_index = self._mastery_current_overmastery_group_index()
@@ -15162,8 +18450,10 @@ class MainWindow(QMainWindow):
         stats = self._apply_overmastery_four_stats_to_group(group_index, effects, value, write_value=write_value)
         self._mark_stale_pages(["Mastery", "Characters", "Save Health"])
         self.refresh_mastery_mod_rows()
-        shown = "80%" if int(value) == 0xFFFFFFFF else ("20%" if int(value) == 512 else str(int(value)))
-        msg = f"Selected group applied: stats {stats['effect_changed']}, values {stats['value_changed']} · {shown}"
+        self.load_overmastery_controls_for_current_character()
+        shown = self._mastery_amount_label(value)
+        prefix = "Auto applied selected" if auto else "Selected group applied"
+        msg = f"{prefix}: stats {stats['effect_changed']}, values {stats['value_changed']} · {shown}"
         if hasattr(self, "mastery_sw_lab_status"):
             self.mastery_sw_lab_status.setText(msg)
         self.statusBar().showMessage(msg + ". Save As to test.", 5000)
@@ -15175,7 +18465,7 @@ class MainWindow(QMainWindow):
         if any(v is None for v in effects[:4]):
             self.statusBar().showMessage("Pick four Overmastery stats first.", 3500)
             return
-        value = self._parse_mastery_u32_text(getattr(self, "mastery_overmastery_value_edit", None).text() if hasattr(self, "mastery_overmastery_value_edit") else "-1", -1)
+        value = self._parse_mastery_u32_text(getattr(self, "mastery_overmastery_value_edit", None).text() if hasattr(self, "mastery_overmastery_value_edit") else str(OVERMASTERY_VALUE_MAX), OVERMASTERY_VALUE_MAX)
         write_value = bool(getattr(self, "mastery_overmastery_write_value_check", None) is None or self.mastery_overmastery_write_value_check.isChecked())
         total = {"effect_changed": 0, "value_changed": 0, "effect_found": 0, "value_found": 0}
         for group_index in range(0x28):
@@ -15189,7 +18479,8 @@ class MainWindow(QMainWindow):
                 self.refresh_mastery_mod_rows()
         except Exception:
             pass
-        shown = "80%" if int(value) == 0xFFFFFFFF else ("20%" if int(value) == 512 else str(int(value)))
+        self.load_overmastery_controls_for_current_character()
+        shown = self._mastery_amount_label(value)
         prefix = "Auto applied" if auto else "Applied"
         msg = f"{prefix}: stats {total['effect_changed']}, values {total['value_changed']} · {shown}"
         if hasattr(self, "mastery_sw_lab_status"):
@@ -15204,6 +18495,14 @@ class MainWindow(QMainWindow):
             # immediately so the table visibly changes after button presses.
             if tabs is not None and tabs.currentIndex() == 1:
                 self.refresh_mastery_mod_rows()
+        except Exception:
+            pass
+        try:
+            self.refresh_overmastery_matrix_preview()
+        except Exception:
+            pass
+        try:
+            self.refresh_basic_mastery_sweep_status()
         except Exception:
             pass
         try:
@@ -15278,7 +18577,7 @@ class MainWindow(QMainWindow):
                 else:
                     missing += 1
         self._refresh_mastery_after_bulk_write()
-        shown = "FFFFFFFF / 80%" if int(value) == 0xFFFFFFFF else f"{int(value):,} / 0x{int(value):08X}"
+        shown = "Legacy FFFFFFFF sentinel" if int(value) == 0xFFFFFFFF else f"{int(value):,} / 0x{int(value):08X}"
         msg = f"{label}: wrote {shown}. {changed} changed, {found} found, {missing} missing out of {checked} overmastery value slot(s)."
         if hasattr(self, "mastery_sw_lab_status"):
             self.mastery_sw_lab_status.setText(msg)
@@ -15328,9 +18627,9 @@ class MainWindow(QMainWindow):
             ivalue = int(value)
         except Exception:
             ivalue = 0
-        # The pinned overmastery code uses FFFFFFFF as the 80% value. The save
-        # writer converts that to -1 for signed int rows while preserving the raw
-        # FF FF FF FF bytes.
+        # Legacy tests sometimes used FFFFFFFF as a raw sentinel. Prefer
+        # 0x03FF for normal max / 80% overmastery rows; keep -1 support so
+        # older saves/codes can still be inspected or reproduced.
         if ivalue == -1:
             return 0xFFFFFFFF
         return max(0, min(0xFFFFFFFF, ivalue))
@@ -15361,7 +18660,7 @@ class MainWindow(QMainWindow):
             fallback_note = " Used parsed-row fallback."
 
         self._refresh_mastery_after_bulk_write()
-        shown = "FFFFFFFF / 80%" if int(value) == 0xFFFFFFFF else f"{int(value):,} / 0x{int(value):08X}"
+        shown = "Legacy FFFFFFFF sentinel" if int(value) == 0xFFFFFFFF else f"{int(value):,} / 0x{int(value):08X}"
         msg = (
             f"{label}: wrote {shown}. "
             f"{changed} changed, {found} found, {missing} missing out of {int(count)} slot(s).{fallback_note}"
@@ -15512,7 +18811,7 @@ class MainWindow(QMainWindow):
         exists, did_change = self._set_record_first_value_quiet(rec, value)
         if exists:
             self._mark_stale_pages(["Mastery", "Characters", "Save Health"])
-            shown = "FFFFFFFF / 80%" if int(value) == 0xFFFFFFFF else f"{int(value):,} / 0x{int(value):08X}"
+            shown = "Legacy FFFFFFFF sentinel" if int(value) == 0xFFFFFFFF else f"{int(value):,} / 0x{int(value):08X}"
             msg = f"SW slot test wrote slot {slot} rel 0x{rel:06X} to {shown} ({'changed' if did_change else 'already set'})."
         else:
             msg = f"SW slot test could not resolve slot {slot} rel 0x{rel:06X} to an FF470600/1607 row in this save."
@@ -15577,7 +18876,7 @@ class MainWindow(QMainWindow):
         if rel is None:
             rel = self._parse_mastery_offset_value(rel_text)
         if rel is None:
-            # Pasted code fallback: N is a 28xxxxxx direct write or 4Exxxxxx range write.
+            # Pasted code fallback: N is a 28000000-series direct write or 4E000000-style range write.
             joined = " | ".join(str(v or "") for v in row.values())
             m = re.search(r"(?i)\b((?:28|4E)[0-9A-F]{6})\b", joined)
             if m:
@@ -16278,19 +19577,32 @@ class MainWindow(QMainWindow):
         if role == "slotinfo" and ivalue == 0xFF460600:
             return "Save Wizard search marker / mastery anchor"
         observed = {
-            0x7B727910: "Sigil Slot Restore / Add Equip Slot",
-            0x45C65767: "Critical Rate",
-            0x6757C645: "Critical Rate (endian-swapped note)",
-            0x43B7581D: "Normal Damage Cap Up",
-            0x9C555433: "Skill Damage Cap Up",
-            0x4A4C093D: "SBA Damage Cap Up",
-            0x6CB38EF3: "Stun Power Up",
-            0x4E42646B: "SBA Damage Up",
+            0x7B727910: "Sigil Slot Add / Restore (danger: >13 slots breaks game)",
             0xC4925BD7: "Attack Power Up",
+            0x68B39018: "Chain Burst Damage Up",
+            0x45C65767: "Critical Rate",
+            0x54929589: "Healing Cap Up",
             0x52A207B5: "Health Up",
+            0x43B7581D: "Normal Damage Cap Up",
+            0x4A4C093D: "SBA Damage Cap Up",
+            0x4E42646B: "SBA Damage Up",
+            0x9C555433: "Skill Damage Cap Up",
             0x9A97C049: "Skill Damage Up",
-            0x54929589: "Recovery Cap Up",
-            0x68B39018: "Link/Burst Damage Up",
+            0x6CB38EF3: "Stun Power Up",
+            # Pasted sheet also listed a second/right OP ID table. Keep these named
+            # so hashes do not show as unknown if they appear in a save or sheet import.
+            0xD75B92C4: "Attack Power Up (OP right-table variant)",
+            0x1890B368: "Chain Burst Damage Up (OP right-table variant)",
+            0x6757C645: "Critical Rate (OP right-table variant)",
+            0x89959254: "Healing Cap Up (OP right-table variant)",
+            0xB507A252: "Health Up (OP right-table variant)",
+            0x1D58B743: "Normal Damage Cap Up (OP right-table variant)",
+            0x3D094C4A: "SBA Damage Cap Up (OP right-table variant)",
+            0x6B64424E: "SBA Damage Up (OP right-table variant)",
+            0x3354559C: "Skill Damage Cap Up (OP right-table variant)",
+            0x49C0979A: "Skill Damage Up (OP right-table variant)",
+            0xF38EB36C: "Stun Power Up (OP right-table variant)",
+            # Additional MED_EFF labels observed in previous test/hash data.
             0xCB63BE55: "Attack Power Up Variant 2",
             0xDCBD8423: "Attack Power Up Variant 3",
             0x59DCE1E8: "Attack Power Up Variant 4",
@@ -16351,13 +19663,13 @@ class MainWindow(QMainWindow):
         if h in (0, EMPTY_HASH):
             return "Empty"
         if h == 0x7B727910 or slot_h == 0x280B6CB0:
-            return "Sigil Slot / Layout"
-        if h in {0x43B7581D, 0x4A4C093D, 0x9C555433}:
+            return "Sigil Slot Add / Layout Safety"
+        if h in {0x43B7581D, 0x4A4C093D, 0x9C555433, 0x1D58B743, 0x3D094C4A, 0x3354559C}:
             return "Damage Cap"
-        if h in {0xC4925BD7, 0x9A97C049, 0x6CB38EF3, 0x4E42646B, 0x45C65767}:
+        if h in {0xC4925BD7, 0x9A97C049, 0x6CB38EF3, 0x4E42646B, 0x45C65767, 0x68B39018, 0xD75B92C4, 0x1890B368, 0x6757C645, 0x6B64424E, 0x49C0979A, 0xF38EB36C}:
             return "Damage / Offense"
-        if h == 0x52A207B5:
-            return "Survival"
+        if h in {0x52A207B5, 0x54929589, 0xB507A252, 0x89959254}:
+            return "Survival / Healing"
         if self._mastery_special_name(h, "mastery"):
             return "Observed / Test Save"
         entry = self._mastery_hash_entry(h)
@@ -16459,7 +19771,8 @@ class MainWindow(QMainWindow):
                 state = self._record_first_value(recs.get(1607), 0)
                 effect_name = self._mastery_effect_name(mastery)
                 gbid = self._mastery_effect_gbid(mastery)
-                row = [slot + 1, "—", effect_name if not gbid else f"{effect_name} ({gbid})", "Overmastery", "Yes" if self._mastery_state_display(state, mastery) == "Active" else self._mastery_state_display(state, mastery), self._mastery_mod_state_label(state, mastery), "—", self._hash_hex_or_dash(mastery), unit_id]
+                amount_label = self._mastery_amount_label(state)
+                row = [slot + 1, "—", effect_name if not gbid else f"{effect_name} ({gbid})", "Overmastery 4-stat lane", f"Lane {slot + 1}/4", amount_label, "—", self._hash_hex_or_dash(mastery), unit_id]
                 meta = {"mode": mode, "unit_id": unit_id, "slot": slot, "socket": None, "char_unit": derived_char, "fields": recs, "slotinfo": 0, "mastery": mastery, "state": state, "slotinfo_rec": None, "mastery_rec": recs.get(1606), "state_rec": recs.get(1607)}
                 maybe_add(row, meta, [gbid, self._hash_hex_or_dash(mastery)])
         else:
@@ -16494,8 +19807,8 @@ class MainWindow(QMainWindow):
         self.mastery_slot_rows_meta = self.mastery_slot_rows_meta[:800]
         if hasattr(self, "mastery_slot_summary_label"):
             name = self.mastery_character_combo.currentText() if hasattr(self, "mastery_character_combo") else f"unit {char_unit}"
-            mode_name = {"effects": "Mastery Effects", "board": "Board Slot Keys", "overmastery": "Overmastery Slots"}.get(mode, mode)
-            self.mastery_slot_summary_label.setText(f"{name} · {mode_name}: showing {len(self.mastery_slot_rows_meta)} row(s). 1606 = effect label/hash, 1607 = amount/state, 1601 = slot key/layout.")
+            mode_name = {"effects": "Mastery Effects", "board": "Board Slot Keys", "overmastery": "Overmastery 4-Stat Slots"}.get(mode, mode)
+            self.mastery_slot_summary_label.setText(f"{name} · {mode_name}: showing {len(self.mastery_slot_rows_meta)} row(s). 1606 = effect/stat hash, 1607 = amount/state (0200=20%, 03FF=80%), 1601 = slot key/layout.")
         if hasattr(self, "mastery_slot_table"):
             self._set_table_widths(self.mastery_slot_table, {0: 70, 1: 70, 2: 330, 3: 150, 4: 75, 5: 85, 6: 270, 7: 125, 8: 110})
         self.update_mastery_slot_detail()
@@ -16540,12 +19853,13 @@ class MainWindow(QMainWindow):
         effect_name = self._mastery_effect_name(mastery)
         gbid = self._mastery_effect_gbid(mastery) or "unmapped"
         socket_text = "" if meta.get("socket") is None else f" · Socket {int(meta.get('socket')) + 1}"
+        state_or_amount = self._mastery_amount_label(state) if meta.get("mode") == "overmastery" else self._mastery_state_display(state, mastery)
         label.setText(
-            f"Character unit {meta.get('char_unit')} · Slot {int(meta.get('slot', 0)) + 1}{socket_text}\n"
+            f"Character unit {meta.get('char_unit')} · Slot/Lane {int(meta.get('slot', 0)) + 1}{socket_text}\n"
             f"View: {meta.get('mode')} · Unit: {meta.get('unit_id')}\n"
-            f"Effect: {effect_name}\n"
-            f"Group: {self._mastery_effect_category(mastery, slotinfo)} · Active: {self._mastery_state_display(state, mastery)}\n"
-            f"GBID: {gbid} · 1606 effect hash: {self._hash_hex_or_dash(mastery)}\n"
+            f"Effect/Stat: {effect_name}\n"
+            f"Group: {self._mastery_effect_category(mastery, slotinfo)} · State/Amount: {state_or_amount}\n"
+            f"GBID: {gbid} · 1606 effect/stat hash: {self._hash_hex_or_dash(mastery)}\n"
             f"1601 slot key: {self._mastery_hash_display(slotinfo, 'slotinfo')}"
             f"{missing_text}"
         )
@@ -16651,12 +19965,12 @@ class MainWindow(QMainWindow):
         if not self.save:
             return 0
         changed = 0
-        max_value = 1023  # 0x03FF; sheet notes this as the max OP amount.
+        max_value = 0x03FF  # 1023; pasted sheet notes 0x03FF as max / 80%.
 
         # Four OP overmastery slots seen in the working save/code notes.
-        # Slot 1 = Critical Rate, Slot 2 = Normal Damage Cap Up,
-        # Slot 3 = SBA Damage Cap Up, Slot 4 = Skill Damage Cap Up.
-        over_values = [0x45C65767, 0x43B7581D, 0x4A4C093D, 0x9C555433]
+        # Default lanes now match the four-stat picker defaults: Attack Power, Normal Damage Cap,
+        # Skill Damage Cap, Critical Rate. Avoid Sigil Slot Add here because >13 sigil slots breaks the game.
+        over_values = [0xC4925BD7, 0x43B7581D, 0x9C555433, 0x45C65767]
         for slot, value in enumerate(over_values):
             changed += 1 if self._set_record_first_value(self._mastery_over_record(char_unit, slot), value, "OP overmastery 1606") else 0
             changed += 1 if self._set_record_first_value(self._mastery_over_state_record(char_unit, slot), max_value, "OP overmastery state 1607") else 0
@@ -16763,8 +20077,6 @@ class MainWindow(QMainWindow):
             self.refresh_sigil_rows()
         elif idx == 1:
             self.refresh_sigil_database_rows()
-        elif idx == 2:
-            self.refresh_sigil_empty_slot_rows()
 
     def show_empty_sigils_in_current_table(self) -> None:
         if hasattr(self, "sigil_show_empty_check"):
@@ -16888,14 +20200,46 @@ class MainWindow(QMainWindow):
                 )
 
     def refresh_sigil_empty_slot_rows(self) -> None:
+        """Refresh the reusable-empty-sigil model.
+
+        The old Empty Slots tab was removed from the UI. Older construction code
+        left self.sigil_empty_status/self.sigil_empty_table wrappers pointing at
+        Qt objects that could be deleted, so this function must never assume
+        those widgets are alive.
+        """
         if not hasattr(self, "sigil_empty_model"):
             return
+
+        def _safe_set_empty_status(message: str) -> None:
+            widget = getattr(self, "sigil_empty_status", None)
+            if widget is None:
+                return
+            try:
+                widget.setText(message)
+            except RuntimeError:
+                try:
+                    delattr(self, "sigil_empty_status")
+                except Exception:
+                    pass
+
+        def _safe_width_empty_table() -> None:
+            table = getattr(self, "sigil_empty_table", None)
+            if table is None:
+                return
+            try:
+                self._set_table_widths(table, {0: 110, 1: 100, 2: 90, 3: 160, 4: 100, 5: 280})
+            except RuntimeError:
+                try:
+                    delattr(self, "sigil_empty_table")
+                except Exception:
+                    pass
+
         if not self.save:
             self.sigil_empty_model.set_rows([])
             self.sigil_empty_rows_meta = []
-            if hasattr(self, "sigil_empty_status"):
-                self.sigil_empty_status.setText("Open a save to list reusable empty sigil slots.")
+            _safe_set_empty_status("Open a save to list reusable empty sigil slots.")
             return
+
         rows: List[List[Any]] = []
         meta: List[Dict[str, Any]] = []
         try:
@@ -16919,20 +20263,20 @@ class MainWindow(QMainWindow):
                 flag_value,
                 "Reusable empty sigil slot",
             ])
-            meta.append({
+            row_meta = {
                 "unit_id": unit_id,
                 "slot_rec": slot_rec,
                 "hash_rec": fields.get(2703),
                 "level_rec": level_rec,
                 "worn_rec": fields.get(2706),
                 "flags_rec": fields.get(2707),
-            })
+            }
+            row_meta.update(self._sigil_trait_meta_records_for_unit(int(unit_id)))
+            meta.append(row_meta)
         self.sigil_empty_rows_meta = meta
         self.sigil_empty_model.set_rows(rows)
-        if hasattr(self, "sigil_empty_table"):
-            self._set_table_widths(self.sigil_empty_table, {0: 110, 1: 100, 2: 90, 3: 160, 4: 100, 5: 280})
-        if hasattr(self, "sigil_empty_status"):
-            self.sigil_empty_status.setText(f"Empty sigil slots: {self.format_value(len(rows))} reusable slot(s) found.")
+        _safe_width_empty_table()
+        _safe_set_empty_status(f"Empty sigil slots: {self.format_value(len(rows))} reusable slot(s) found.")
 
     def update_sigil_database_status(self) -> None:
         if not hasattr(self, "sigil_database_status"):
@@ -16968,7 +20312,8 @@ class MainWindow(QMainWindow):
             return
         level = int(self.sigil_database_level_spin.value()) if hasattr(self, "sigil_database_level_spin") else SIGIL_LEVEL_MAX
         locked = bool(self.sigil_database_locked_check.isChecked()) if hasattr(self, "sigil_database_locked_check") else True
-        result = self._add_sigil_hash_level_to_empty_slot(int(meta.get("hash", 0)) & 0xFFFFFFFF, level=level, locked=locked)
+        owner_hash = self.sigil_database_assign_combo.currentData() if hasattr(self, "sigil_database_assign_combo") else EMPTY_HASH
+        result = self._add_sigil_hash_level_to_empty_slot(int(meta.get("hash", 0)) & 0xFFFFFFFF, level=level, locked=locked, owner_hash=owner_hash)
         if not result:
             self.statusBar().showMessage("No reusable empty sigil slot was available, or the slot could not be activated.", 5000)
             return
@@ -16991,16 +20336,28 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "sigil_table"):
             return
         show_technical = bool(getattr(getattr(self, "sigil_show_technical_check", None), "isChecked", lambda: False)())
-        # Normal view keeps the useful columns visible: slot, name, level, equipped-to, flags.
-        # Technical view exposes Unit/GBID/hash values for reverse-engineering and manual patching.
-        for col in (0, 3, 4, 7):
+        # Normal view uses only contiguous readable columns:
+        # Slot, Sigil, Lv, Trait 1, Trait 2, Character, Flags.
+        # Technical mode exposes Unit/GBID/hash plus the separate hidden trait levels.
+        for col in (0, 3, 4, 10, 11, 12):
             self.sigil_table.setColumnHidden(col, not show_technical)
         try:
-            self.sigil_table.setColumnWidth(1, 70)    # Slot
-            self.sigil_table.setColumnWidth(2, 360)   # Sigil
-            self.sigil_table.setColumnWidth(5, 80)    # Level
-            self.sigil_table.setColumnWidth(6, 340)   # Equipped To
-            self.sigil_table.setColumnWidth(8, 150)   # Flags
+            header = self.sigil_table.horizontalHeader()
+            header.setStretchLastSection(False)
+            header.setMinimumSectionSize(40)
+            for col in range(self.sigil_model.columnCount()):
+                header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+            for col in (2, 6, 7, 8):
+                header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
+            self.sigil_table.setColumnWidth(1, 44)     # Slot
+            self.sigil_table.setColumnWidth(2, 210)    # Sigil
+            self.sigil_table.setColumnWidth(5, 100)    # Level
+            self.sigil_table.setColumnWidth(6, 170)    # Trait 1
+            self.sigil_table.setColumnWidth(7, 170)    # Trait 2
+            self.sigil_table.setColumnWidth(8, 160)    # Character
+            self.sigil_table.setColumnWidth(9, 50)     # Flags
+            self.sigil_table.setColumnWidth(10, 64)    # T1 Lv technical
+            self.sigil_table.setColumnWidth(11, 64)    # T2 Lv technical
         except Exception:
             pass
 
@@ -17016,6 +20373,7 @@ class MainWindow(QMainWindow):
             if hasattr(self, "sigil_database_status"):
                 self.refresh_sigil_database_rows()
             return
+        self._sigil_trait_grouped_cache = None
         grouped = self.save.group_by_unit([2702, 2703, 2704, 2706, 2707])
         show_empty = bool(getattr(getattr(self, "sigil_show_empty_check", None), "isChecked", lambda: False)())
         known_only = bool(getattr(getattr(self, "sigil_known_only_check", None), "isChecked", lambda: False)())
@@ -17065,6 +20423,23 @@ class MainWindow(QMainWindow):
             worn_hash = "" if worn_int in (0, EMPTY_HASH) else f"0x{worn_int:08X}"
             hash_rec = fields.get(2703)
             level_rec = self._sigil_level_record_for_hash_record(hash_rec, fields)
+            trait_meta = self._sigil_trait_meta_records_for_unit(int(unit_id))
+            trait1_hash = self._record_first_value(trait_meta.get("trait1_hash_rec"), EMPTY_HASH)
+            trait1_level = self._record_first_value(trait_meta.get("trait1_level_rec"), 0)
+            trait2_hash = self._record_first_value(trait_meta.get("trait2_hash_rec"), EMPTY_HASH)
+            trait2_level = self._record_first_value(trait_meta.get("trait2_level_rec"), 0)
+            if is_empty:
+                trait1_name = ""
+                trait1_level = ""
+                trait2_name = ""
+                trait2_level = ""
+            else:
+                trait1_name, _trait1_gbid, _ = self.hash_entry_parts(trait1_hash) if trait1_hash not in (0, EMPTY_HASH) else ("", "", "")
+                trait2_name, _trait2_gbid, _ = self.hash_entry_parts(trait2_hash) if trait2_hash not in (0, EMPTY_HASH) else ("", "", "")
+                if trait1_hash in (0, EMPTY_HASH):
+                    trait1_level = ""
+                if trait2_hash in (0, EMPTY_HASH):
+                    trait2_level = ""
             row = [
                 unit_id,
                 self.value1(fields.get(2702), ""),
@@ -17072,9 +20447,13 @@ class MainWindow(QMainWindow):
                 s_gbid,
                 s_hash,
                 self.value1(level_rec, ""),
+                self._sigil_trait_display(trait1_hash, trait1_level),
+                self._sigil_trait_display(trait2_hash, trait2_level),
                 worn_display,
-                worn_gbid,
                 self.value1(fields.get(2707), ""),
+                trait1_level,
+                trait2_level,
+                worn_gbid,
             ]
             if not self._matches_editor_filter(row, q):
                 continue
@@ -17087,6 +20466,7 @@ class MainWindow(QMainWindow):
                 "hash_rec": hash_rec,
                 "level_rec": level_rec,
                 "level_pair_note": self._sigil_level_pair_note(hash_rec, level_rec),
+                **trait_meta,
                 "worn_rec": fields.get(2706),
                 "flags_rec": fields.get(2707),
                 "invalid_owner": invalid_owner,
@@ -17106,9 +20486,7 @@ class MainWindow(QMainWindow):
             )
         if hasattr(self, "sigil_table"):
             self._apply_sigil_column_visibility()
-            self._set_table_widths(self.sigil_table, {1: 74, 2: 360, 3: 170, 4: 120, 5: 64, 6: 230, 7: 170, 8: 115})
-        if hasattr(self, "sigil_empty_model"):
-            self.refresh_sigil_empty_slot_rows()
+            self._set_table_widths(self.sigil_table, {1: 44, 2: 210, 3: 140, 4: 105, 5: 100, 6: 170, 7: 170, 8: 160, 9: 50, 10: 64, 11: 64, 12: 140})
         if hasattr(self, "sigil_database_model"):
             self.refresh_sigil_database_rows()
         self.update_sigil_detail()
@@ -17145,8 +20523,12 @@ class MainWindow(QMainWindow):
         if idx == 0:
             self.refresh_weapon_rows()
         elif idx == 1:
-            self.refresh_weapon_database_rows()
+            if hasattr(self, "weapon_cap_trait_weapon_combo"):
+                self._sync_weapon_cap_trait_weapon_combo()
+            self.update_weapon_cap_trait_controls()
         elif idx == 2:
+            self.refresh_weapon_database_rows()
+        elif idx == 3:
             self.refresh_weapon_empty_slot_rows()
 
     def show_empty_weapons_in_current_table(self) -> None:
@@ -17478,8 +20860,12 @@ class MainWindow(QMainWindow):
                 "is_known": is_known,
                 "hash_rec": fields.get(2803),
                 "xp_rec": fields.get(2804),
+                "cap_rec": fields.get(2805),
                 "unk_2805_rec": fields.get(2805),
                 "unk_2806_rec": fields.get(2806),
+                "trait_id_rec": fields.get(1701),
+                "trait_level_rec": fields.get(1702),
+                "fields": fields,
                 "unk_2807_rec": fields.get(2807),
                 "unk_2814_rec": fields.get(2814),
                 "flags_rec": fields.get(2815),
@@ -17494,12 +20880,16 @@ class MainWindow(QMainWindow):
                 f"{self.format_value(empty_slots)} empty addable · showing {self.format_value(len(rows))}"
             )
         if hasattr(self, "weapon_table"):
-            self._set_table_widths(self.weapon_table, {1: 380, 2: 170, 4: 120, 10: 260})
+            self._set_table_widths(self.weapon_table, {1: 380, 2: 170, 4: 120, 5: 90, 6: 95, 10: 260})
             self._auto_fit_table(self.weapon_table)
         if hasattr(self, "weapon_empty_model"):
             self.refresh_weapon_empty_slot_rows()
         if hasattr(self, "weapon_database_model"):
             self.refresh_weapon_database_rows()
+        if hasattr(self, "weapon_trait_combo"):
+            self.refresh_weapon_trait_choices()
+        if hasattr(self, "weapon_cap_trait_weapon_combo"):
+            self._sync_weapon_cap_trait_weapon_combo()
         self.update_weapon_detail()
 
     def _current_item_category_filter(self) -> str:
@@ -17836,6 +21226,10 @@ class MainWindow(QMainWindow):
         self.current_theme = theme_name
         self.apply_theme()
         self._save_ui_settings()
+        try:
+            self._sync_settings_controls()
+        except Exception:
+            pass
         self.statusBar().showMessage(f"Theme changed to {theme_name}", 3000)
 
     def apply_theme(self) -> None:

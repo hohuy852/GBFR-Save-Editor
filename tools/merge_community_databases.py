@@ -22,19 +22,19 @@ ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "gbfr_editor" / "resources"
 
 GBID_SOURCES = [
-    "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/item_id.csv",
-    "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/sigil_id.csv",
-    "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/skill_id.csv",
+    "",
+    "",
+    "",
 ]
 RESOURCE_SOURCES = {
     "model_hash_ids_seed.csv": [
-        "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/model_ids.md",
+        "",
     ],
     "phase_hash_ids_seed.csv": [
-        "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/phase_id.csv",
+        "",
     ],
     "quest_ids_seed.csv": [
-        "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/quest_id.csv",
+        "",
     ],
 }
 

@@ -8,8 +8,8 @@ import re
 
 from item_db import ItemDatabase, ItemEntry
 
-COMMUNITY_SIGIL_GEM_ID_URL = "https://community.github.io/relink-modding/resources/sigil_gem_ids/"
-COMMUNITY_SIGIL_GEM_ID_CSV_URL = "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/sigil_id.csv"
+COMMUNITY_SIGIL_GEM_ID_URL = ""
+COMMUNITY_SIGIL_GEM_ID_CSV_URL = ""
 COMMUNITY_SIGIL_GEM_TARGET_ROWS = 1350  # upstream docs/resources/sigil_id.csv rows excluding header at the time this catalog was merged
 
 _TIER_BY_DIGIT = {

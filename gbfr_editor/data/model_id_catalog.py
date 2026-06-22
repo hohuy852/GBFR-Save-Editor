@@ -9,7 +9,7 @@ import re
 from resource_id_db import ResourceIdDatabase, ResourceEntry
 from hashing import gbfr_hash, gbfr_hash_hex
 
-COMMUNITY_MODEL_ID_URL = "https://community.github.io/relink-modding/resources/model_ids/"
+COMMUNITY_MODEL_ID_URL = ""
 
 MODEL_CATEGORIES = {
     "Model Player",

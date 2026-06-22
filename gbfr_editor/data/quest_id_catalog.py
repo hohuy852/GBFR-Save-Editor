@@ -8,8 +8,8 @@ import re
 
 from resource_id_db import ResourceIdDatabase, ResourceEntry
 
-COMMUNITY_QUEST_ID_URL = "https://community.github.io/relink-modding/resources/quest_ids/"
-COMMUNITY_QUEST_ID_CSV_URL = "https://raw.githubusercontent.com/Community/relink-modding/main/docs/resources/quest_id.csv"
+COMMUNITY_QUEST_ID_URL = ""
+COMMUNITY_QUEST_ID_CSV_URL = ""
 
 QUEST_GROUPS = {
     "1": "Main Quest / Story",
