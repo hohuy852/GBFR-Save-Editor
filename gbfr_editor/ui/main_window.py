@@ -30,34 +30,18 @@ except ImportError as exc:  # pragma: no cover - PyQt6 may not be installed in C
     raise
 
 from gbfr_save import GBFRSaveData, UnitRecord
-from diff_tools import compare_saves, format_compare_text, write_compare_csv, write_compare_json
 from item_db import ItemDatabase, DEFAULT_ITEM_URL, TRAIT_SKILL_URL, RAW_SIGIL_GEM_URL, source_urls_from_text
 from item_id_catalog import catalog_rows, format_catalog_summary, write_catalog_csv, COMMUNITY_ITEM_ID_TARGET_ROWS
 from sigil_gem_id_catalog import sigil_rows, format_sigil_summary, write_sigil_catalog_csv
 from trait_skill_id_catalog import trait_skill_rows, format_trait_skill_summary, write_trait_skill_catalog_csv
-from model_id_catalog import model_rows, format_model_summary, write_model_catalog_csv
-from phase_id_catalog import phase_rows, format_phase_summary, write_phase_catalog_csv
-from quest_id_catalog import quest_rows, format_quest_summary, write_quest_catalog_csv
 from resource_id_db import ResourceIdDatabase, DEFAULT_RESOURCE_URLS
 from unit_meta import unit_name
 from unit_labeler import UnitLabelIndex
-from gbid_tools import HASHISH_ID_TYPES, build_candidate_records
-from research_tools import search_values, format_search_text, write_search_csv, scan_known_hashes, format_hash_scan_text, write_hash_scan_csv
 from hashing import gbfr_hash, gbfr_hash_hex
-from entity_prefixes import describe_entity_code
 from reference_db import ReferenceDatabase
-from preset_packs import PresetPack, get_preset_pack, search_preset_packs, list_preset_packs
-from save_wizard_cheats import (
-    SAVE_WIZARD_SHEET_URL, SaveWizardCheat, get_builtin_save_wizard_cheat,
-    list_builtin_save_wizard_cheats, load_sheet_csv, parse_sheet_cheats,
-)
-from save_mapper import build_save_map, build_unknown_field_report, save_map_summary_text, write_save_map_csv, write_save_map_json
-from hash_resolver import resolve_unknown_hashes, format_hash_candidates, write_hash_candidates_csv
-from id_audit import build_id_audit, id_audit_summary, write_id_audit_csv
-from google_sheet_audit import audit_sheet_sources, audit_summary, write_audit_csv, urls_from_resource_file
 from cheat_actions import complete_quest_tables_splusplus, unlock_title_archive_candidates, set_character_overmastery_hashes, clear_character_overmastery_hashes, patch_summary, EMPTY_HASH as CHEAT_EMPTY_HASH
 
-APP_TITLE = "Granblue Fantasy Relink Save Lab"
+APP_TITLE = "GBFR - Sigils / Wrightstones / Mastery Editor"
 EMPTY_HASH = 0x887AE0B0
 I32_MIN = -2_147_483_648
 I32_MAX = 2_147_483_647
@@ -300,6 +284,32 @@ class UnitTableModel(QAbstractTableModel):
             self.filtered = out
         self.endResetModel()
 
+    def preview(self, rec: UnitRecord, limit: int = 10) -> str:
+        if self.save is None:
+            return ""
+        values = self.save.get_values(rec, limit)
+        shown: List[str] = []
+        for val in values:
+            if isinstance(val, bool):
+                shown.append("true" if val else "false")
+            elif isinstance(val, float):
+                shown.append(f"{val:g}")
+            elif isinstance(val, int):
+                iv = int(val) & 0xFFFFFFFF
+                entry = self.item_db.lookup_hash(iv)
+                if entry:
+                    shown.append(f"{entry.display_name} ({entry.item_id})")
+                else:
+                    shown.append(f"0x{iv:08X}")
+            else:
+                shown.append(str(val))
+        return ", ".join(shown)
+
+    def record_at(self, row: int) -> Optional[UnitRecord]:
+        if 0 <= row < len(self.filtered):
+            return self.filtered[row]
+        return None
+
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return 0 if parent.isValid() else len(self.filtered)
 
@@ -309,11 +319,6 @@ class UnitTableModel(QAbstractTableModel):
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
             return self.headers[section]
-        return None
-
-    def record_at(self, row: int) -> Optional[UnitRecord]:
-        if 0 <= row < len(self.filtered):
-            return self.filtered[row]
         return None
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
@@ -341,41 +346,6 @@ class UnitTableModel(QAbstractTableModel):
             return self.preview(rec, 10 if role == Qt.ItemDataRole.DisplayRole else 64)
         return None
 
-    def preview(self, rec: UnitRecord, limit: int = 10) -> str:
-        if self.save is None:
-            return ""
-        values = self.save.get_values(rec, limit)
-        shown: List[str] = []
-        for val in values:
-            if isinstance(val, bool):
-                shown.append("true" if val else "false")
-            elif rec.kind == "uint" and rec.id_type in HASHISH_ID_TYPES:
-                iv = int(val) & 0xFFFFFFFF
-                entry = self.item_db.lookup_hash(iv)
-                if entry:
-                    shown.append(f"{entry.display_name} ({entry.item_id})")
-                else:
-                    cats = _resource_categories_for_field(rec.id_type)
-                    resource = self.resource_db.lookup_value(iv, cats) if cats else self.resource_db.lookup_value(iv)
-                    if resource:
-                        shown.append(f"{resource.name} ({resource.id_text})")
-                    else:
-                        shown.append(f"0x{iv:08X}")
-            elif isinstance(val, float):
-                shown.append(f"{val:.6g}")
-            else:
-                resource = None
-                if isinstance(val, int):
-                    cats = _resource_categories_for_field(rec.id_type)
-                    if cats:
-                        resource = self.resource_db.lookup_value(int(val), cats)
-                if resource:
-                    shown.append(f"{resource.name} ({resource.id_text})")
-                else:
-                    shown.append(format_display_value(val, "Value"))
-        if rec.value_count > limit:
-            shown.append("...")
-        return ", ".join(shown)
 
 
 class SimpleRowsModel(QAbstractTableModel):
@@ -564,10 +534,6 @@ class ResourceIdTableModel(QAbstractTableModel):
             return entry.alias_text
         return None
 
-    def entry_at(self, row: int):
-        if 0 <= row < len(self.rows):
-            return self.rows[row]
-        return None
 
 
 class HashScanTableModel(SimpleRowsModel):
@@ -681,19 +647,9 @@ class MainWindow(QMainWindow):
         self.sigil_model.editable_columns = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
         self.sigil_model.set_data_handler = self.apply_sigil_table_cell_edit
         self.sigil_database_model = SimpleRowsModel(["Status", "Name", "GBID", "Hash", "Grade", "Owned", "Empty Slots", "Action"])
-        self.sigil_empty_model = SimpleRowsModel(["Unit", "Slot", "Level", "Owner", "Flags", "Notes"])
-        self.weapon_model = SimpleRowsModel(["Slot", "Weapon", "GBID", "Hash", "XP", "Uncap", "Trait +", "2807", "2814", "Owned", "Stone / Wrightstone"])
-        self.weapon_model.editable_columns = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-        self.weapon_model.set_data_handler = self.apply_weapon_table_cell_edit
-        self.weapon_database_model = SimpleRowsModel(["Status", "Weapon", "GBID", "Hash", "Owner", "Owned", "Empty Slots", "Action"])
-        self.weapon_empty_model = SimpleRowsModel(["Unit", "Hash", "XP", "Flags", "Stone", "Notes"])
         self.wrightstone_model = SimpleRowsModel(["Slot", "Wrightstone", "GBID", "Hash", "Value", "Trait 1", "T1 Lv", "Trait 2", "T2 Lv", "Trait 3", "T3 Lv", "Flags", "Unit"])
         self.wrightstone_model.editable_columns = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
-        self.wrightstone_model.set_data_handler = self.apply_wrightstone_table_cell_edit
         self.wrightstone_rows_meta: List[Dict[str, Any]] = []
-        self.character_model = SimpleRowsModel(["Slot", "Character", "GBID", "Hash", "Level", "EXP", "MSP?", "Unlock?", "Unit"])
-        self.character_model.editable_columns = {1, 2, 3, 4, 5, 6, 7}
-        self.character_model.set_data_handler = self.apply_character_table_cell_edit
         self.mastery_slot_model = SimpleRowsModel(["Slot / Lane", "Socket", "1606 Effect / Stat", "Row Type", "State / Lane", "1607 Amount", "1601 Slot Key", "1606 Hash", "Save Unit"])
         self.mastery_slot_rows_meta: List[Dict[str, Any]] = []
         self.mastery_mod_model = SimpleRowsModel(["Row", "Kind", "Current Effect", "Hidden Type", "Value / Amount", "Hidden Hash", "Hidden Unit", "Hidden Pair"])
@@ -707,7 +663,6 @@ class MainWindow(QMainWindow):
         self.mastery_mod_preset_model = SimpleRowsModel(["Preset Range", "Rows", "Effect To Install", "1606 Hash", "Reason / Notes"])
         self.mastery_mod_value_model = SimpleRowsModel(["Value Preset", "Decimal", "Hex", "Risk", "What It Does"])
         self.mastery_mod_reference_model.editable_columns = {2}
-        self.mastery_mod_reference_model.set_data_handler = self.apply_mastery_mod_reference_cell_edit
         self.mastery_mod_rows_meta: List[Dict[str, Any]] = []
         self.mastery_mod_reference_rows_meta: List[Dict[str, Any]] = []
         self.mastery_mod_code_rows_meta: List[Dict[str, Any]] = []
@@ -733,7 +688,6 @@ class MainWindow(QMainWindow):
         self._mastery_mod_abs1606_cache: Dict[int, UnitRecord] = {}
         self.item_model = SimpleRowsModel(["Slot", "Item", "GBID", "Hash", "Index", "Flag", "Qty / Value", "Backing Store"])
         self.item_model.editable_columns = {1, 2, 3, 4, 5, 6}
-        self.item_model.set_data_handler = self.apply_item_table_cell_edit
         self.items_database_model = SimpleRowsModel(["Status", "Name", "GBID", "Category", "Hash", "Action"])
         self.items_database_rows_meta: List[Dict[str, Any]] = []
         self.relic_database_model = SimpleRowsModel(["Status", "Name", "GBID", "Hash", "Owned", "Empty Slots", "Action"])
@@ -761,25 +715,16 @@ class MainWindow(QMainWindow):
         self._add_browser_active_material_hashes: set[int] = set()
         self._add_browser_safe_template_hashes: set[int] = set()
         self._add_browser_empty_counts = {"items": 0, "sigils": 0, "weapons": 0}
-        self._add_browser_refresh_timer = QTimer(self)
-        self._add_browser_refresh_timer.setSingleShot(True)
-        self._add_browser_refresh_timer.setInterval(250)
-        self._add_browser_refresh_timer.timeout.connect(self.refresh_add_browser_rows)
         self.save_wizard_model = SimpleRowsModel(["Category", "Reference", "Source", "Status", "Notes", "Key"])
         self.progression_model = SimpleRowsModel(["Section", "Confidence", "Records", "Values", "Non-zero", "Recommended Action"])
         self.progression_edit_model = SimpleRowsModel(["Quest ID", "Name", "Status", "Rank", "Done", "Source"])
         self.progression_edit_model.editable_columns = {2, 3, 4}
-        self.progression_edit_model.set_data_handler = self.apply_progression_table_cell_edit
         self._progression_catalog_cache: Optional[List[Dict[str, Any]]] = None
         self._progression_catalog_counts_cache: Dict[str, int] = {}
         self._progression_vector_record_cache: Dict[int, Optional[UnitRecord]] = {}
         self._progression_vector_values_cache: Dict[int, List[Any]] = {}
         self._progression_key_index_cache: Dict[tuple[str, int], Dict[int, int]] = {}
         self._progression_controls_loading = False
-        self._progression_edit_refresh_timer = QTimer(self)
-        self._progression_edit_refresh_timer.setSingleShot(True)
-        self._progression_edit_refresh_timer.setInterval(180)
-        self._progression_edit_refresh_timer.timeout.connect(self.refresh_progression_editor_rows)
         self.progression_rows_model = SimpleRowsModel(["Section", "Field ID", "Field Name", "Unit ID", "Unit Name", "Record", "Count", "Non-zero", "Values", "Notes"])
         self.save_map_model = SimpleRowsModel(["Manager", "Confidence", "Kind", "Field ID", "Field Name", "Records", "Units", "Known Hashes", "Unknown Hashes", "Sample", "Note"])
         self.hash_scan_rows: List[Dict[str, Any]] = []
@@ -843,9 +788,6 @@ class MainWindow(QMainWindow):
             self._set_advanced_visible(bool(self.advanced_mode), persist=False)
         self.apply_theme()
         self._apply_view_preferences(persist=False)
-        # Populate only the first user-facing table at startup.
-        # Catalog/research pages can contain thousands of rows and are refreshed lazily when opened.
-        self.refresh_preset_rows()
 
 
     def _nav_section(self, text: str, advanced: bool = False) -> QLabel:
@@ -979,11 +921,11 @@ class MainWindow(QMainWindow):
         for widget in getattr(self, "advanced_nav_widgets", []):
             widget.setVisible(False)
         if hasattr(self, "stack"):
-            visible_pages = {"Welcome", "Cheats", "General", "Progression", "Items / Materials", "Sigils", "Weapons", "Wrightstones", "Characters", "Mastery", "Save Health", "Settings", "About"}
+            visible_pages = {"Sigils", "Wrightstones", "Mastery"}
             current_label = self._current_page_label()
             if current_label and current_label not in visible_pages:
-                self._show_page("Welcome")
-        self._update_nav_selection(self._current_page_label() or "Welcome")
+                self._show_page("Sigils")
+        self._update_nav_selection(self._current_page_label() or "Sigils")
         if persist:
             self._save_ui_settings()
 
@@ -1038,33 +980,8 @@ class MainWindow(QMainWindow):
         btn.setMenu(menu)
         return btn
 
-    def _make_action_button(self, text: str, slot: Any, primary: bool = False) -> QPushButton:
-        btn = QPushButton(text)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        if primary:
-            btn.setProperty("class", "primaryButton")
-        btn.clicked.connect(slot)
-        return btn
 
-    def _add_action_grid(self, layout: QVBoxLayout, actions: List[tuple[str, Any]], columns: int = 4, primary_first: bool = False) -> None:
-        """Add responsive-looking action buttons without long horizontal rows."""
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(8)
-        grid.setVerticalSpacing(8)
-        for idx, (text, slot) in enumerate(actions):
-            btn = self._make_action_button(text, slot, primary=primary_first and idx == 0)
-            grid.addWidget(btn, idx // max(1, columns), idx % max(1, columns))
-        layout.addLayout(grid)
 
-    def _fit_action_row(self, row: QHBoxLayout) -> None:
-        """Keep older horizontal action rows from fighting for screen width."""
-        for idx in range(row.count()):
-            item = row.itemAt(idx)
-            widget = item.widget() if item else None
-            if isinstance(widget, QPushButton):
-                widget.setCursor(Qt.CursorShape.PointingHandCursor)
-                widget.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
 
     def _set_compact_detail(self, widget: QWidget, max_height: int = 82) -> None:
         widget.setMaximumHeight(max_height)
@@ -1295,26 +1212,9 @@ class MainWindow(QMainWindow):
         save_action.triggered.connect(self.save_original)
         save_as_action = QAction("Save As...", self)
         save_as_action.triggered.connect(self.save_as)
-        export_action = QAction("Export JSON Report...", self)
-        export_action.triggered.connect(self.export_report)
-        import_items_action = QAction("Import Item CSV...", self)
-        import_items_action.triggered.connect(self.import_item_csv)
-        download_items_action = QAction("Download Community Item/Sigil/Trait IDs", self)
-        download_items_action.triggered.connect(self.download_item_ids)
-        download_all_community_action = QAction("Download All Community Databases", self)
-        download_all_community_action.triggered.connect(self.download_all_community_databases)
-        export_db_action = QAction("Export Merged GBID DB...", self)
-        export_db_action.triggered.connect(self.export_item_db_csv)
         file_menu.addAction(open_action)
         file_menu.addAction(save_action)
         file_menu.addAction(save_as_action)
-        file_menu.addSeparator()
-        file_menu.addAction(export_action)
-        file_menu.addSeparator()
-        file_menu.addAction(import_items_action)
-        file_menu.addAction(download_items_action)
-        file_menu.addAction(download_all_community_action)
-        file_menu.addAction(export_db_action)
 
         view_menu = self.menuBar().addMenu("View")
         appearance_menu = view_menu.addMenu("Appearance / Theme")
@@ -1353,10 +1253,6 @@ class MainWindow(QMainWindow):
         self.fast_edit_action.setChecked(bool(self._fast_edit_mode))
         self.fast_edit_action.toggled.connect(lambda checked: setattr(self, "_fast_edit_mode", bool(checked)))
         view_menu.addAction(self.fast_edit_action)
-
-        refresh_page_action = QAction("Refresh Current Page", self)
-        refresh_page_action.triggered.connect(self.refresh_current_page)
-        view_menu.addAction(refresh_page_action)
 
         view_menu.addSeparator()
         reset_action = QAction("Reset clean view", self)
@@ -1402,19 +1298,9 @@ class MainWindow(QMainWindow):
         nav_layout.addWidget(nav_scroll, 1)
 
         nav_items_layout.addWidget(self._nav_section("Edit"))
-        self._add_nav_button(nav_items_layout, "Welcome", self._overview_page)
-        self._add_nav_button(nav_items_layout, "Cheats", self._cheat_preset_hub_page)
-        self._add_nav_button(nav_items_layout, "General", self._editor_hub_page)
-        self._add_nav_button(nav_items_layout, "Progression", self._progression_page)
-        self._add_nav_button(nav_items_layout, "Items / Materials", self._items_page)
         self._add_nav_button(nav_items_layout, "Sigils", self._sigils_page)
-        self._add_nav_button(nav_items_layout, "Weapons", self._weapons_page)
         self._add_nav_button(nav_items_layout, "Wrightstones", self._wrightstones_page)
-        self._add_nav_button(nav_items_layout, "Characters", self._characters_page)
         self._add_nav_button(nav_items_layout, "Mastery", self._mastery_mods_page)
-        self._add_nav_button(nav_items_layout, "Save Health", self._save_health_page)
-        self._add_nav_button(nav_items_layout, "Settings", self._settings_page)
-        self._add_nav_button(nav_items_layout, "About", self._about_page)
         nav_items_layout.addStretch(1)
 
         self.status_label = QLabel("No save loaded")
@@ -1427,7 +1313,7 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(self.stack, 1)
         self.setCentralWidget(root)
         self._install_common_numeric_validators()
-        self._show_page("Welcome")
+        self._show_page("Sigils")
 
     def _theme_options(self) -> List[tuple[str, str]]:
         return [
@@ -1483,2167 +1369,59 @@ class MainWindow(QMainWindow):
                 finally:
                     widget.blockSignals(False)
 
-    def _settings_page(self) -> QWidget:
-        page = QWidget()
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(28, 24, 28, 24)
-        page_layout.setSpacing(14)
 
-        header = QLabel("Settings")
-        header.setObjectName("pageHeader")
-        page_layout.addWidget(header)
 
-        help_text = QLabel("Theme and view options live here so the main editor stays clean. These settings are saved automatically.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        page_layout.addWidget(help_text)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        content = QWidget()
-        layout = QVBoxLayout(content)
-        layout.setContentsMargins(0, 0, 10, 0)
-        layout.setSpacing(14)
-        scroll.setWidget(content)
-        page_layout.addWidget(scroll, 1)
 
-        appearance_card = make_card("Appearance")
-        appearance_layout = QVBoxLayout(appearance_card)
-        appearance_layout.setSpacing(10)
-        appearance_layout.addWidget(QLabel("Theme"))
-        self.settings_theme_combo = QComboBox()
-        for key, label in self._theme_options():
-            self.settings_theme_combo.addItem(label, key)
-        self.settings_theme_combo.currentIndexChanged.connect(lambda *_: self._set_theme_from_combo())
-        appearance_layout.addWidget(self.settings_theme_combo)
-        layout.addWidget(appearance_card)
 
-        view_card = make_card("View / Performance")
-        view_layout = QVBoxLayout(view_card)
-        view_layout.setSpacing(8)
-        self.settings_clean_check = QCheckBox("Clean view: hide most page tips")
-        self.settings_clean_check.toggled.connect(self.set_clean_mode)
-        self.settings_compact_check = QCheckBox("Compact table rows")
-        self.settings_compact_check.toggled.connect(self.set_compact_mode)
-        self.settings_auto_fit_check = QCheckBox("Auto-fit columns after refresh")
-        self.settings_auto_fit_check.toggled.connect(self.set_auto_fit_tables)
-        self.settings_fast_load_check = QCheckBox("Fast load / lazy refresh")
-        self.settings_fast_load_check.toggled.connect(self.set_fast_load_mode)
-        for widget in (self.settings_clean_check, self.settings_compact_check, self.settings_auto_fit_check, self.settings_fast_load_check):
-            view_layout.addWidget(widget)
-        reset_btn = QPushButton("Reset Clean Defaults")
-        reset_btn.clicked.connect(self.reset_clean_view)
-        view_layout.addWidget(reset_btn)
-        layout.addWidget(view_card)
-        layout.addStretch(1)
-        self._sync_settings_controls()
-        return page
 
-    def _overview_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(14)
 
-        header = QLabel("Welcome")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
 
-        intro = QLabel("Select a base folder and the editor will search every subfolder for saves named GameData or SaveData1.")
-        intro.setWordWrap(True)
-        intro.setObjectName("helpText")
-        layout.addWidget(intro)
 
-        open_card = make_card("Open Save")
-        open_layout = QVBoxLayout(open_card)
-        open_layout.setSpacing(10)
 
-        top_row = QHBoxLayout()
-        open_btn = QPushButton("Open Save File")
-        open_btn.clicked.connect(self.open_save)
-        choose_btn = QPushButton("Choose Folder")
-        choose_btn.clicked.connect(self.choose_save_finder_base_folder)
-        scan_btn = QPushButton("Scan Folder")
-        scan_btn.clicked.connect(self.scan_save_finder_base_folder)
-        for btn in (open_btn, choose_btn, scan_btn):
-            top_row.addWidget(btn)
-        top_row.addStretch(1)
-        open_layout.addLayout(top_row)
 
-        path_row = QHBoxLayout()
-        self.save_finder_base_edit = QLineEdit()
-        self.save_finder_base_edit.setPlaceholderText("Base folder to scan recursively...")
-        self.save_finder_base_edit.setText(str(getattr(self, "save_finder_base_path", "") or ""))
-        self.save_finder_base_edit.returnPressed.connect(self.scan_save_finder_base_folder)
-        path_row.addWidget(QLabel("Folder"))
-        path_row.addWidget(self.save_finder_base_edit, 1)
-        open_layout.addLayout(path_row)
 
-        self.save_finder_status = QLabel("Choose a folder to scan. Subfolders are included automatically. Double-click a save row to open it.")
-        self.save_finder_status.setObjectName("subtleText")
-        self.save_finder_status.setWordWrap(True)
-        open_layout.addWidget(self.save_finder_status)
 
-        self.save_finder_table = QTableView()
-        self.save_finder_table.setModel(self.save_finder_model)
-        self._table_clean(self.save_finder_table)
-        self.save_finder_table.setMinimumHeight(420)
-        self.save_finder_table.doubleClicked.connect(lambda *_: self.open_selected_found_save())
-        open_layout.addWidget(self.save_finder_table, 1)
 
-        action_row = QHBoxLayout()
-        open_selected_btn = QPushButton("Open Selected")
-        open_selected_btn.clicked.connect(self.open_selected_found_save)
-        rescan_btn = QPushButton("Rescan")
-        rescan_btn.clicked.connect(self.scan_save_finder_base_folder)
-        action_row.addWidget(open_selected_btn)
-        action_row.addWidget(rescan_btn)
-        action_row.addStretch(1)
-        open_layout.addLayout(action_row)
 
-        layout.addWidget(open_card, 1)
-        return page
 
 
-    def choose_save_finder_base_folder(self) -> None:
-        start = str(getattr(self, "save_finder_base_path", "") or Path.home())
-        folder = QFileDialog.getExistingDirectory(self, "Choose folder to scan for GBFR saves", start)
-        if not folder:
-            return
-        self.save_finder_base_path = folder
-        if hasattr(self, "save_finder_base_edit"):
-            self.save_finder_base_edit.setText(folder)
-        self._save_ui_settings()
-        self.scan_save_finder_base_folder()
 
-    def _is_gbfr_save_candidate_name(self, name: str) -> bool:
-        n = str(name or "").strip()
-        lower = n.lower()
-        stem = Path(n).stem.lower()
-        # Prefer obvious save names, but do not require the exact file name.
-        # Users often rename saves by game/version, for example
-        # GameData_backup, Relink_GameData_v1, or SaveData1_test.sav.
-        if "gamedata" in lower or "savedata1" in lower or "savedata" in lower:
-            return True
-        suffix = Path(n).suffix.lower()
-        # Also allow common renamed save/archive patterns to be content-sniffed.
-        if suffix in {"", ".sav", ".save", ".dat", ".bin", ".bak", ".backup"}:
-            return True
-        if any(token in stem for token in ("gbfr", "relink", "granblue")):
-            return True
-        return False
 
-    def _detect_gbfr_save_file_kind(self, path: Path, stat: Optional[Any] = None) -> Optional[str]:
-        try:
-            if stat is None:
-                stat = path.stat()
-            size = int(stat.st_size)
-            if size < 1024:
-                return None
-            # Skip obvious non-save files even if they live in the save folder.
-            if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".gif", ".txt", ".log", ".json", ".ini", ".xml", ".md", ".csv", ".zip", ".7z", ".rar", ".exe", ".dll"}:
-                return None
-            # GBFR saves are small enough that reading the whole candidate is OK,
-            # but avoid dragging huge unrelated files into memory during folder scans.
-            if size > 128 * 1024 * 1024:
-                return None
-            data = bytearray(path.read_bytes())
-            container = GBFRSaveData._detect_container(path, data)
-            if container.mode == "wrapped_savegamefile_slotdata":
-                return "Wrapped Save"
-            if container.mode == "raw_savedatabinary":
-                return "GameData"
-            return "Detected Save"
-        except Exception:
-            return None
 
-    def scan_save_finder_base_folder(self) -> None:
-        edit = getattr(self, "save_finder_base_edit", None)
-        base_text = edit.text().strip() if edit is not None else str(getattr(self, "save_finder_base_path", "") or "")
-        if not base_text:
-            self.statusBar().showMessage("Choose a base folder first.", 3500)
-            return
-        base = Path(base_text).expanduser()
-        if not base.exists() or not base.is_dir():
-            self.statusBar().showMessage("That base folder does not exist.", 4500)
-            return
-        self.save_finder_base_path = str(base)
-        self._save_ui_settings()
 
-        rows: List[List[Any]] = []
-        meta: List[Dict[str, Any]] = []
-        checked = 0
-        max_hits = 2000
-        try:
-            for root, dirs, files in os.walk(base):
-                # Skip common giant/non-save folders for responsiveness.
-                dirs[:] = [
-                    d for d in dirs
-                    if d.lower() not in {"__pycache__", ".git", "node_modules", "$recycle.bin", "windows", "program files", "program files (x86)"}
-                ]
-                for filename in files:
-                    checked += 1
-                    path = Path(root) / filename
-                    try:
-                        stat = path.stat()
-                        if stat.st_size < 1024:
-                            continue
-                        if not self._is_gbfr_save_candidate_name(filename):
-                            continue
-                        kind = self._detect_gbfr_save_file_kind(path, stat)
-                        if not kind:
-                            continue
-                        lower = filename.lower()
-                        if "savedata1" in lower:
-                            kind = "SaveData1"
-                        elif "gamedata" in lower:
-                            kind = "GameData"
-                        modified = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
-                        rows.append([filename, kind, str(path.parent), modified])
-                        meta.append({"path": str(path), "name": filename, "kind": kind, "modified": modified, "size": int(stat.st_size)})
-                        if len(rows) >= max_hits:
-                            break
-                    except Exception:
-                        continue
-                if len(rows) >= max_hits:
-                    break
-        except Exception as exc:
-            QMessageBox.warning(self, "Scan failed", str(exc))
-            return
 
-        self.save_finder_rows_meta = meta
-        self.save_finder_model.set_rows(rows)
-        if hasattr(self, "save_finder_table"):
-            self._set_table_widths(self.save_finder_table, {0: 160, 1: 110, 2: 720, 3: 160})
-        msg = f"Found {len(rows):,} detected GBFR save(s) under {base} and its subfolders."
-        if len(rows) >= max_hits:
-            msg += f" Stopped at {max_hits:,} results."
-        if hasattr(self, "save_finder_status"):
-            self.save_finder_status.setText(msg)
-        self.statusBar().showMessage(msg, 5000)
 
-    def open_selected_found_save(self) -> None:
-        table = getattr(self, "save_finder_table", None)
-        if table is None:
-            return
-        idx = table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(getattr(self, "save_finder_rows_meta", [])):
-            self.statusBar().showMessage("Select a save from the list first.", 3000)
-            return
-        path = self.save_finder_rows_meta[idx.row()].get("path")
-        if not path:
-            return
-        self._open_save_path(str(path))
 
 
-    def _save_health_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(14)
-        header = QLabel("Save Health")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("A clean checklist for whether the opened save is safe to edit, how many reusable empty slots are available, and what still needs research.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        help_text.setVisible(False)
 
-        card = make_card("Current save status")
-        card_layout = QVBoxLayout(card)
-        self.save_health_text = QPlainTextEdit()
-        self.save_health_text.setObjectName("summaryBox")
-        self.save_health_text.setReadOnly(True)
-        self.save_health_text.setPlainText("Open a save to run the health checklist.")
-        card_layout.addWidget(self.save_health_text)
-        layout.addWidget(card, 1)
 
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh", self.refresh_save_health),
-            ("Open Items", lambda: self._show_page("Items / Materials")),
-            ("Open Sigils", lambda: self._show_page("Sigils")),
-            ("Open Weapons", lambda: self._show_page("Weapons")),
-            ("Save As", self.save_as),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
 
 
-    def _about_page(self) -> QWidget:
-        page = QWidget()
-        outer = QVBoxLayout(page)
-        outer.setContentsMargins(28, 24, 28, 24)
-        outer.setSpacing(10)
 
-        header = QLabel("About")
-        header.setObjectName("pageHeader")
-        outer.addWidget(header)
 
-        scroll = QScrollArea()
-        scroll.setObjectName("aboutScroll")
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        body = QWidget()
-        layout = QVBoxLayout(body)
-        layout.setContentsMargins(0, 0, 12, 0)
-        layout.setSpacing(10)
 
-        top = make_card("Granblue Fantasy Relink Save Lab")
-        top_layout = QGridLayout(top)
-        top_layout.setHorizontalSpacing(18)
-        top_layout.setVerticalSpacing(6)
 
-        creator = QLabel("<b>Created by ProtoBuffers</b>")
-        creator.setTextFormat(Qt.TextFormat.RichText)
-        creator.setWordWrap(True)
-        top_layout.addWidget(creator, 0, 0, 1, 2)
 
-        support = QLabel("Supports PC saves and decrypted PS4 saves.")
-        support.setWordWrap(True)
-        support.setObjectName("subtleText")
-        top_layout.addWidget(support, 1, 0, 1, 2)
 
-        sheet = QLabel(
-            'Community data sheet: '
-            '<a href="https://docs.google.com/spreadsheets/d/1mGf987Njg3VodeXp8kVwzEgvYSAeMzkHnkGnAj1_RjY/edit?gid=0#gid=0">'
-            "Granblue Fantasy Relink spreadsheet</a>"
-        )
-        sheet.setTextFormat(Qt.TextFormat.RichText)
-        sheet.setOpenExternalLinks(True)
-        sheet.setWordWrap(True)
-        top_layout.addWidget(sheet, 2, 0, 1, 2)
-        layout.addWidget(top)
 
-        credits = make_card("Credits")
-        credits_layout = QVBoxLayout(credits)
-        credits_text = QLabel(
-            "zeraf3000  •  JJDarklight  •  method_dev  •  hywolfe  •  skiller  •  peepeez  •  "
-            "di_ciolla  •  tj0816  •  dvymin  •  ceruleandhm  •  anon devs"
-        )
-        credits_text.setWordWrap(True)
-        credits_layout.addWidget(credits_text)
-        layout.addWidget(credits)
 
-        features = make_card("Features")
-        features_layout = QGridLayout(features)
-        features_layout.setHorizontalSpacing(24)
-        features_layout.setVerticalSpacing(6)
-        feature_items = [
-            "PC / PS4 save support",
-            "Welcome save finder",
-            "Save Health checks",
-            "Cheats dashboard",
-            "Progression / unlock editing",
-            "Items / Materials editor",
-            "Sigil editor + database add",
-            "Weapon editor + add all missing",
-            "Character editor",
-            "Mastery / Overmastery editor",
-            "32-bit input safety clamps",
-            "Save As workflow",
-        ]
-        for idx, item in enumerate(feature_items):
-            label = QLabel(f"• {item}")
-            label.setWordWrap(True)
-            features_layout.addWidget(label, idx // 2, idx % 2)
-        layout.addWidget(features)
 
-        ps4 = make_card("PS4 Save Help")
-        ps4_layout = QVBoxLayout(ps4)
-        ps4_text = QLabel(
-            'Need to decrypt a PS4 save for free? Join the ProtoBuffers Discord: '
-            '<a href="https://discord.gg/protobuffers">https://discord.gg/protobuffers</a>'
-        )
-        ps4_text.setTextFormat(Qt.TextFormat.RichText)
-        ps4_text.setOpenExternalLinks(True)
-        ps4_text.setWordWrap(True)
-        ps4_layout.addWidget(ps4_text)
-        layout.addWidget(ps4)
 
-        layout.addStretch(1)
-        scroll.setWidget(body)
-        outer.addWidget(scroll, 1)
-        return page
 
 
-    def _save_map_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(24, 16, 24, 16)
-        layout.setSpacing(8)
-        header = QLabel("Save Map")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Manager-level map of the save: field IDs, readable names, known/unknown hash coverage, sample units, and research confidence. This is the main page for mapping unknown data without staring at raw rows.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
 
-        top = QHBoxLayout()
-        self.save_map_filter_edit = QLineEdit()
-        self.save_map_filter_edit.setPlaceholderText("Filter by manager, field ID, field name, confidence, note, sample...")
-        self.save_map_filter_edit.textChanged.connect(self.refresh_save_map_rows)
-        top.addWidget(self.save_map_filter_edit, 1)
-        self.save_map_unknown_check = QCheckBox("Research targets only")
-        self.save_map_unknown_check.toggled.connect(self.refresh_save_map_rows)
-        top.addWidget(self.save_map_unknown_check)
-        layout.addLayout(top)
 
-        self.save_map_table = QTableView()
-        self.save_map_table.setModel(self.save_map_model)
-        self.save_map_table.setAlternatingRowColors(True)
-        self.save_map_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.save_map_table.setSortingEnabled(True)
-        layout.addWidget(self.save_map_table, 1)
 
-        detail = make_card("Map Summary")
-        detail_layout = QVBoxLayout(detail)
-        self.save_map_summary = QPlainTextEdit()
-        self.save_map_summary.setObjectName("summaryBox")
-        self.save_map_summary.setReadOnly(True)
-        self.save_map_summary.setMaximumHeight(170)
-        self.save_map_summary.setPlainText("Open a save to build the manager/field map.")
-        detail_layout.addWidget(self.save_map_summary)
-        layout.addWidget(detail)
 
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh Map", self.refresh_save_map_rows),
-            ("Export Map CSV", lambda: self.export_save_map("csv", False)),
-            ("Export Map JSON", lambda: self.export_save_map("json", False)),
-            ("Export Research Targets CSV", lambda: self.export_save_map("csv", True)),
-            ("Open Raw Units", lambda: self._show_page("Units")),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
 
-    def _id_cleanup_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(12)
-        header = QLabel("ID Cleanup")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Audits every hash-like ID in the loaded save and separates known GBIDs, generated candidates, empty values, and unresolved IDs. Use this page to hunt missing IDs without mixing them into the normal edit tabs.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
 
-        top = QHBoxLayout()
-        self.id_audit_filter_edit = QLineEdit()
-        self.id_audit_filter_edit.setPlaceholderText("Filter by manager, hash, status, name, source...")
-        self.id_audit_filter_edit.textChanged.connect(self.refresh_id_audit_rows)
-        top.addWidget(self.id_audit_filter_edit, 1)
-        self.id_audit_unresolved_check = QCheckBox("Unresolved / candidates only")
-        self.id_audit_unresolved_check.toggled.connect(self.refresh_id_audit_rows)
-        top.addWidget(self.id_audit_unresolved_check)
-        self.id_audit_empty_check = QCheckBox("Include empty hashes")
-        self.id_audit_empty_check.toggled.connect(self.refresh_id_audit_rows)
-        top.addWidget(self.id_audit_empty_check)
-        self.id_audit_hide_ability_check = QCheckBox("Hide ability/action noise")
-        self.id_audit_hide_ability_check.setChecked(True)
-        self.id_audit_hide_ability_check.toggled.connect(self.refresh_id_audit_rows)
-        top.addWidget(self.id_audit_hide_ability_check)
-        layout.addLayout(top)
 
-        self.id_audit_table = QTableView()
-        self.id_audit_table.setModel(self.id_audit_model)
-        self.id_audit_table.setAlternatingRowColors(True)
-        self.id_audit_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.id_audit_table.setSortingEnabled(True)
-        layout.addWidget(self.id_audit_table, 1)
 
-        detail = make_card("Coverage Summary")
-        detail_layout = QVBoxLayout(detail)
-        self.id_audit_summary = QPlainTextEdit()
-        self.id_audit_summary.setReadOnly(True)
-        self.id_audit_summary.setMaximumHeight(150)
-        self.id_audit_summary.setPlainText("Open a save to audit hash-like IDs.")
-        detail_layout.addWidget(self.id_audit_summary)
-        layout.addWidget(detail)
 
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh Audit", self.refresh_id_audit_rows),
-            ("Export All CSV", lambda: self.export_id_audit(False)),
-            ("Export Missing/Candidates CSV", lambda: self.export_id_audit(True)),
-            ("Open Hash Scan", lambda: self._show_page("Hash Scan")),
-            ("Open Data Sources", lambda: self._show_page("Data Sources")),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
 
 
-    def _general_character_choices(self) -> List[Dict[str, Any]]:
-        """Character choices used by General party/roster tools."""
-        choices: List[Dict[str, Any]] = []
-        try:
-            base = list(getattr(self, "character_owner_choices", []) or [])
-            for choice in base:
-                try:
-                    h = int(choice.get("hash", 0)) & 0xFFFFFFFF
-                except Exception:
-                    continue
-                if h in (0, EMPTY_HASH):
-                    continue
-                label = str(choice.get("label") or choice.get("name") or f"0x{h:08X}")
-                choices.append({"label": label, "hash": h, "name": choice.get("name", label), "gbid": choice.get("gbid", "")})
-        except Exception:
-            pass
-        if not choices:
-            try:
-                for entry in self.item_db.by_hash.values():
-                    gbid = str(getattr(entry, "item_id", "") or "").upper()
-                    if gbid.startswith("PL"):
-                        choices.append({
-                            "label": f"{entry.display_name} ({entry.item_id})",
-                            "hash": int(entry.hash_value) & 0xFFFFFFFF,
-                            "name": entry.display_name,
-                            "gbid": entry.item_id,
-                        })
-            except Exception:
-                pass
-        seen = set()
-        out = []
-        for choice in choices:
-            h = int(choice.get("hash", 0)) & 0xFFFFFFFF
-            if h in seen:
-                continue
-            seen.add(h)
-            out.append(choice)
-        return out
-
-    def _party_slot_records_sw_order(self) -> List[UnitRecord]:
-        """Return party 2201 records in Save Wizard visible slot order.
-
-        Save Wizard codes use occurrence order for FF990800:
-        Slot 1 / on-screen leader = 4th occurrence, Slot 2 = 3rd,
-        Slot 3 = 2nd, Slot 4 = 1st. In file order these are reversed,
-        so this maps the UI to the exact code order.
-        """
-        if not self.save:
-            return []
-        recs: List[UnitRecord] = []
-        try:
-            for rec in self.save.records:
-                if rec.kind == "uint" and int(rec.id_type) == 2201:
-                    recs.append(rec)
-        except Exception:
-            return []
-        recs = sorted(recs, key=lambda r: int(getattr(r, "value_data_offset", 0)))
-        return list(reversed(recs[:4]))
-
-    def _party_slot_record(self, slot_index: int) -> Optional[UnitRecord]:
-        try:
-            recs = self._party_slot_records_sw_order()
-            idx = int(slot_index)
-            if 0 <= idx < len(recs):
-                return recs[idx]
-        except Exception:
-            pass
-        return None
-
-    def _party_slot_fields(self, slot_index: int) -> Dict[int, UnitRecord]:
-        rec = self._party_slot_record(slot_index)
-        if not rec or not self.save:
-            return {}
-        try:
-            grouped = self.save.group_by_unit([2201, 2202, 2203])
-            return dict(grouped.get(int(rec.unit_id), {}) or {})
-        except Exception:
-            return {}
-
-    def _set_party_leader_flags(self) -> int:
-        """Keep Slot 1 as the active/on-screen leader row."""
-        changed = 0
-        for idx in range(4):
-            fields = self._party_slot_fields(idx)
-            leader_rec = fields.get(2203)
-            if leader_rec is not None:
-                desired = bool(idx == 0)
-                old = bool(self._record_first_value(leader_rec, False))
-                if old != desired and self._set_record_first_value(leader_rec, desired, f"party slot {idx + 1} leader flag 2203"):
-                    changed += 1
-            alt_rec = fields.get(2202)
-            if alt_rec is not None:
-                old_alt = bool(self._record_first_value(alt_rec, False))
-                if old_alt and self._set_record_first_value(alt_rec, False, f"party slot {idx + 1} secondary flag 2202"):
-                    changed += 1
-        return changed
-
-    def _set_combo_to_hash(self, combo: QComboBox, value: int) -> None:
-        try:
-            target = int(value) & 0xFFFFFFFF
-        except Exception:
-            target = EMPTY_HASH
-        for i in range(combo.count()):
-            data = combo.itemData(i)
-            try:
-                if data is not None and int(data) == target:
-                    combo.setCurrentIndex(i)
-                    return
-            except Exception:
-                pass
-        if combo.count():
-            combo.setCurrentIndex(0)
-
-    def refresh_general_character_controls(self) -> None:
-        self._general_party_loading = True
-        try:
-            choices = self._general_character_choices()
-            party_combos = list(getattr(self, "general_party_combos", []) or [])
-            roster_combo = getattr(self, "general_roster_character_combo", None)
-
-            current_values = []
-            for idx, combo in enumerate(party_combos):
-                current_values.append(combo.currentData() if combo is not None else None)
-
-            for idx, combo in enumerate(party_combos):
-                combo.blockSignals(True)
-                combo.clear()
-                for choice in choices:
-                    combo.addItem(str(choice.get("label")), int(choice.get("hash")) & 0xFFFFFFFF)
-                current = None
-                rec = self._party_slot_record(idx)
-                if rec is not None:
-                    current = self._record_first_value(rec, EMPTY_HASH)
-                elif current_values[idx] is not None:
-                    current = current_values[idx]
-                self._set_combo_to_hash(combo, int(current or EMPTY_HASH))
-                combo.blockSignals(False)
-
-            if roster_combo is not None:
-                current = roster_combo.currentData()
-                roster_combo.blockSignals(True)
-                roster_combo.clear()
-                for choice in choices:
-                    roster_combo.addItem(str(choice.get("label")), int(choice.get("hash")) & 0xFFFFFFFF)
-                if current is not None:
-                    self._set_combo_to_hash(roster_combo, int(current))
-                roster_combo.blockSignals(False)
-
-            if hasattr(self, "general_party_status"):
-                if not self.save:
-                    self.general_party_status.setText("Open a save to edit party slots or character selection.")
-                else:
-                    recs = self._party_slot_records_sw_order()
-                    mapping = ", ".join([f"Slot {i + 1}=unit {int(rec.unit_id)}" for i, rec in enumerate(recs[:4])])
-                    self.general_party_status.setText(
-                        f"Ready. Found {len(recs[:4])}/4 party slot records using 2201 / FF990800. Changes auto-apply in memory. {mapping}"
-                    )
-        finally:
-            self._general_party_loading = False
-
-    def _general_synced_value_specs(self) -> List[Dict[str, Any]]:
-        return [
-            {"field_id": 1104, "label": "Rupies", "edit": "general_rupies_edit", "cap": 99_999_999},
-            {"field_id": 1112, "label": "Mastery Points", "edit": "general_mastery_points_edit", "cap": 9_999_999},
-        ]
-
-    def _general_synced_value_record(self, field_id: int) -> Optional[UnitRecord]:
-        if not self.save:
-            return None
-        return self.save.find_first("int", int(field_id), 0)
-
-    def _set_general_value_text(self, edit_name: str, value: Any) -> None:
-        edit = getattr(self, edit_name, None)
-        if edit is None:
-            return
-        edit.blockSignals(True)
-        try:
-            edit.setText("" if value is None else str(value))
-        finally:
-            edit.blockSignals(False)
-
-    def refresh_general_synced_values(self) -> None:
-        self._general_values_loading = True
-        try:
-            found = 0
-            parts = []
-            for spec in self._general_synced_value_specs():
-                rec = self._general_synced_value_record(int(spec["field_id"]))
-                if rec is None:
-                    self._set_general_value_text(str(spec["edit"]), "")
-                    parts.append(f"{spec['label']}: missing field {spec['field_id']}")
-                    continue
-                value = self._record_first_value(rec, 0)
-                self._set_general_value_text(str(spec["edit"]), value)
-                found += 1
-                parts.append(f"{spec['label']}={self.format_value(value)}")
-            label = getattr(self, "general_synced_values_status", None)
-            if label is not None:
-                if not self.save:
-                    label.setText("Open a save to edit Rupies and Mastery Points.")
-                else:
-                    label.setText(f"Synced UserDataManager values found {found}/2 · " + " · ".join(parts))
-        finally:
-            self._general_values_loading = False
-
-    def _schedule_general_synced_value_apply(self, field_id: int, edit_name: str, label: str, cap: int) -> None:
-        if getattr(self, "_general_values_loading", False):
-            return
-        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
-            return
-        if not self.save:
-            return
-        timers = getattr(self, "_general_value_timers", None)
-        if not isinstance(timers, dict):
-            self._general_value_timers = {}
-            timers = self._general_value_timers
-        timer = timers.get(int(field_id))
-        if timer is None:
-            timer = QTimer(self)
-            timer.setSingleShot(True)
-            timers[int(field_id)] = timer
-        try:
-            timer.timeout.disconnect()
-        except Exception:
-            pass
-        timer.timeout.connect(lambda fid=int(field_id), en=str(edit_name), lab=str(label), c=int(cap): self.apply_general_synced_value(fid, en, lab, c, auto=True))
-        timer.start(140)
-
-    def apply_general_synced_value(self, field_id: int, edit_name: str, label: str, cap: int, *, auto: bool = False) -> bool:
-        if getattr(self, "_general_values_loading", False):
-            return False
-        if not self.save:
-            if not auto:
-                QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return False
-        edit = getattr(self, edit_name, None)
-        if edit is None:
-            return False
-        raw = str(edit.text() or "").strip().replace(",", "")
-        if not raw:
-            return False
-        try:
-            value = int(raw, 0)
-        except Exception:
-            if not auto:
-                QMessageBox.warning(self, "Invalid value", f"{label} must be a decimal number or 0xHEX value.")
-            return False
-        value = max(0, min(int(cap), int(value)))
-        if str(value) != raw:
-            self._set_general_value_text(edit_name, value)
-        rec = self._general_synced_value_record(int(field_id))
-        if rec is None:
-            status = getattr(self, "general_synced_values_status", None)
-            msg = f"{label} field {field_id} was not found in this save."
-            if status is not None:
-                status.setText(msg)
-            if not auto:
-                QMessageBox.warning(self, "Field not found", msg)
-            return False
-        current = self._record_first_value(rec, 0)
-        if int(current or 0) == int(value):
-            return False
-        ok = self._set_record_first_value(rec, int(value), f"{label} UserDataManager {field_id}")
-        if ok:
-            self._mark_stale_pages(["General", "Items / Materials", "Cheats", "Save Health"])
-            status = getattr(self, "general_synced_values_status", None)
-            msg = f"Auto-applied {label} = {self.format_value(value)} in memory. Save when ready."
-            if status is not None:
-                status.setText(msg)
-            self.statusBar().showMessage(msg, 4500)
-            try:
-                if hasattr(self, "item_model"):
-                    # The Items page shows the same wallet rows; keep it marked
-                    # stale and refresh if already populated/opened.
-                    self.refresh_item_rows()
-            except Exception:
-                pass
-        return bool(ok)
-
-    def max_general_synced_values(self) -> None:
-        changed = 0
-        for spec in self._general_synced_value_specs():
-            self._set_general_value_text(str(spec["edit"]), int(spec["cap"]))
-            if self.apply_general_synced_value(int(spec["field_id"]), str(spec["edit"]), str(spec["label"]), int(spec["cap"]), auto=False):
-                changed += 1
-        self.refresh_general_synced_values()
-        self.statusBar().showMessage(f"Max synced General values applied: {changed} field(s) changed.", 4500)
-
-    def _schedule_general_party_auto_apply(self) -> None:
-        if getattr(self, "_general_party_loading", False):
-            return
-        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
-            return
-        if not self.save:
-            return
-        timer = getattr(self, "_general_party_auto_apply_timer", None)
-        if timer is None:
-            timer = QTimer(self)
-            timer.setSingleShot(True)
-            timer.timeout.connect(lambda: self.apply_general_party_slots(auto=True))
-            self._general_party_auto_apply_timer = timer
-        timer.start(180)
-
-    def apply_general_party_slots(self, auto: bool = False) -> None:
-        if not self.save:
-            if not auto:
-                QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        changed = 0
-        missing = 0
-        for idx, combo in enumerate(list(getattr(self, "general_party_combos", []) or [])):
-            data = combo.currentData()
-            if data is None:
-                continue
-            rec = self._party_slot_record(idx)
-            if rec is None:
-                missing += 1
-                continue
-            if self._set_record_first_value(rec, int(data) & 0xFFFFFFFF, f"party slot {idx + 1} character 2201"):
-                changed += 1
-        changed += self._set_party_leader_flags()
-        self._mark_stale_pages(["General", "Characters", "Save Health"])
-        if not auto:
-            self.refresh_general_character_controls()
-        msg = f"Party slots updated: {changed} field(s) changed"
-        if missing:
-            msg += f", {missing} missing"
-        suffix = ". Auto-applied in memory. Save when ready." if auto else ". Save As to test in game."
-        if hasattr(self, "general_party_status"):
-            self.general_party_status.setText(msg + suffix)
-        self.statusBar().showMessage(msg + suffix, 5000)
-
-    def apply_general_party_leader_only(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        combos = list(getattr(self, "general_party_combos", []) or [])
-        if not combos or combos[0].currentData() is None:
-            self.statusBar().showMessage("Pick a Slot 1 / Leader character first.", 3000)
-            return
-        rec = self._party_slot_record(0)
-        if rec is None:
-            QMessageBox.warning(self, "Missing party slot", "Could not find the Slot 1 / Leader 2201 record.")
-            return
-        changed = 0
-        if self._set_record_first_value(rec, int(combos[0].currentData()) & 0xFFFFFFFF, "party slot 1 leader character 2201"):
-            changed += 1
-        changed += self._set_party_leader_flags()
-        self._mark_stale_pages(["General", "Characters", "Save Health"])
-        self.refresh_general_character_controls()
-        msg = f"Leader slot updated: {changed} field(s) changed. Save As to test in game."
-        if hasattr(self, "general_party_status"):
-            self.general_party_status.setText(msg)
-        self.statusBar().showMessage(msg, 6000)
-
-    def _character_meta_by_hash(self, character_hash: int) -> Optional[Dict[str, Any]]:
-        try:
-            target = int(character_hash) & 0xFFFFFFFF
-        except Exception:
-            return None
-        try:
-            if not getattr(self, "character_rows_meta", None):
-                self.refresh_character_rows()
-        except Exception:
-            pass
-        for meta in getattr(self, "character_rows_meta", []) or []:
-            try:
-                rec = meta.get("hash_rec")
-                value = self._record_first_value(rec, 0) & 0xFFFFFFFF
-                if value == target:
-                    return meta
-            except Exception:
-                continue
-        if self.save:
-            try:
-                grouped = self.save.group_by_unit(self.CHARACTER_FIELD_IDS)
-                for unit_id, fields in grouped.items():
-                    try:
-                        if int(self._record_first_value(fields.get(1301), 0)) & 0xFFFFFFFF == target:
-                            return {
-                                "unit_id": int(unit_id),
-                                "slot": int(unit_id) - 10000,
-                                "hash_rec": fields.get(1301),
-                                "unlock_rec": fields.get(1302),
-                                "fields": fields,
-                            }
-                    except Exception:
-                        continue
-            except Exception:
-                pass
-        return None
-
-    def _apply_character_selection_flags(self, meta: Dict[str, Any]) -> int:
-        fields = dict(meta.get("fields") or {})
-        changed = 0
-        # 1305 is the strongest observed "in selection/owned" flag. The extra
-        # small flags keep rows from looking empty/inactive after being enabled.
-        for field_id, value in [
-            (1305, 1),
-            (1316, 1),
-            (1317, 1),
-            (1318, 1),
-            (1322, 1),
-        ]:
-            rec = fields.get(field_id)
-            if rec is not None:
-                old = self._record_first_value(rec, 0)
-                new_value = max(int(old or 0), int(value))
-                if self._set_record_first_value(rec, new_value, f"character selection field {field_id}"):
-                    changed += 1
-        for field_id, value in [
-            (1308, 1),   # level
-            (1309, 150), # starter MSP-like value if blank
-            (1310, 10),  # starter progress-like value if blank
-        ]:
-            rec = fields.get(field_id)
-            if rec is not None:
-                old = int(self._record_first_value(rec, 0) or 0)
-                if old <= 0 and self._set_record_first_value(rec, int(value), f"character starter field {field_id}"):
-                    changed += 1
-        return changed
-
-    def add_general_character_to_selection(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        combo = getattr(self, "general_roster_character_combo", None)
-        if combo is None or combo.currentData() is None:
-            QMessageBox.information(self, "No character selected", "Pick a character first.")
-            return
-        char_hash = int(combo.currentData()) & 0xFFFFFFFF
-        meta = self._character_meta_by_hash(char_hash)
-        if not meta:
-            QMessageBox.warning(self, "Character row not found", "This save does not have a matching 1301 / FF150500 character row for that character.")
-            return
-        changed = self._apply_character_selection_flags(meta)
-        self._mark_stale_pages(["General", "Characters", "Save Health"])
-        try:
-            self.refresh_character_rows()
-        except Exception:
-            pass
-        self.refresh_general_character_controls()
-        name = combo.currentText()
-        msg = f"Character enabled: {name}. {changed} field(s) changed."
-        if hasattr(self, "general_party_status"):
-            self.general_party_status.setText(msg + " Save As to test in game.")
-        self.statusBar().showMessage(msg + " Save As to test in game.", 6000)
-
-
-    def _editor_hub_page(self) -> QWidget:
-        """Focused General page for party and character selection."""
-        page = QWidget()
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(28, 24, 28, 24)
-        page_layout.setSpacing(14)
-
-        header = QLabel("General")
-        header.setObjectName("pageHeader")
-        page_layout.addWidget(header)
-
-        help_text = QLabel("Change your active party slots or enable characters in your selectable roster.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        page_layout.addWidget(help_text)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        content = QWidget()
-        layout = QVBoxLayout(content)
-        layout.setContentsMargins(0, 0, 10, 0)
-        layout.setSpacing(14)
-        scroll.setWidget(content)
-        page_layout.addWidget(scroll, 1)
-
-        party_box = make_card("Party Slots")
-        party_layout = QVBoxLayout(party_box)
-        party_layout.setSpacing(12)
-
-        party_help = QLabel("Pick the four characters shown in your party. Slot 1 is the on-screen leader. Combo changes auto-apply in memory; save when ready.")
-        party_help.setWordWrap(True)
-        party_help.setObjectName("subtleText")
-        party_layout.addWidget(party_help)
-
-        party_grid = QGridLayout()
-        party_grid.setHorizontalSpacing(14)
-        party_grid.setVerticalSpacing(10)
-        self.general_party_combos = []
-        for idx in range(4):
-            combo = QComboBox()
-            combo.setMinimumWidth(360)
-            combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            combo.currentIndexChanged.connect(lambda *_: self._schedule_general_party_auto_apply())
-            self.general_party_combos.append(combo)
-
-            label = QLabel(f"Slot {idx + 1}" + (" / Leader" if idx == 0 else ""))
-            label.setMinimumWidth(110)
-            party_grid.addWidget(label, idx, 0)
-            party_grid.addWidget(combo, idx, 1)
-        party_layout.addLayout(party_grid)
-
-        party_actions = QHBoxLayout()
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self.refresh_general_character_controls)
-        apply_leader_btn = QPushButton("Set Leader Now")
-        apply_leader_btn.clicked.connect(self.apply_general_party_leader_only)
-        apply_party_btn = QPushButton("Resync Party Now")
-        apply_party_btn.setProperty("class", "primaryButton")
-        apply_party_btn.clicked.connect(self.apply_general_party_slots)
-        open_chars_btn = QPushButton("Open Characters")
-        open_chars_btn.clicked.connect(lambda: self._show_page("Characters"))
-        party_actions.addWidget(refresh_btn)
-        party_actions.addWidget(apply_leader_btn)
-        party_actions.addWidget(apply_party_btn)
-        party_actions.addWidget(open_chars_btn)
-        party_actions.addStretch(1)
-        party_layout.addLayout(party_actions)
-        layout.addWidget(party_box)
-
-        roster_box = make_card("Character Selection")
-        roster_layout = QVBoxLayout(roster_box)
-        roster_layout.setSpacing(12)
-
-        roster_help = QLabel("Enable a character so they appear in your selectable roster. Save As first, then test in game.")
-        roster_help.setWordWrap(True)
-        roster_help.setObjectName("subtleText")
-        roster_layout.addWidget(roster_help)
-
-        roster_row = QHBoxLayout()
-        roster_row.addWidget(QLabel("Character"))
-        self.general_roster_character_combo = QComboBox()
-        self.general_roster_character_combo.setMinimumWidth(420)
-        self.general_roster_character_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        roster_row.addWidget(self.general_roster_character_combo, 1)
-        roster_layout.addLayout(roster_row)
-
-        roster_actions = QHBoxLayout()
-        enable_btn = QPushButton("Add / Enable Character")
-        enable_btn.setProperty("class", "primaryButton")
-        enable_btn.clicked.connect(self.add_general_character_to_selection)
-        roster_actions.addWidget(enable_btn)
-        roster_actions.addStretch(1)
-        roster_layout.addLayout(roster_actions)
-        layout.addWidget(roster_box)
-
-        values_box = make_card("Synced Values")
-        values_layout = QVBoxLayout(values_box)
-        values_layout.setSpacing(10)
-        values_help = QLabel(
-            "These edit the direct UserDataManager values the game reads for the top bar. "
-            "They stay synced with the Wallet / Profile rows on Items / Materials."
-        )
-        values_help.setWordWrap(True)
-        values_help.setObjectName("subtleText")
-        values_layout.addWidget(values_help)
-
-        values_grid = QGridLayout()
-        values_grid.setHorizontalSpacing(12)
-        values_grid.setVerticalSpacing(8)
-        self.general_rupies_edit = QLineEdit()
-        self.general_rupies_edit.setPlaceholderText("Rupies / 1104")
-        self.general_mastery_points_edit = QLineEdit()
-        self.general_mastery_points_edit.setPlaceholderText("Mastery Points / 1112")
-        for edit in (self.general_rupies_edit, self.general_mastery_points_edit):
-            edit.setMinimumHeight(32)
-            edit.setFont(QFont("Segoe UI", 10))
-        self.general_rupies_edit.textChanged.connect(
-            lambda *_: self._schedule_general_synced_value_apply(1104, "general_rupies_edit", "Rupies", 99_999_999)
-        )
-        self.general_mastery_points_edit.textChanged.connect(
-            lambda *_: self._schedule_general_synced_value_apply(1112, "general_mastery_points_edit", "Mastery Points", 9_999_999)
-        )
-        values_grid.addWidget(QLabel("Rupies"), 0, 0)
-        values_grid.addWidget(self.general_rupies_edit, 0, 1)
-        values_grid.addWidget(QLabel("Mastery Points"), 1, 0)
-        values_grid.addWidget(self.general_mastery_points_edit, 1, 1)
-        values_layout.addLayout(values_grid)
-
-        values_actions = QHBoxLayout()
-        refresh_values_btn = QPushButton("Refresh Values")
-        refresh_values_btn.clicked.connect(self.refresh_general_synced_values)
-        max_values_btn = QPushButton("Max Rupies + Mastery Points")
-        max_values_btn.clicked.connect(self.max_general_synced_values)
-        open_items_btn = QPushButton("Open Items")
-        open_items_btn.clicked.connect(lambda: self._show_page("Items / Materials"))
-        values_actions.addWidget(refresh_values_btn)
-        values_actions.addWidget(max_values_btn)
-        values_actions.addWidget(open_items_btn)
-        values_actions.addStretch(1)
-        values_layout.addLayout(values_actions)
-
-        self.general_synced_values_status = QLabel("Open a save to edit Rupies and Mastery Points.")
-        self.general_synced_values_status.setObjectName("subtleText")
-        self.general_synced_values_status.setWordWrap(True)
-        values_layout.addWidget(self.general_synced_values_status)
-        layout.addWidget(values_box)
-
-        self.general_party_status = QLabel("Open a save to edit party slots or character selection.")
-        self.general_party_status.setObjectName("subtleText")
-        self.general_party_status.setWordWrap(True)
-        layout.addWidget(self.general_party_status)
-
-        layout.addStretch(1)
-        return page
-
-
-    def _cheat_preset_hub_page(self) -> QWidget:
-        """Button-only cheat dashboard.
-
-        Preset/add-pack tables were removed because the mapped actions already
-        exist as buttons. The hidden preset machinery is still available to
-        mapped actions, but the user workflow is now grouped buttons only.
-        """
-        page = QWidget()
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(28, 24, 28, 24)
-        page_layout.setSpacing(10)
-
-        header = QLabel("Cheats")
-        header.setObjectName("pageHeader")
-        page_layout.addWidget(header)
-
-        summary = QLabel(
-            "Button-only cheat dashboard. Actions patch known save fields or existing empty slots; "
-            "use Save As for the first edited copy. Preset/add-pack tables were removed."
-        )
-        summary.setWordWrap(True)
-        summary.setObjectName("subtleText")
-        page_layout.addWidget(summary)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        content = QWidget()
-        layout = QVBoxLayout(content)
-        layout.setContentsMargins(0, 0, 10, 0)
-        layout.setSpacing(12)
-        scroll.setWidget(content)
-        page_layout.addWidget(scroll, 1)
-
-        def mapped(key: str):
-            return lambda _=False, k=key: self.apply_save_wizard_cheat(get_builtin_save_wizard_cheat(k))
-
-        def add_box(title: str, help_text: str, actions: list[tuple[str, Any]], columns: int = 4, primary_first: bool = False) -> None:
-            box = make_card(title)
-            box_layout = QVBoxLayout(box)
-            box_layout.setSpacing(8)
-            label = QLabel(help_text)
-            label.setWordWrap(True)
-            label.setObjectName("subtleText")
-            box_layout.addWidget(label)
-            self._add_action_grid(box_layout, actions, columns=columns, primary_first=primary_first)
-            layout.addWidget(box)
-
-        add_box(
-            "Quick max existing rows",
-            "Fast cheats for rows already present in the loaded save. These do not add new FlatBuffer rows.",
-            [
-                ("Max Items / Currency", self.cheat_max_known_item_quantities),
-                ("Max Sigils + Traits + Lock", self.cheat_max_sigil_levels_and_locks),
-                ("Max Weapons 999,999,999", self.cheat_max_weapon_xp_and_flags),
-                ("Max Characters 999,999,999", self.cheat_max_character_levels),
-            ],
-            columns=4,
-            primary_first=True,
-        )
-
-        add_box(
-            "Exact value tools",
-            "Use these when you want a typed value instead of a max value. These now skip extra confirmation popups.",
-            [
-                ("Set Items To...", self.cheat_set_known_item_quantities_custom),
-                ("Set Sigil + Trait Levels To...", self.cheat_set_known_sigil_levels_custom),
-                ("Set Weapon XP To...", self.cheat_set_known_weapon_xp_custom),
-                ("Set Character Values To...", self.cheat_set_character_levels_custom),
-            ],
-            columns=4,
-        )
-
-        add_box(
-            "Add / repair existing slots",
-            "Adds into existing empty verified slots only, or repairs older unsafe add-all edits.",
-            [
-                ("Safe Add Missing Materials", mapped("sw-add-all-known-materials")),
-                ("Add All Known V/V+ Sigils", mapped("sw-add-all-known-v-sigils")),
-                ("Add Basic V Sigils", mapped("sw-add-basic-v-sigils")),
-                ("Add Meta Sigil Core", mapped("sw-add-meta-sigils")),
-                ("Add Survival Sigils", mapped("sw-add-survival-sigils")),
-                ("Add Captain Weapons", mapped("sw-add-captain-weapons")),
-                ("Repair Unsafe Inventory", mapped("sw-repair-unsafe-material-addall")),
-            ],
-            columns=3,
-        )
-
-        add_box(
-            "Mastery / Overmastery lab",
-            "Direct Save-Wizard-style mastery actions from the cleaned FF460600/FF470600 mapping. Save As before testing.",
-            [
-                ("Normal Mastery 512", lambda _=False: self.apply_mastery_sw_normal_value_sweep(0x200)),
-                ("Normal Mastery 1016", lambda _=False: self.apply_mastery_sw_normal_value_sweep(0x3F8)),
-                ("Normal Mastery 1023", lambda _=False: self.apply_mastery_sw_normal_value_sweep(0x3FF)),
-                ("Normal All Attack Power", lambda _=False: self.apply_mastery_sw_normal_effect_sweep(0xC4925BD7, "Attack Power Up")),
-                ("Normal All Critical Rate", lambda _=False: self.apply_mastery_sw_normal_effect_sweep(0x6757C645, "Critical Rate")),
-                ("Overmastery 20%", lambda _=False: self.apply_mastery_sw_overmastery_value_sweep(0x200)),
-                ("Overmastery 80%", lambda _=False: self.apply_mastery_sw_overmastery_value_sweep(OVERMASTERY_VALUE_MAX)),
-                ("Open Mastery Editor", lambda _=False: self._show_page("Mastery")),
-            ],
-            columns=4,
-        )
-
-        add_box(
-            "Progression / unlocks",
-            "Mapped progression actions only. The editor skips catalog-only rows and writes rows that exist in the loaded save vectors.",
-            [
-                ("Complete All Mapped", mapped("sw-complete-mapped-progression")),
-                ("Complete Main Story", mapped("sw-complete-main-story")),
-                ("Complete Side / Challenge", mapped("sw-complete-side-quests")),
-                ("Complete Fate Episodes", mapped("sw-complete-fate-episodes")),
-                ("Complete Multiplayer", mapped("sw-complete-multiplayer-quests")),
-                ("Complete Town / Lobby", mapped("sw-complete-town-lobby-misc")),
-                ("Unlock Title / Archive", mapped("sw-unlock-title-archive-candidates")),
-            ],
-            columns=3,
-        )
-
-        add_box(
-            "Open focused editors",
-            "Jump straight to the page that has the detailed table/editor for that save area.",
-            [
-                ("Items / Materials", lambda _=False: self._show_page("Items / Materials")),
-                ("Sigils", lambda _=False: self._show_page("Sigils")),
-                ("Weapons", lambda _=False: self._show_page("Weapons")),
-                ("Characters", lambda _=False: self._show_page("Characters")),
-                ("Progression", lambda _=False: self._show_page("Progression")),
-                ("Mastery", lambda _=False: self._show_page("Mastery")),
-                ("Save Health", lambda _=False: self._show_page("Save Health")),
-                ("Save As", self.save_as),
-            ],
-            columns=4,
-        )
-
-        notes = make_card("Notes")
-        notes_layout = QVBoxLayout(notes)
-        notes_label = QLabel(
-            "Sigil cheats now accept the current Sigil / Gem database category, update linked 120M trait-level rows where present, "
-            "and preserve the Save Wizard assignment pattern: assigned rows use 2706 character hash / 2707=2; unassigned locked rows use 2707=3. "
-            "Add actions reuse existing empty slots only. Max buttons update the status bar instead of opening completion dialogs."
-        )
-        notes_label.setWordWrap(True)
-        notes_label.setObjectName("subtleText")
-        notes_layout.addWidget(notes_label)
-        layout.addWidget(notes)
-
-        layout.addStretch(1)
-        return page
-
-
-    def _cheats_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(12)
-        header = QLabel("Cheats")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Curated cheat actions for common edits. Cheat packs still reuse empty existing slots; they do not resize the save yet. Use Save As first and verify in-game.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-
-        quick = make_card("One-click max cheats for the currently loaded save")
-        quick_layout = QVBoxLayout(quick)
-        quick_layout.addWidget(QLabel("These patch existing known rows already present in the save. They do not add new rows."))
-        quick_row = QHBoxLayout()
-        for text, slot in [
-            ("Max Known Item Quantities", self.cheat_max_known_item_quantities),
-            ("Max Sigil Levels + Lock", self.cheat_max_sigil_levels_and_locks),
-            ("Max Weapon XP + Flags", self.cheat_max_weapon_xp_and_flags),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            quick_row.addWidget(btn)
-        quick_row.addStretch(1)
-        quick_layout.addLayout(quick_row)
-        layout.addWidget(quick)
-
-        custom = make_card("Specific value cheats")
-        custom_layout = QVBoxLayout(custom)
-        custom_layout.addWidget(QLabel("Use these when you want an exact value instead of a max value. They only patch known existing rows already present in the save."))
-        custom_row = QHBoxLayout()
-        for text, slot in [
-            ("Set Known Items To...", self.cheat_set_known_item_quantities_custom),
-            ("Set Sigil Levels To...", self.cheat_set_known_sigil_levels_custom),
-            ("Set Weapon XP To...", self.cheat_set_known_weapon_xp_custom),
-            ("Set Character Levels To...", self.cheat_set_character_levels_custom),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            custom_row.addWidget(btn)
-        custom_row.addStretch(1)
-        custom_layout.addLayout(custom_row)
-        layout.addWidget(custom)
-
-        packs = make_card("Cheat packs that add into empty slots")
-        packs_layout = QVBoxLayout(packs)
-        for key in [
-            "cheat-max-currency-mastery",
-            "cheat-upgrade-material-cache",
-            "cheat-meta-sigil-core",
-            "cheat-survival-sigil-stack",
-            "cheat-captain-weapon-pack",
-        ]:
-            try:
-                pack = get_preset_pack(key)
-            except Exception:
-                continue
-            row = QHBoxLayout()
-            text = QLabel(f"<b>{pack.name}</b><br><span style='color:#93a4b8'>{pack.description}<br>Rows: {pack.total_rows} · Items {len(pack.items)} · Sigils {len(pack.sigils)} · Weapons {len(pack.weapons)}</span>")
-            text.setWordWrap(True)
-            row.addWidget(text, 1)
-            apply_btn = QPushButton("Apply")
-            apply_btn.clicked.connect(lambda _=False, p=pack: self.apply_preset_pack(p))
-            row.addWidget(apply_btn)
-            copy_btn = QPushButton("Copy Text")
-            copy_btn.clicked.connect(lambda _=False, p=pack: QApplication.clipboard().setText(p.to_batch_text()))
-            row.addWidget(copy_btn)
-            packs_layout.addLayout(row)
-        layout.addWidget(packs)
-
-        notes = make_card("Safety notes")
-        notes_layout = QVBoxLayout(notes)
-        notes_label = QLabel("If a cheat pack needs more empty slots than your save exposes, it will stop before applying. Curated cheat packs require known database matches, so they should not create Unknown hash rows. Manual add/batch tools still allow raw hashes for research.")
-        notes_label.setWordWrap(True)
-        notes_layout.addWidget(notes_label)
-        layout.addWidget(notes)
-        layout.addStretch(1)
-        return page
-
-
-    def _save_wizard_cheats_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(12)
-        header = QLabel("Save Wizard Cheat Runner")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "This tab is now action-focused. Preset Packs are reusable add-loadouts; "
-            "Save Wizard is for cheat-style save edits and sheet-code research. "
-            "Mapped cheats run safe editor-native logic. Imported sheet rows stay reference-only until we map them."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-
-        quick = make_card("Mapped one-click Save Wizard style cheats")
-        quick_layout = QVBoxLayout(quick)
-
-        def add_section(title: str, actions: list[tuple[str, str]]):
-            label = QLabel(f"<b>{title}</b>")
-            label.setObjectName("subtleText")
-            quick_layout.addWidget(label)
-            row = QHBoxLayout()
-            for text, key in actions:
-                btn = QPushButton(text)
-                btn.clicked.connect(lambda _=False, k=key: self.apply_save_wizard_cheat(get_builtin_save_wizard_cheat(k)))
-                row.addWidget(btn)
-            row.addStretch(1)
-            quick_layout.addLayout(row)
-
-        add_section("Inventory / Currency", [
-            ("Max Existing Items", "sw-max-current-items"),
-            ("Safe Add Missing Items", "sw-add-all-known-materials"),
-            ("Max Rupies + Mastery", "sw-max-currency-mastery"),
-            ("Repair Unsafe Inventory", "sw-repair-unsafe-material-addall"),
-        ])
-        add_section("Sigils", [
-            ("Max Existing Sigils + Traits + Lock", "sw-max-current-sigils"),
-            ("Add All Known V/V+", "sw-add-all-known-v-sigils"),
-            ("Add Basic V Set", "sw-add-basic-v-sigils"),
-            ("Add Meta Core", "sw-add-meta-sigils"),
-        ])
-        add_section("Characters / Weapons", [
-            ("Max Character Levels", "sw-max-current-characters"),
-            ("Max Existing Weapons", "sw-max-current-weapons"),
-            ("Add Captain Weapons", "sw-add-captain-weapons"),
-        ])
-        add_section("Progression", [
-            ("Complete All Mapped", "sw-complete-mapped-progression"),
-            ("Complete Main Story", "sw-complete-main-story"),
-            ("Complete Side Quests", "sw-complete-side-quests"),
-            ("Complete Fate Episodes", "sw-complete-fate-episodes"),
-            ("Complete Multiplayer", "sw-complete-multiplayer-quests"),
-            ("Complete Town/Lobby", "sw-complete-town-lobby-misc"),
-            ("Unlock Title / Archive Candidates", "sw-unlock-title-archive-candidates"),
-        ])
-        custom_label = QLabel("<b>Specific Values</b>")
-        custom_label.setObjectName("subtleText")
-        quick_layout.addWidget(custom_label)
-        custom_row = QHBoxLayout()
-        for text, slot in [
-            ("Set Known Items To...", self.cheat_set_known_item_quantities_custom),
-            ("Set Sigil + Trait Levels To...", self.cheat_set_known_sigil_levels_custom),
-            ("Set Weapons To...", self.cheat_set_known_weapon_xp_custom),
-            ("Set Characters To...", self.cheat_set_character_levels_custom),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            custom_row.addWidget(btn)
-        custom_row.addStretch(1)
-        quick_layout.addLayout(custom_row)
-        layout.addWidget(quick)
-
-        sheet_box = make_card("Imported Save Wizard sheet rows / research")
-        sheet_layout = QVBoxLayout(sheet_box)
-        sheet_help = QLabel(
-            "Load the community sheet here to compare raw Save Wizard entries against our editor actions. "
-            "These rows are not applied blindly; they are a to-do list for mapping more safe cheats."
-        )
-        sheet_help.setWordWrap(True)
-        sheet_help.setObjectName("subtleText")
-        sheet_layout.addWidget(sheet_help)
-        top = QHBoxLayout()
-        self.save_wizard_filter_edit = QLineEdit()
-        self.save_wizard_filter_edit.setPlaceholderText("Filter imported/reference sheet rows...")
-        self.save_wizard_filter_edit.textChanged.connect(lambda _: self.refresh_save_wizard_rows())
-        top.addWidget(self.save_wizard_filter_edit, 1)
-        load_btn = QPushButton("Load Sheet Tab")
-        load_btn.clicked.connect(self.load_save_wizard_sheet_tab)
-        top.addWidget(load_btn)
-        export_btn = QPushButton("Export Mapped + Imported List")
-        export_btn.clicked.connect(self.export_save_wizard_cheats_csv)
-        top.addWidget(export_btn)
-        sheet_layout.addLayout(top)
-
-        self.save_wizard_table = QTableView()
-        self.save_wizard_table.setModel(self.save_wizard_model)
-        self._table_clean(self.save_wizard_table, hidden_columns=(5,))
-        self.save_wizard_table.selectionModel().selectionChanged.connect(lambda *_: self.update_save_wizard_detail())
-        self.save_wizard_table.doubleClicked.connect(lambda _: self.apply_selected_save_wizard_cheat())
-        sheet_layout.addWidget(self.save_wizard_table, 1)
-
-        detail = make_card("Selected Sheet Reference")
-        detail_layout = QVBoxLayout(detail)
-        self.save_wizard_detail_label = QLabel("Load or select an imported sheet row to preview it. Mapped cheat buttons are above.")
-        self.save_wizard_detail_label.setWordWrap(True)
-        self.save_wizard_detail_label.setObjectName("subtleText")
-        detail_layout.addWidget(self.save_wizard_detail_label)
-        sheet_layout.addWidget(detail)
-        layout.addWidget(sheet_box, 1)
-
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Open Presets", lambda: self._show_page("Cheats")),
-            ("Open Cheats", lambda: self._show_page("Cheats")),
-            ("Open Progression", lambda: self._show_page("Progression")),
-            ("Save As", self.save_as),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
-
-    def _progression_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(12)
-
-        header_row = QHBoxLayout()
-        header = QLabel("Progression / Unlocks")
-        header.setObjectName("pageHeader")
-        header_row.addWidget(header)
-        header_row.addStretch(1)
-        save_btn = QPushButton("Save As")
-        save_btn.setMinimumHeight(36)
-        save_btn.clicked.connect(self.save_as)
-        header_row.addWidget(save_btn)
-        layout.addLayout(header_row)
-
-        help_text = QLabel(
-            "Clean quest/progression editor. Pick a top tab, search the visible mapped rows, then complete mapped rows or edit the selected row. "
-            "Catalog-only rows are hidden from this page until their save vector is mapped."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-
-        # Hidden backing combo used by existing progression helpers.
-        self.progression_quest_group_combo = QComboBox(page)
-        self.progression_quest_group_combo.addItem("All Progression", "")
-        groups = [
-            ("1", "Main Quest"),
-            ("2", "Challenges / Side Quests"),
-            ("3", "Fate Episodes"),
-            ("4", "Multiplayer / Quest Counter"),
-            ("5", "Town / Lobby"),
-            ("6", "Dummy / Practice"),
-            ("7", "Short Story / Misc"),
-        ]
-        for prefix, label in groups:
-            self.progression_quest_group_combo.addItem(label, prefix)
-        self.progression_quest_group_combo.currentIndexChanged.connect(lambda *_: self.refresh_progression_editor_rows())
-        self.progression_quest_group_combo.setVisible(False)
-
-        self.progression_group_tabs = QTabBar()
-        self.progression_group_tabs.setObjectName("progressionTopTabs")
-        self.progression_group_tabs.setExpanding(False)
-        self.progression_group_tabs.setDrawBase(False)
-        # Visible mission tabs only. Town/Lobby and Dummy/Practice stay hidden
-        # from the normal workflow because they are not useful user-facing mission groups.
-        self.progression_group_tab_prefixes = ["", "1", "2", "3", "4", "7"]
-        self.progression_group_tab_base_labels = {
-            "": "All",
-            "1": "Main Quest",
-            "2": "Challenges / Side Quests",
-            "3": "Fate Episodes",
-            "4": "Multiplayer",
-            "7": "Short Story / Misc",
-        }
-        for prefix in self.progression_group_tab_prefixes:
-            self.progression_group_tabs.addTab(self.progression_group_tab_base_labels[prefix])
-            self.progression_group_tabs.setTabData(self.progression_group_tabs.count() - 1, prefix)
-        self.progression_group_tabs.currentChanged.connect(lambda idx: self.set_progression_group_filter(self.progression_group_tabs.tabData(idx) or ""))
-        layout.addWidget(self.progression_group_tabs)
-
-        main_box = make_card("Quest / Progression Rows")
-        main_layout = QVBoxLayout(main_box)
-        main_layout.setContentsMargins(14, 14, 14, 14)
-        main_layout.setSpacing(10)
-
-        title_row = QHBoxLayout()
-        self.progression_editor_title = QLabel("All Progression")
-        self.progression_editor_title.setObjectName("sectionHeader")
-        title_row.addWidget(self.progression_editor_title)
-        title_row.addStretch(1)
-        complete_visible = QPushButton("Complete Current Tab")
-        complete_visible.setMinimumHeight(36)
-        complete_visible.clicked.connect(self.complete_progression_visible_group)
-        title_row.addWidget(complete_visible)
-        complete_all = QPushButton("Complete All Mapped")
-        complete_all.setMinimumHeight(36)
-        complete_all.clicked.connect(lambda _=False: self.cheat_complete_progression_group("", "Complete All Mapped Progression"))
-        title_row.addWidget(complete_all)
-        main_layout.addLayout(title_row)
-
-        self.progression_editor_status = QLabel("Open a save to edit progression.")
-        self.progression_editor_status.setObjectName("helpText")
-        self.progression_editor_status.setWordWrap(True)
-        main_layout.addWidget(self.progression_editor_status)
-
-        tools_row = QHBoxLayout()
-        self.progression_editor_search_edit = QLineEdit()
-        self.progression_editor_search_edit.setPlaceholderText("Search quest/stage name, ID, status, rank, or mapped state...")
-        self.progression_editor_search_edit.textChanged.connect(lambda *_: self.schedule_progression_editor_refresh())
-        tools_row.addWidget(self.progression_editor_search_edit, 3)
-        self.progression_done_filter_combo = QComboBox()
-        self.progression_done_filter_combo.addItems(["All mapped rows", "Completed only", "Incomplete only"])
-        self.progression_done_filter_combo.currentTextChanged.connect(lambda *_: self.schedule_progression_editor_refresh())
-        tools_row.addWidget(self.progression_done_filter_combo, 0)
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.setMinimumHeight(36)
-        refresh_btn.clicked.connect(self.refresh_progression_rows)
-        tools_row.addWidget(refresh_btn)
-        main_layout.addLayout(tools_row)
-
-        self.progression_edit_table = QTableView()
-        self.progression_edit_table.setModel(self.progression_edit_model)
-        self._table_clean(self.progression_edit_table)
-        self.progression_edit_table.verticalHeader().setDefaultSectionSize(32)
-        self.progression_edit_table.verticalHeader().setMinimumSectionSize(30)
-        self.progression_edit_table.setMinimumHeight(470)
-        self.progression_edit_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.progression_edit_table.selectionModel().selectionChanged.connect(lambda *_: self.update_progression_edit_controls())
-        main_layout.addWidget(self.progression_edit_table, 1)
-
-        selected_box = make_card("Selected Row")
-        selected_layout = QGridLayout(selected_box)
-        selected_layout.setContentsMargins(14, 18, 14, 14)
-        selected_layout.setHorizontalSpacing(10)
-        selected_layout.setVerticalSpacing(8)
-        self.progression_selected_summary = QLabel("Select a row to edit common progression values.")
-        self.progression_selected_summary.setObjectName("helpText")
-        self.progression_selected_summary.setWordWrap(True)
-        selected_layout.addWidget(self.progression_selected_summary, 0, 0, 1, 8)
-        self.progression_status_spin = QSpinBox()
-        self.progression_status_spin.setObjectName("progressionStatusSpin")
-        self.progression_status_spin.setRange(0, 999)
-        self.progression_status_spin.setValue(1)
-        self.progression_status_spin.setMinimumHeight(36)
-        self.progression_status_spin.setMinimumWidth(120)
-        self.progression_rank_spin = QSpinBox()
-        self.progression_rank_spin.setObjectName("progressionRankSpin")
-        self.progression_rank_spin.setRange(0, 9)
-        self.progression_rank_spin.setValue(7)
-        self.progression_rank_spin.setMinimumHeight(36)
-        self.progression_rank_spin.setMinimumWidth(120)
-        self.progression_completed_check = QCheckBox("Completed / Viewed")
-        self.progression_completed_check.setChecked(True)
-        self.progression_status_spin.valueChanged.connect(lambda *_: self.apply_progression_realtime_from_controls())
-        self.progression_rank_spin.valueChanged.connect(lambda *_: self.apply_progression_realtime_from_controls())
-        self.progression_completed_check.stateChanged.connect(lambda *_: self.apply_progression_realtime_from_controls())
-        apply_selected = QPushButton("Apply Now")
-        apply_selected.setMinimumHeight(36)
-        apply_selected.clicked.connect(self.apply_progression_selected_edit)
-        complete_selected = QPushButton("Complete Selected")
-        complete_selected.setMinimumHeight(36)
-        complete_selected.clicked.connect(self.complete_progression_selected_row)
-        selected_layout.addWidget(QLabel("Status"), 1, 0)
-        selected_layout.addWidget(self.progression_status_spin, 1, 1)
-        selected_layout.addWidget(QLabel("Rank"), 1, 2)
-        selected_layout.addWidget(self.progression_rank_spin, 1, 3)
-        selected_layout.addWidget(self.progression_completed_check, 1, 4)
-        selected_layout.addWidget(apply_selected, 1, 5)
-        selected_layout.addWidget(complete_selected, 1, 6)
-        main_layout.addWidget(selected_box, 0)
-
-        layout.addWidget(main_box, 1)
-
-        # Hidden compatibility widgets for old raw helper methods.
-        hidden = QWidget(page)
-        hidden.hide()
-        self.progression_detail_combo = QComboBox(hidden)
-        self.progression_detail_combo.addItem("Overview")
-        self.progression_detail_text = QPlainTextEdit(hidden)
-        self.progression_table = QTableView(hidden)
-        self.progression_table.setModel(self.progression_model)
-        self.progression_raw_group = make_card("Raw Field Rows")
-        self.progression_raw_group.hide()
-        self.progression_raw_group.setCheckable(True)
-        self.progression_raw_group.setChecked(False)
-        self.progression_row_filter_edit = QLineEdit(hidden)
-        self.progression_field_filter_combo = QComboBox(hidden)
-        self.progression_unit_filter_edit = QLineEdit(hidden)
-        self.progression_nonzero_only_check = QCheckBox(hidden)
-        self.progression_nonzero_only_check.setChecked(True)
-        self.progression_expand_values_check = QCheckBox(hidden)
-        self.progression_value_mode_combo = QComboBox(hidden)
-        self.progression_value_mode_combo.addItems(["Any values", "Has non-zero", "All zero/empty", "Known/named units", "Unknown/unnamed units"])
-        self.progression_max_rows_combo = QComboBox(hidden)
-        self.progression_max_rows_combo.addItems(["250 rows", "500 rows", "1000 rows", "2500 rows", "All rows"])
-        self.progression_max_rows_combo.setCurrentText("250 rows")
-        self.progression_filter_status = QLabel("Raw rows hidden.", hidden)
-        self.progression_rows_table = QTableView(hidden)
-        self.progression_rows_table.setModel(self.progression_rows_model)
-
-        return page
-
-
-    def _units_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("All Save Units")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        self.filter_edit = QLineEdit()
-        self.filter_edit.setPlaceholderText("Filter by kind, field ID, unit ID, unit name, or known name...  e.g. Gran, Rukalsa, Damage Cap, 2703")
-        self.filter_edit.textChanged.connect(self.unit_model.set_filter)
-        layout.addWidget(self.filter_edit)
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.unit_table = QTableView()
-        self.unit_table.setModel(self.unit_model)
-        self._table_clean(self.unit_table, hidden_columns=(0, 1))
-        self.unit_table.selectionModel().selectionChanged.connect(self.unit_selected)
-        self.unit_table.doubleClicked.connect(lambda _: self.copy_selected_values_to_editor())
-        splitter.addWidget(self.unit_table)
-
-        edit_box = make_card("Selected Unit Editor")
-        edit_layout = QVBoxLayout(edit_box)
-        self.selected_label = QLabel("Select a row to edit existing values.")
-        self.selected_label.setWordWrap(True)
-        edit_layout.addWidget(self.selected_label)
-        self.value_edit = QPlainTextEdit()
-        self.value_edit.setPlaceholderText("Comma-separated values. The count must stay the same; this editor does not insert/delete FlatBuffer entries yet.")
-        edit_layout.addWidget(self.value_edit, 1)
-        btn_row = QHBoxLayout()
-        copy_btn = QPushButton("Load Values")
-        copy_btn.clicked.connect(self.copy_selected_values_to_editor)
-        apply_btn = QPushButton("Apply Values")
-        apply_btn.clicked.connect(self.apply_selected_values)
-        btn_row.addWidget(copy_btn)
-        btn_row.addWidget(apply_btn)
-        btn_row.addStretch(1)
-        edit_layout.addLayout(btn_row)
-        splitter.addWidget(edit_box)
-        splitter.setSizes([900, 360])
-        layout.addWidget(splitter, 1)
-        return page
-
-    def _unit_map_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Named Unit Map")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("This page converts numeric Unit IDs into readable save slots by using manager ranges plus hashes found inside the save: characters, items/materials, sigils, weapons, abilities, quests, and fallback slot names.")
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-        self.unit_map_filter_edit = QLineEdit()
-        self.unit_map_filter_edit.setPlaceholderText("Filter unit labels by group, name, GBID, hash, or unit id...")
-        self.unit_map_filter_edit.textChanged.connect(lambda _: self.refresh_unit_map_rows())
-        layout.addWidget(self.unit_map_filter_edit)
-        self.unit_map_table = QTableView()
-        self.unit_map_table.setModel(self.unit_map_model)
-        self._table_clean(self.unit_map_table, hidden_columns=(4, 6))
-        self.unit_map_table.doubleClicked.connect(lambda _: self.jump_to_unit_map_unit())
-        layout.addWidget(self.unit_map_table, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Jump Raw", self.jump_to_unit_map_unit),
-            ("Copy Unit Label", self.copy_selected_unit_label),
-            ("Export Unit Map CSV", self.export_unit_map_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
-
-    def _preset_packs_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Preset Packs")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Curated add packs for common testing workflows. Presets still reuse empty existing slots only; use Save As first and verify in-game.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.preset_filter_edit = QLineEdit()
-        self.preset_filter_edit.setPlaceholderText("Filter presets by category, name, item/sigil/weapon, or description...")
-        self._connect_debounced_text_changed(self.preset_filter_edit, "preset_filter", self.refresh_preset_rows, 220)
-        layout.addWidget(self.preset_filter_edit)
-        self.preset_table = QTableView()
-        self.preset_table.setModel(self.preset_model)
-        self._table_clean(self.preset_table, hidden_columns=(7,))
-        self.preset_table.selectionModel().selectionChanged.connect(lambda *_: self.update_preset_detail())
-        self.preset_table.doubleClicked.connect(lambda _: self.apply_selected_preset_pack())
-        layout.addWidget(self.preset_table, 1)
-        detail = make_card("Selected Preset")
-        detail_layout = QVBoxLayout(detail)
-        self.preset_detail_label = QLabel("Select a preset to preview what it will add.")
-        self.preset_detail_label.setWordWrap(True)
-        self.preset_detail_label.setObjectName("subtleText")
-        detail_layout.addWidget(self.preset_detail_label)
-        layout.addWidget(detail)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Apply Preset", self.apply_selected_preset_pack),
-            ("Copy Batch Text", self.copy_selected_preset_text),
-            ("Export Presets CSV", self.export_preset_packs_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
-
-
-    def _add_equip_browser_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Add / Equip Browser")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Safe browser for database entries. Materials are only updated when the save already has an active 180x stack; this avoids the Add All inventory crash. Sigils and weapons reuse real empty slots. Reference-only hashes are clearly marked and cannot be added.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-
-        tab_row = QHBoxLayout()
-        self._add_browser_tab_buttons = []
-        for label in ["Safe Add", "Items", "Sigils", "Weapons", "Wallet", "Lookup"]:
-            btn = QPushButton(label)
-            btn.setCheckable(True)
-            btn.setMinimumHeight(34)
-            btn.clicked.connect(lambda _=False, name=label: self._set_add_browser_tab(name))
-            self._add_browser_tab_buttons.append(btn)
-            tab_row.addWidget(btn)
-        tab_row.addStretch(1)
-        layout.addLayout(tab_row)
-        self._refresh_add_browser_tab_buttons()
-
-        top = QGridLayout()
-        self.add_browser_filter = QLineEdit()
-        self.add_browser_filter.setPlaceholderText("Search current tab by name, GBID, hash, or type... e.g. Damage Cap, Centrum, Apocalypse")
-        self.add_browser_filter.textChanged.connect(lambda _: self.schedule_add_browser_refresh())
-        top.addWidget(QLabel("Search"), 0, 0)
-        top.addWidget(self.add_browser_filter, 0, 1, 1, 5)
-
-        self.add_browser_status_filter = QComboBox()
-        self.add_browser_status_filter.addItems(["All status", "Ready / Safe", "Missing / Safe Add", "Already Owned", "Has Empty Slot", "Blocked / Not Safe", "Reference Only"])
-        self.add_browser_status_filter.currentTextChanged.connect(lambda _: self.schedule_add_browser_refresh())
-        self.add_browser_subtype_filter = QComboBox()
-        self.add_browser_subtype_filter.currentTextChanged.connect(lambda _: self.schedule_add_browser_refresh())
-        self.add_browser_category = QComboBox()
-        self.add_browser_category.addItems(["Auto", "Safe For Loaded Save", "Addable Types", "Items / Materials", "Sigils", "Weapons", "Wallet / Profile", "Relics / Curios", "All Database Rows", "Characters", "Traits / Skills", "Reference / Models"])
-        self.add_browser_category.currentTextChanged.connect(lambda _: self.schedule_add_browser_refresh())
-        top.addWidget(QLabel("Status"), 1, 0)
-        top.addWidget(self.add_browser_status_filter, 1, 1)
-        top.addWidget(QLabel("Subtype"), 1, 2)
-        top.addWidget(self.add_browser_subtype_filter, 1, 3)
-        top.addWidget(QLabel("Scope"), 1, 4)
-        top.addWidget(self.add_browser_category, 1, 5)
-        layout.addLayout(top)
-        self._update_add_browser_subtype_filter()
-
-        quick = QHBoxLayout()
-        for label, query, tab, subtype in [
-            ("Damage Cap", "Damage Cap", "Sigils", "Damage / Power"),
-            ("War Elemental", "War Elemental", "Sigils", "Special / Unique"),
-            ("Missing Materials", "", "Items", "Missing Safe"),
-            ("Wrightstones", "", "Items", "Wrightstones"),
-            ("Terminus/Apocalypse", "Apocalypse", "Weapons", "Apocalypse / Terminus"),
-            ("Characters", "PL", "Lookup", "Characters"),
-            ("Clear", "", "Safe Add", "All subtypes"),
-        ]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, q=query, t=tab, st=subtype: self._set_add_browser_quick_filter(q, t, st))
-            quick.addWidget(btn)
-        quick.addStretch(1)
-        layout.addLayout(quick)
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.add_browser_table = QTableView()
-        self.add_browser_table.setModel(self.add_browser_model)
-        self._table_clean(self.add_browser_table, hidden_columns=())
-        self.add_browser_table.setColumnWidth(0, 130)
-        self.add_browser_table.setColumnWidth(1, 260)
-        self.add_browser_table.setColumnWidth(2, 160)
-        self.add_browser_table.setColumnWidth(3, 120)
-        self.add_browser_table.setColumnWidth(4, 150)
-        self.add_browser_table.setColumnWidth(5, 280)
-        self.add_browser_table.selectionModel().selectionChanged.connect(lambda *_: self.update_add_browser_detail())
-        self.add_browser_table.doubleClicked.connect(lambda _: self.add_browser_selected_default())
-        splitter.addWidget(self.add_browser_table)
-
-        detail = make_card("Selected Entry · Safe Actions")
-        detail_layout = QVBoxLayout(detail)
-        self.add_browser_detail_label = QLabel("Select a row. The action panel will explain whether it is safe to update/add for the currently loaded save.")
-        self.add_browser_detail_label.setWordWrap(True)
-        self.add_browser_detail_label.setObjectName("subtleText")
-        detail_layout.addWidget(self.add_browser_detail_label)
-
-        grid = QGridLayout()
-        self.add_browser_qty_spin = QSpinBox(); self.add_browser_qty_spin.setRange(1, 99_999_999); self.add_browser_qty_spin.setValue(99)
-        self.add_browser_level_spin = QSpinBox(); self.add_browser_level_spin.setRange(1, SIGIL_LEVEL_MAX); self.add_browser_level_spin.setValue(SIGIL_LEVEL_MAX)
-        self.add_browser_xp_spin = QSpinBox(); self.add_browser_xp_spin.setRange(0, 2_147_483_647); self.add_browser_xp_spin.setValue(0)
-        self.add_browser_locked_check = QCheckBox("Lock if unassigned (2707=3)"); self.add_browser_locked_check.setChecked(True)
-        self.add_browser_equip_combo = QComboBox(); self.add_browser_equip_combo.addItem("None / Unassigned", EMPTY_HASH)
-        grid.addWidget(QLabel("Material / Wallet Quantity"), 0, 0); grid.addWidget(self.add_browser_qty_spin, 0, 1)
-        grid.addWidget(QLabel("Sigil Level"), 1, 0); grid.addWidget(self.add_browser_level_spin, 1, 1)
-        grid.addWidget(QLabel("Weapon XP"), 2, 0); grid.addWidget(self.add_browser_xp_spin, 2, 1)
-        grid.addWidget(QLabel("Assign Sigil To"), 3, 0); grid.addWidget(self.add_browser_equip_combo, 3, 1)
-        grid.addWidget(self.add_browser_locked_check, 4, 0, 1, 2)
-        detail_layout.addLayout(grid)
-
-        action_grid = QGridLayout()
-        actions = [
-            ("Update/Add Item Safely", self.add_browser_selected_as_item),
-            ("Add as Sigil", self.add_browser_selected_as_sigil),
-            ("Add as Weapon", self.add_browser_selected_as_weapon),
-            ("Copy Hash", self.copy_add_browser_selected_hash),
-            ("Open Items", lambda: self._show_page("Items / Materials")),
-            ("Open Sigils", lambda: self._show_page("Sigils")),
-            ("Open Weapons", lambda: self._show_page("Weapons")),
-            ("Open Characters", lambda: self._show_page("Characters")),
-        ]
-        for i, (text, slot) in enumerate(actions):
-            btn = QPushButton(text); btn.clicked.connect(slot); action_grid.addWidget(btn, i // 2, i % 2)
-        detail_layout.addLayout(action_grid)
-        detail_layout.addStretch(1)
-        splitter.addWidget(detail)
-        splitter.setSizes([980, 420])
-        layout.addWidget(splitter, 1)
-        self.refresh_add_browser_rows()
-        return page
-
-    def _items_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Inventory Items / Materials")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Inventory shows owned save-backed quantities. Database / Missing Items shows verified normal materials that can be safely added or updated without touching relics, curios, wallet-only values, or unknown rows.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.item_count_label = QLabel("Open a save to inspect ItemManager inventory slots.")
-        self.item_count_label.setWordWrap(True)
-        self.item_count_label.setObjectName("subtleText")
-        layout.addWidget(self.item_count_label)
-        self.item_empty_hint_label = QLabel("")
-        self.item_empty_hint_label.setWordWrap(True)
-        self.item_empty_hint_label.setObjectName("helpText")
-        self.item_empty_hint_label.setVisible(False)
-        layout.addWidget(self.item_empty_hint_label)
-
-        self.items_material_tabs = QTabWidget()
-        self.items_material_tabs.setObjectName("editorTabs")
-        self.items_material_tabs.currentChanged.connect(lambda _=0: self._refresh_current_items_subtab())
-
-        inventory_tab = QWidget()
-        inventory_layout = QVBoxLayout(inventory_tab)
-        inventory_layout.setContentsMargins(12, 12, 12, 12)
-        inventory_layout.setSpacing(8)
-
-        self.item_filter_edit = QLineEdit()
-        self.item_filter_edit.setPlaceholderText("Filter owned items/materials by name, GBID, hash, quantity, or unit id...")
-        self._connect_debounced_text_changed(self.item_filter_edit, "items_filter", self.refresh_item_rows, 180)
-        inventory_layout.addWidget(self.item_filter_edit)
-
-        category_row = QHBoxLayout()
-        category_row.addWidget(QLabel("Category"))
-        self.item_category_combo = QComboBox()
-        self.item_category_combo.addItems([
-            "All Safe Quantity Rows",
-            "Wallet / Profile",
-            "Materials",
-            "Consumables",
-            "Wrightstones",
-            "Glitterstones",
-            "Tickets / Badges",
-            "Missing / Addable",
-            "Unknown Safe Rows",
-            "Technical / Relic / Curio",
-        ])
-        self.item_category_combo.currentTextChanged.connect(lambda _: self.refresh_item_rows())
-        category_row.addWidget(self.item_category_combo)
-        category_row.addStretch(1)
-        inventory_layout.addLayout(category_row)
-        item_filter_row = QHBoxLayout()
-        self.item_show_empty_check = QCheckBox("Show empty addable slots")
-        self.item_known_only_check = QCheckBox("Known hashes only")
-        self.item_unknown_only_check = QCheckBox("Unknown hashes only")
-        self.item_show_technical_check = QCheckBox("Show technical / non-quantity rows")
-        self.item_show_technical_check.setToolTip("Show 190x/200x/210x item-slot, relic/curio, and type/state rows. These are hidden by default because their Quantity column is not a safe stack quantity.")
-        self.item_known_only_check.setToolTip("Show only slots whose hash resolves to a known GBID/name.")
-        self.item_unknown_only_check.setToolTip("Show only non-empty slots whose hash is not in the database yet.")
-        self.item_known_only_check.toggled.connect(lambda checked: self._sync_known_unknown_filter(checked, self.item_unknown_only_check, self.refresh_item_rows))
-        self.item_unknown_only_check.toggled.connect(lambda checked: self._sync_known_unknown_filter(checked, self.item_known_only_check, self.refresh_item_rows))
-        self.item_show_empty_check.toggled.connect(lambda _=False: self.refresh_item_rows())
-        self.item_show_technical_check.toggled.connect(lambda _=False: self.refresh_item_rows())
-        item_filter_row.addWidget(self._make_filter_button("Filters", [
-            ("Show empty addable slots", self.item_show_empty_check),
-            ("Known hashes only", self.item_known_only_check),
-            ("Unknown hashes only", self.item_unknown_only_check),
-            ("Show technical / non-quantity rows", self.item_show_technical_check),
-        ]))
-        item_filter_row.addWidget(QLabel("Tip: selected quantity auto-applies; table edits also write immediately in memory."))
-        item_filter_row.addStretch(1)
-        inventory_layout.addLayout(item_filter_row)
-        self.item_table = QTableView()
-        self.item_table.setModel(self.item_model)
-        self._table_clean(self.item_table, hidden_columns=(0, 3, 7))
-        self.item_table.setEditTriggers(
-            QAbstractItemView.EditTrigger.DoubleClicked
-            | QAbstractItemView.EditTrigger.SelectedClicked
-            | QAbstractItemView.EditTrigger.EditKeyPressed
-        )
-        self.item_table.selectionModel().selectionChanged.connect(lambda *_: self.update_item_detail())
-        inventory_layout.addWidget(self.item_table, 1)
-        detail = make_card("Selected Item")
-        self._set_compact_detail(detail, max_height=170)
-        detail_layout = QVBoxLayout(detail)
-        self.item_detail_label = QLabel("Select an item row to view its save-backed fields.")
-        self.item_detail_label.setObjectName("selectedItemSummary")
-        self.item_detail_label.setWordWrap(True)
-        self.item_detail_label.setMinimumHeight(62)
-        detail_layout.addWidget(self.item_detail_label)
-
-        # Hidden compatibility widgets for older helper methods.
-        self.item_identity_edit = QLineEdit(); self.item_identity_edit.setVisible(False)
-        self.item_quantity_edit = QLineEdit(); self.item_quantity_edit.setVisible(False)
-        self.item_index_edit = QLineEdit(); self.item_index_edit.setVisible(False)
-        self.item_flag_edit = QLineEdit(); self.item_flag_edit.setVisible(False)
-        for editor in (self.item_identity_edit, self.item_quantity_edit, self.item_index_edit, self.item_flag_edit):
-            editor.returnPressed.connect(self.apply_item_inline_edits)
-
-        action_row = QHBoxLayout()
-        action_row.addWidget(QLabel("Qty"))
-        self.item_selected_qty_spin = QSpinBox()
-        self.item_selected_qty_spin.setRange(0, 99_999_999)
-        self.item_selected_qty_spin.setValue(1)
-        self.item_selected_qty_spin.setMinimumWidth(130)
-        self.item_selected_qty_spin.valueChanged.connect(lambda *_: self._schedule_item_selected_quantity_auto_apply())
-        action_row.addWidget(self.item_selected_qty_spin)
-        for text, slot in [
-            ("Set Quantity Now", self.set_selected_item_quantity_from_spin),
-            ("Max Selected", self.max_selected_item_quantity),
-            ("Add Item", self.add_item_to_empty_slot),
-            ("Copy Hash", self.copy_selected_item_hash),
-            ("Copy GBID", self.copy_selected_item_gbid),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); action_row.addWidget(btn)
-        action_row.addStretch(1)
-        detail_layout.addLayout(action_row)
-        inventory_layout.addWidget(detail)
-
-        row = QHBoxLayout()
-        row.addWidget(self._make_more_button("More", [
-            ("Edit Quantity", self.edit_selected_item_quantity),
-            ("Edit Item / Hash", self.edit_selected_item_hash),
-            ("Edit Index / Serial", self.edit_selected_item_index),
-            ("Edit Flag / State", self.edit_selected_item_flag),
-            ("Show Empty Addable Slots", lambda: (self.item_show_empty_check.setChecked(True), self.refresh_item_rows())),
-            ("Explain This Tab", self.explain_items_tab),
-            ("Validate Inventory Safety", self.validate_inventory_safety),
-            ("Batch Add Items From Text", self.batch_add_items_to_empty_slots),
-            ("Duplicate Item to Empty Slot", self.duplicate_selected_item_to_empty_slot),
-            ("Copy Item Slot", self.copy_selected_item_slot),
-            ("Paste Item Slot", self.paste_item_slot_to_selected),
-            ("Swap With Copied Item Slot", self.swap_selected_item_with_copied),
-            ("Set Visible Quantities", self.bulk_set_visible_item_quantity),
-            ("Max Visible Quantities", self.max_visible_item_quantities),
-            ("Jump to Raw Unit", self.jump_to_item_unit),
-            ("Copy Hash", self.copy_selected_item_hash),
-            ("Copy GBID", self.copy_selected_item_gbid),
-            ("Export CSV", self.export_items_csv),
-        ]))
-        row.addStretch(1)
-        inventory_layout.addLayout(row)
-
-        self.items_material_tabs.addTab(inventory_tab, "Inventory")
-        self.items_material_tabs.addTab(self._build_items_database_tab(), "Database / Missing Items")
-        self.items_material_tabs.addTab(self._build_relic_curio_database_tab(), "Relics / Curios")
-        layout.addWidget(self.items_material_tabs, 1)
-        return page
-
-    def _build_items_database_tab(self) -> QWidget:
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
-        help_text = QLabel("Searches the item/material database and shows whether each row is already owned, safely addable, or blocked for this loaded save. Safe add rows use the verified 180x material-template writer; blocked rows are visible for clarity but are not written.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-
-        controls = QHBoxLayout()
-        self.items_database_filter = QLineEdit()
-        self.items_database_filter.setPlaceholderText("Search database by name, GBID, category, hash, or sheet LE hash...")
-        self._connect_debounced_text_changed(self.items_database_filter, "items_database_filter", self.refresh_items_database_rows, 220)
-        controls.addWidget(self.items_database_filter, 2)
-        self.items_database_category = QComboBox()
-        self.items_database_category.addItems(["Missing Safe Only", "Already Owned", "All Database Matches", "Blocked / Not Safe"])
-        self.items_database_category.currentTextChanged.connect(lambda _: self.refresh_items_database_rows())
-        controls.addWidget(self.items_database_category)
-        controls.addWidget(QLabel("Qty"))
-        self.items_database_qty_spin = QSpinBox()
-        self.items_database_qty_spin.setRange(1, 99_999_999)
-        self.items_database_qty_spin.setValue(999)
-        controls.addWidget(self.items_database_qty_spin)
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self.refresh_items_database_rows)
-        controls.addWidget(refresh_btn)
-        layout.addLayout(controls)
-
-        self.items_database_summary = QLabel("Open a save to compare the database against inventory.")
-        self.items_database_summary.setObjectName("subtleText")
-        self.items_database_summary.setWordWrap(True)
-        layout.addWidget(self.items_database_summary)
-
-        self.items_database_table = QTableView()
-        self.items_database_table.setModel(self.items_database_model)
-        self._table_clean(self.items_database_table, hidden_columns=())
-        self.items_database_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.items_database_table.selectionModel().selectionChanged.connect(lambda *_: self.update_items_database_detail())
-        layout.addWidget(self.items_database_table, 1)
-
-        detail = make_card("Selected Database Item")
-        detail_layout = QVBoxLayout(detail)
-        self.items_database_detail = QLabel("Select a missing safe item to add it to the loaded save.")
-        self.items_database_detail.setObjectName("selectedItemSummary")
-        self.items_database_detail.setWordWrap(True)
-        self.items_database_detail.setMinimumHeight(70)
-        detail_layout.addWidget(self.items_database_detail)
-        button_row = QHBoxLayout()
-        for text, slot in [
-            ("Add / Update Selected", self.add_items_database_selected),
-            ("Add Visible Missing", self.add_items_database_visible_missing),
-            ("Open Inventory View", lambda: self.items_material_tabs.setCurrentIndex(0) if hasattr(self, "items_material_tabs") else None),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); button_row.addWidget(btn)
-        button_row.addStretch(1)
-        detail_layout.addLayout(button_row)
-        layout.addWidget(detail)
-        return tab
-
-    def _build_relic_curio_database_tab(self) -> QWidget:
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
-        help_text = QLabel("Experimental relic/curio database. This does not use normal material 1801/1802 stacks. It writes only into existing empty 190x/200x relic/curio spaces and shows how many matching relics are already present in the loaded save.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-
-        controls = QHBoxLayout()
-        self.relic_database_filter = QLineEdit()
-        self.relic_database_filter.setPlaceholderText("Search relics/curios by name, GBID, hash...")
-        self.relic_database_filter.textChanged.connect(lambda _: self.refresh_relic_database_rows())
-        controls.addWidget(self.relic_database_filter, 2)
-        self.relic_database_status = QComboBox()
-        self.relic_database_status.addItems(["Missing Only", "Already Owned", "All Relics / Curios"])
-        self.relic_database_status.currentTextChanged.connect(lambda _: self.refresh_relic_database_rows())
-        controls.addWidget(self.relic_database_status)
-        controls.addWidget(QLabel("Count / State"))
-        self.relic_database_qty_spin = QSpinBox()
-        self.relic_database_qty_spin.setRange(1, 9999)
-        self.relic_database_qty_spin.setValue(1)
-        controls.addWidget(self.relic_database_qty_spin)
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self.refresh_relic_database_rows)
-        controls.addWidget(refresh_btn)
-        layout.addLayout(controls)
-
-        self.relic_database_summary = QLabel("Open a save to inspect relic/curio slots.")
-        self.relic_database_summary.setObjectName("subtleText")
-        self.relic_database_summary.setWordWrap(True)
-        layout.addWidget(self.relic_database_summary)
-
-        self.relic_database_table = QTableView()
-        self.relic_database_table.setModel(self.relic_database_model)
-        self._table_clean(self.relic_database_table, hidden_columns=())
-        self.relic_database_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.relic_database_table.selectionModel().selectionChanged.connect(lambda *_: self.update_relic_database_detail())
-        self.relic_database_table.doubleClicked.connect(lambda *_: self.add_relic_database_selected())
-        layout.addWidget(self.relic_database_table, 1)
-
-        detail = make_card("Selected Relic / Curio")
-        detail_layout = QVBoxLayout(detail)
-        self.relic_database_detail = QLabel("Select a missing relic/curio to write it into an empty existing 190x/200x slot.")
-        self.relic_database_detail.setObjectName("selectedItemSummary")
-        self.relic_database_detail.setWordWrap(True)
-        self.relic_database_detail.setMinimumHeight(70)
-        detail_layout.addWidget(self.relic_database_detail)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Add Selected Relic", self.add_relic_database_selected),
-            ("Add Visible Missing", self.add_relic_database_visible_missing),
-            ("Open Inventory View", lambda: self.items_material_tabs.setCurrentIndex(0) if hasattr(self, "items_material_tabs") else None),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        detail_layout.addLayout(row)
-        layout.addWidget(detail)
-        return tab
 
     def _relic_curio_entries(self):
         rows = []
@@ -3778,64 +1556,9 @@ class MainWindow(QMainWindow):
             "Backing: 190x/200x ItemManager relic/curio rows",
         ]))
 
-    def _find_empty_relic_curio_slot(self) -> Optional[Dict[str, Any]]:
-        for slot in self._relic_slot_rows():
-            h = int(slot.get("hash", 0) or 0) & 0xFFFFFFFF
-            qty = int(slot.get("qty", 0) or 0)
-            if h in (0, EMPTY_HASH) and qty == 0:
-                return slot
-        return None
 
-    def _write_relic_curio_to_empty_slot(self, item_hash: int, qty: int = 1) -> Optional[str]:
-        if not self.save:
-            return None
-        slot = self._find_empty_relic_curio_slot()
-        if not slot:
-            return None
-        item_hash = int(item_hash) & 0xFFFFFFFF
-        qty = max(1, int(qty))
-        changed = 0
-        changed += 1 if self._set_record_first_value(slot.get("hash_rec"), item_hash, "relic/curio hash") else 0
-        changed += 1 if self._set_record_first_value(slot.get("qty_rec"), qty, "relic/curio count/state") else 0
-        if slot.get("flag_rec") is not None and self._record_first_value(slot.get("flag_rec"), 0) == 0:
-            changed += 1 if self._set_record_first_value(slot.get("flag_rec"), 1, "relic/curio flag") else 0
-        entry = self.item_db.lookup_hash(item_hash)
-        display = f"{entry.display_name} ({entry.item_id})" if entry else f"0x{item_hash:08X}"
-        return f"Added {display} -> {slot['label']} unit {slot['unit_id']} ({changed} fields)" if changed else None
 
-    def add_relic_database_selected(self) -> None:
-        meta = self._selected_relic_database_meta()
-        entry = meta.get("entry") if meta else None
-        if not entry:
-            QMessageBox.information(self, "No relic selected", "Select a relic/curio database row first.")
-            return
-        qty = int(self.relic_database_qty_spin.value()) if hasattr(self, "relic_database_qty_spin") else 1
-        result = self._write_relic_curio_to_empty_slot(int(entry.hash_value) & 0xFFFFFFFF, qty)
-        if not result:
-            QMessageBox.information(self, "No empty relic slot", "No empty 190x/200x relic/curio slot was found. This editor will not create new FlatBuffer rows yet.")
-            return
-        self._after_editor_patch(result)
-        self.refresh_relic_database_rows()
-        self.refresh_item_rows()
 
-    def add_relic_database_visible_missing(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        candidates = [m.get("entry") for m in getattr(self, "relic_database_rows_meta", []) if m.get("status") == "Missing" and m.get("entry") is not None]
-        if not candidates:
-            QMessageBox.information(self, "No missing relics visible", "No visible missing relic/curio rows are selected by the current filters.")
-            return
-        qty = int(self.relic_database_qty_spin.value()) if hasattr(self, "relic_database_qty_spin") else 1
-        added = 0
-        for entry in candidates:
-            if not self._find_empty_relic_curio_slot():
-                break
-            if self._write_relic_curio_to_empty_slot(int(entry.hash_value) & 0xFFFFFFFF, qty):
-                added += 1
-        self._after_editor_patch(f"Added {added} visible missing relic/curio rows into empty 190x/200x slots. Save As before testing.")
-        self.refresh_relic_database_rows()
-        self.refresh_item_rows()
 
     def _refresh_current_items_subtab(self) -> None:
         if not hasattr(self, "items_material_tabs"):
@@ -3965,45 +1688,7 @@ class MainWindow(QMainWindow):
             ])
         )
 
-    def add_items_database_selected(self) -> None:
-        meta = self._selected_items_database_meta()
-        entry = meta.get("entry") if meta else None
-        if not entry:
-            QMessageBox.information(self, "No item selected", "Select a database item first.")
-            return
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        status = meta.get("status")
-        if status not in {"Missing · safe add", "Already owned"}:
-            QMessageBox.warning(self, "Not safe to add", "This row has no active material stack or verified safe-add template in this save, so it is blocked.")
-            return
-        qty = int(self.items_database_qty_spin.value()) if hasattr(self, "items_database_qty_spin") else 999
-        result = self._upsert_material_bank_quantity(int(entry.hash_value) & 0xFFFFFFFF, qty, flag=None)
-        if not result:
-            QMessageBox.information(self, "No safe target", "Could not find a safe 180x stack/template for this item.")
-            return
-        self._after_editor_patch(f"Database item action: {result}")
-        self.refresh_items_database_rows()
-        self.refresh_item_rows()
 
-    def add_items_database_visible_missing(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        candidates = [m.get("entry") for m in getattr(self, "items_database_rows_meta", []) if m.get("status") == "Missing · safe add" and m.get("entry") is not None]
-        if not candidates:
-            QMessageBox.information(self, "No visible missing items", "No visible rows are currently safe missing items. Change the filter to Missing Safe Only or clear the search.")
-            return
-        qty = int(self.items_database_qty_spin.value()) if hasattr(self, "items_database_qty_spin") else 999
-        added = []
-        for entry in candidates:
-            result = self._upsert_material_bank_quantity(int(entry.hash_value) & 0xFFFFFFFF, qty, flag=None)
-            if result:
-                added.append(result)
-        self._after_editor_patch(f"Safely added {len(added)} visible database items. Save As when ready.")
-        self.refresh_items_database_rows()
-        self.refresh_item_rows()
 
     def _inventory_safety_report_lines(self) -> tuple[List[str], bool]:
         """Return inventory validation report lines and whether a crash-risk pattern exists."""
@@ -4073,24 +1758,7 @@ class MainWindow(QMainWindow):
             lines += ["", "No known Add-All crash pattern was detected."]
         return lines, risky
 
-    def validate_inventory_safety(self) -> None:
-        """Scan inventory rows for the specific unsafe patterns we have seen crash GBFR."""
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        lines, _risky = self._inventory_safety_report_lines()
-        QMessageBox.information(self, "Inventory Safety Check", "\n".join(lines))
 
-    def explain_items_tab(self) -> None:
-        QMessageBox.information(
-            self,
-            "What the Items tab shows",
-            "The Items tab is not the item-ID database. It only lists active ItemManager inventory slots from the loaded save.\n\n"
-            "By default it only shows safe editable quantities: UserData wallet values and ItemManager 1801/1802 material-bank stacks.\n\n"
-            "Technical item-slot rows, relic/curio lookup rows, and type/state rows are hidden by default because their quantity-looking value is not a normal stack count. Enable Show technical / non-quantity rows to inspect them without treating them as safe bulk-edit targets.\n\n"
-            "It does not show sigils, weapons, characters, quests, titles, raw Save Wizard rows, or the full GBID database. Those are separate pages.\n\n"
-            "If this page is empty, the loaded file probably has no active ItemManager item stacks, or the filters are hiding them. Use Add Item to fill an empty slot, enable Show empty addable slots, or load the full SaveData1.dat instead of a raw GameData-only file."
-        )
 
     def _build_character_owner_choices(self) -> List[Dict[str, Any]]:
         """Known character hashes used by GemManager 2706 worn/character assignment."""
@@ -4592,6 +2260,7 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout()
         for text, slot in [
             ("Add Sigil", self.add_sigil_to_empty_slot),
+            ("Remove Selected", self.remove_selected_sigil_to_empty_slot),
             ("Show Empty", self.show_empty_sigils_in_current_table),
         ]:
             btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
@@ -4678,6 +2347,7 @@ class MainWindow(QMainWindow):
             ("Add Selected Locked", self.add_selected_database_sigil_locked_to_empty_slot),
             ("Add Selected Unlocked", self.add_selected_database_sigil_unlocked_to_empty_slot),
             ("Batch Add From Text", self.batch_add_sigils_to_empty_slots),
+            ("Import Best Templates", self.import_sigil_templates),
             ("Show Empty In Current", self.show_empty_sigils_in_current_table),
         ]:
             btn = QPushButton(text); btn.clicked.connect(slot); db_actions.addWidget(btn)
@@ -4693,392 +2363,6 @@ class MainWindow(QMainWindow):
         return page
 
 
-    def _weapons_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(12)
-
-        header = QLabel("Weapons")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-
-        help_text = QLabel(
-            "Modern weapon slot editor. Edit current weapons, add from the weapon database into reusable empty slots, or inspect empty slots directly. "
-            f"Max weapon XP/progress is {WEAPON_XP_MAX:,}."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-
-        self.weapon_count_label = QLabel("Open a save to inspect weapon slots.")
-        self.weapon_count_label.setWordWrap(True)
-        self.weapon_count_label.setObjectName("subtleText")
-        layout.addWidget(self.weapon_count_label)
-
-        self.weapon_tabs = QTabWidget()
-        self.weapon_tabs.setObjectName("editorTabs")
-        self.weapon_tabs.currentChanged.connect(lambda *_: self._refresh_current_weapon_tab())
-
-        current_tab = QWidget()
-        current_layout = QVBoxLayout(current_tab)
-        current_layout.setContentsMargins(12, 12, 12, 12)
-        current_layout.setSpacing(10)
-
-        self.weapon_filter_edit = QLineEdit()
-        self.weapon_filter_edit.setPlaceholderText("Filter current weapons by name, GBID, hash, XP, stone, flags, or unit id...")
-        self._connect_debounced_text_changed(self.weapon_filter_edit, "weapons_filter", self.refresh_weapon_rows, 180)
-        current_layout.addWidget(self.weapon_filter_edit)
-
-        weapon_filter_row = QHBoxLayout()
-        self.weapon_show_empty_check = QCheckBox("Show empty slots")
-        self.weapon_known_only_check = QCheckBox("Known only")
-        self.weapon_unknown_only_check = QCheckBox("Unknown only")
-        self.weapon_known_only_check.setToolTip("Show only slots whose weapon hash resolves to a known GBID/name.")
-        self.weapon_unknown_only_check.setToolTip("Show only non-empty weapon slots whose hash is not in the database yet.")
-        self.weapon_known_only_check.toggled.connect(lambda checked: self._sync_known_unknown_filter(checked, self.weapon_unknown_only_check, self.refresh_weapon_rows))
-        self.weapon_unknown_only_check.toggled.connect(lambda checked: self._sync_known_unknown_filter(checked, self.weapon_known_only_check, self.refresh_weapon_rows))
-        self.weapon_show_empty_check.toggled.connect(lambda _=False: self.refresh_weapon_rows())
-        weapon_filter_row.addWidget(self._make_filter_button("Filters", [
-            ("Show empty slots", self.weapon_show_empty_check),
-            ("Known only", self.weapon_known_only_check),
-            ("Unknown only", self.weapon_unknown_only_check),
-        ]))
-        for text, slot in [
-            ("Show Empty Slots", lambda _=False: self._show_weapon_tab(3)),
-            ("Clear", self.clear_weapon_filters),
-            ("Max Visible", self.max_visible_weapons),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            weapon_filter_row.addWidget(btn)
-        weapon_filter_row.addWidget(QLabel("Tip: add new weapons from the Database tab; double-click XP to edit."))
-        weapon_filter_row.addStretch(1)
-        current_layout.addLayout(weapon_filter_row)
-
-        self.weapon_table = QTableView()
-        self.weapon_table.setModel(self.weapon_model)
-        self._table_clean(self.weapon_table, hidden_columns=(0, 3, 5, 6, 7, 8, 9))
-        self.weapon_table.verticalHeader().setDefaultSectionSize(30 if getattr(self, "compact_mode", True) else 36)
-        self.weapon_table.setEditTriggers(
-            QAbstractItemView.EditTrigger.DoubleClicked
-            | QAbstractItemView.EditTrigger.SelectedClicked
-            | QAbstractItemView.EditTrigger.EditKeyPressed
-        )
-        self.weapon_table.selectionModel().selectionChanged.connect(lambda *_: self.update_weapon_detail())
-        self.weapon_table.doubleClicked.connect(lambda _: self.edit_selected_weapon_xp())
-        current_layout.addWidget(self.weapon_table, 1)
-
-        detail = make_card("Selected Weapon")
-        self._set_compact_detail(detail, max_height=226)
-        detail_layout = QVBoxLayout(detail)
-        detail_layout.setSpacing(6)
-
-        self.weapon_detail_label = QPlainTextEdit()
-        self.weapon_detail_label.setReadOnly(True)
-        self.weapon_detail_label.setObjectName("summaryBox")
-        self.weapon_detail_label.setMinimumHeight(0)
-        self.weapon_detail_label.setMaximumHeight(0)
-        self.weapon_detail_label.setVisible(False)
-        self.weapon_detail_label.setPlainText("Select a weapon row, then edit weapon, XP, imbued stone, and flags here without a dialog.")
-        detail_layout.addWidget(self.weapon_detail_label)
-
-        weapon_grid = QGridLayout()
-        weapon_grid.setHorizontalSpacing(10)
-        weapon_grid.setVerticalSpacing(4)
-        self.weapon_identity_edit = QLineEdit(); self.weapon_identity_edit.setPlaceholderText("Weapon GBID/name/hash")
-        self.weapon_xp_edit = QLineEdit(); self.weapon_xp_edit.setPlaceholderText("XP / progress")
-        self.weapon_stone_edit = QLineEdit(); self.weapon_stone_edit.setPlaceholderText("Stone GBID/name/hash, blank/0 to clear")
-        self.weapon_flags_edit = QLineEdit(); self.weapon_flags_edit.setPlaceholderText("Flags")
-        for editor in (self.weapon_identity_edit, self.weapon_xp_edit, self.weapon_stone_edit, self.weapon_flags_edit):
-            editor.setMinimumHeight(32)
-            # Debounced live apply keeps the selected weapon form, table row,
-            # and Caps / Traits selector synced without requiring a manual apply.
-            editor.textChanged.connect(lambda *_: self._schedule_weapon_inline_auto_apply())
-            editor.editingFinished.connect(self.sync_weapon_detail_controls)
-        weapon_grid.addWidget(QLabel("Weapon"), 0, 0)
-        weapon_grid.addWidget(self.weapon_identity_edit, 0, 1, 1, 3)
-        weapon_grid.addWidget(QLabel("XP"), 1, 0)
-        weapon_grid.addWidget(self.weapon_xp_edit, 1, 1)
-        weapon_grid.addWidget(QLabel("Stone"), 1, 2)
-        weapon_grid.addWidget(self.weapon_stone_edit, 1, 3)
-        weapon_grid.addWidget(QLabel("Flags"), 2, 0)
-        weapon_grid.addWidget(self.weapon_flags_edit, 2, 1)
-        weapon_grid.setColumnStretch(1, 2)
-        weapon_grid.setColumnStretch(3, 2)
-        detail_layout.addLayout(weapon_grid)
-
-        weapon_inline_row = QHBoxLayout()
-        for text, slot in [
-            ("Apply Changes / Resync", self.apply_weapon_inline_edits),
-            ("Max Selected", self.max_selected_weapon),
-            ("Max All", self.max_all_weapons),
-            ("Clear Stone", self.clear_selected_weapon_stone),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); weapon_inline_row.addWidget(btn)
-        weapon_inline_row.addStretch(1)
-        detail_layout.addLayout(weapon_inline_row)
-        current_layout.addWidget(detail)
-
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Add Weapon", self.add_weapon_to_empty_slot),
-            ("Duplicate", self.duplicate_selected_weapon_to_empty_slot),
-            ("Open Database", lambda _=False: self._show_weapon_tab(2)),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addWidget(self._make_more_button("More", [
-            ("Change Selected Weapon", self.edit_selected_weapon_hash),
-            ("Set Stone", self.edit_selected_weapon_stone),
-            ("Clear Stone", self.clear_selected_weapon_stone),
-            ("Batch Add Weapons From Text", self.batch_add_weapons_to_empty_slots),
-            ("Duplicate Weapon to Empty Slot", self.duplicate_selected_weapon_to_empty_slot),
-            ("Copy Weapon Slot", self.copy_selected_weapon_slot),
-            ("Paste Weapon Slot", self.paste_weapon_slot_to_selected),
-            ("Swap With Copied Weapon Slot", self.swap_selected_weapon_with_copied),
-            ("Set Visible XP", self.bulk_set_visible_weapon_xp),
-            ("Max Visible Weapons", self.max_visible_weapons),
-            ("Max All Weapons", self.max_all_weapons),
-            ("Set Flags", self.edit_selected_weapon_flags),
-            ("Jump to Raw Unit", self.jump_to_weapon_unit),
-            ("Copy Hash", self.copy_selected_weapon_hash),
-            ("Copy GBID", self.copy_selected_weapon_gbid),
-            ("Export CSV", self.export_weapons_csv),
-            ("Export Unknown Hashes", self.export_unknown_weapon_hashes_csv),
-        ]))
-        row.addStretch(1)
-        current_layout.addLayout(row)
-
-        caps_tab = QWidget()
-        caps_layout = QVBoxLayout(caps_tab)
-        caps_layout.setContentsMargins(12, 12, 12, 12)
-        caps_layout.setSpacing(12)
-
-        caps_help = QLabel(
-            "Weapon uncap/max-level uses 2805. The in-game ATK/HP weapon trait list is mostly derived by the game from weapon level/uncap, while 2806 appears to be the separate + trait-level bonus shown after the base trait level. Wrightstones are separate inventory rows."
-        )
-        caps_help.setWordWrap(True)
-        caps_help.setObjectName("helpText")
-        caps_layout.addWidget(caps_help)
-
-        selected_card = make_card("Selected Weapon")
-        selected_layout = QVBoxLayout(selected_card)
-        selected_grid = QGridLayout()
-        selected_grid.setHorizontalSpacing(12)
-        selected_grid.setVerticalSpacing(8)
-        self.weapon_cap_trait_weapon_combo = QComboBox()
-        self.weapon_cap_trait_weapon_combo.setMinimumWidth(560)
-        self.weapon_cap_trait_weapon_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.weapon_cap_trait_weapon_combo.currentIndexChanged.connect(lambda *_: self.on_weapon_cap_trait_weapon_combo_changed())
-        selected_grid.addWidget(QLabel("Weapon"), 0, 0)
-        selected_grid.addWidget(self.weapon_cap_trait_weapon_combo, 0, 1)
-        refresh_weapon_pick_btn = QPushButton("Refresh Weapons")
-        refresh_weapon_pick_btn.clicked.connect(self.refresh_weapon_rows)
-        selected_grid.addWidget(refresh_weapon_pick_btn, 0, 2)
-        selected_grid.setColumnStretch(1, 3)
-        selected_layout.addLayout(selected_grid)
-        self.weapon_builtin_trait_summary = QLabel("Open a save and select a weapon to inspect its saved uncap/trait-bonus fields.")
-        self.weapon_builtin_trait_summary.setObjectName("subtleText")
-        self.weapon_builtin_trait_summary.setWordWrap(True)
-        selected_layout.addWidget(self.weapon_builtin_trait_summary)
-        caps_layout.addWidget(selected_card)
-
-        cap_card = make_card("Weapon Uncap / Max Level")
-        cap_layout = QVBoxLayout(cap_card)
-        cap_grid = QGridLayout()
-        cap_grid.setHorizontalSpacing(12)
-        cap_grid.setVerticalSpacing(8)
-
-        self.weapon_cap_combo = QComboBox()
-        for label, value in [
-            ("Base / 30 cap (0)", 0),
-            ("50 cap (1)", 1),
-            ("75 cap (2)", 2),
-            ("100 cap (3)", 3),
-            ("125 cap (4)", 4),
-            ("150 cap / Max (5)", 5),
-        ]:
-            self.weapon_cap_combo.addItem(label, value)
-        self.weapon_cap_custom_spin = QSpinBox()
-        self.weapon_cap_custom_spin.setRange(0, 255)
-        self.weapon_cap_custom_spin.setValue(5)
-        self.weapon_cap_custom_spin.setMinimumWidth(90)
-
-        cap_grid.addWidget(QLabel("Preset"), 0, 0)
-        cap_grid.addWidget(self.weapon_cap_combo, 0, 1)
-        cap_grid.addWidget(QLabel("Custom"), 0, 2)
-        cap_grid.addWidget(self.weapon_cap_custom_spin, 0, 3)
-        cap_layout.addLayout(cap_grid)
-
-        cap_actions = QHBoxLayout()
-        for text, slot in [
-            ("Apply Preset To Selected", self.apply_weapon_cap_preset_selected),
-            ("Apply Custom To Selected", self.apply_weapon_cap_custom_selected),
-            ("Apply Preset To Visible", self.apply_weapon_cap_preset_visible),
-            ("Open Current Weapons", lambda _=False: self._show_weapon_tab(0)),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            cap_actions.addWidget(btn)
-        cap_actions.addStretch(1)
-        cap_layout.addLayout(cap_actions)
-        caps_layout.addWidget(cap_card)
-
-        bonus_card = make_card("Weapon Trait + Bonus")
-        bonus_layout = QVBoxLayout(bonus_card)
-        bonus_note = QLabel("This edits weapon field 2806. In the in-game details screen this appears to be the + value after the base weapon trait level, for example ATK T.Lvl 20 + 1. Keep this experimental and test with Save As.")
-        bonus_note.setWordWrap(True)
-        bonus_note.setObjectName("subtleText")
-        bonus_layout.addWidget(bonus_note)
-        bonus_row = QHBoxLayout()
-        bonus_row.addWidget(QLabel("Trait + / 2806"))
-        self.weapon_trait_bonus_spin = QSpinBox()
-        self.weapon_trait_bonus_spin.setRange(0, 999)
-        self.weapon_trait_bonus_spin.setValue(0)
-        self.weapon_trait_bonus_spin.setMinimumWidth(110)
-        bonus_row.addWidget(self.weapon_trait_bonus_spin)
-        for text, slot in [
-            ("Apply Bonus To Selected", self.apply_weapon_trait_bonus_selected),
-            ("Apply Bonus To Visible", self.apply_weapon_trait_bonus_visible),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            bonus_row.addWidget(btn)
-        bonus_row.addStretch(1)
-        bonus_layout.addLayout(bonus_row)
-        caps_layout.addWidget(bonus_card)
-
-        trait_card = make_card("Wrightstone / Direct Trait Notes")
-        trait_layout = QVBoxLayout(trait_card)
-        trait_note = QLabel("The ATK/HP traits shown on the weapon details screen are not normal 1701/1702 trait records on the weapon row. Direct 1701/1702 controls stay here only as a fallback for unusual saves; normal Wrightstone traits are edited from the Wrightstones tab.")
-        trait_note.setWordWrap(True)
-        trait_note.setObjectName("subtleText")
-        trait_layout.addWidget(trait_note)
-
-        trait_grid = QGridLayout()
-        trait_grid.setHorizontalSpacing(12)
-        trait_grid.setVerticalSpacing(8)
-        self.weapon_trait_combo = QComboBox()
-        self.weapon_trait_combo.setMinimumWidth(420)
-        self.weapon_trait_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.weapon_trait_level_spin = QSpinBox()
-        self.weapon_trait_level_spin.setRange(0, I32_MAX)
-        self.weapon_trait_level_spin.setValue(15)
-        self.weapon_trait_level_spin.setMinimumWidth(120)
-
-        trait_grid.addWidget(QLabel("Trait"), 0, 0)
-        trait_grid.addWidget(self.weapon_trait_combo, 0, 1)
-        trait_grid.addWidget(QLabel("Level"), 0, 2)
-        trait_grid.addWidget(self.weapon_trait_level_spin, 0, 3)
-        trait_layout.addLayout(trait_grid)
-
-        trait_actions = QHBoxLayout()
-        for text, slot in [
-            ("Refresh Traits", self.refresh_weapon_trait_choices),
-            ("Open Wrightstones", self.open_wrightstones_for_selected_weapon),
-            ("Apply Direct Trait If Present", self.apply_weapon_trait_selected),
-            ("Clear Direct Trait If Present", self.clear_weapon_trait_selected),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            trait_actions.addWidget(btn)
-        trait_actions.addStretch(1)
-        trait_layout.addLayout(trait_actions)
-        caps_layout.addWidget(trait_card)
-
-        self.weapon_cap_trait_status = QLabel("Select a weapon above or in Current Weapons. Uncap and trait + bonus edit directly; Wrightstone traits are edited from Wrightstones.")
-        self.weapon_cap_trait_status.setObjectName("subtleText")
-        self.weapon_cap_trait_status.setWordWrap(True)
-        caps_layout.addWidget(self.weapon_cap_trait_status)
-        caps_layout.addStretch(1)
-
-        database_tab = QWidget()
-        db_layout = QVBoxLayout(database_tab)
-        db_layout.setContentsMargins(12, 12, 12, 12)
-        db_layout.setSpacing(10)
-        db_help = QLabel("Add weapons from the built-in database into reusable empty 2803/2804 weapon slots. This does not resize/rebuild the save.")
-        db_help.setWordWrap(True)
-        db_help.setObjectName("helpText")
-        db_layout.addWidget(db_help)
-
-        db_tools = QHBoxLayout()
-        self.weapon_database_filter_edit = QLineEdit()
-        self.weapon_database_filter_edit.setPlaceholderText("Search weapon database by name, GBID, hash, owner prefix, WEP_PL0000, Eos, Terminus...")
-        self.weapon_database_filter_edit.textChanged.connect(lambda *_: self.refresh_weapon_database_rows())
-        db_tools.addWidget(self.weapon_database_filter_edit, 3)
-
-        self.weapon_database_filter_combo = QComboBox()
-        self.weapon_database_filter_combo.addItems(["All weapons", "Missing only", "Owned only", "Playable WEP_PL only", "NPC / Reserved WEP_NP"])
-        self.weapon_database_filter_combo.currentTextChanged.connect(lambda *_: self.refresh_weapon_database_rows())
-        db_tools.addWidget(self.weapon_database_filter_combo, 1)
-
-        self.weapon_database_xp_spin = QSpinBox()
-        self.weapon_database_xp_spin.setRange(0, WEAPON_XP_MAX)
-        self.weapon_database_xp_spin.setValue(WEAPON_XP_MAX)
-        self.weapon_database_xp_spin.setMinimumWidth(145)
-        db_tools.addWidget(QLabel("XP"))
-        db_tools.addWidget(self.weapon_database_xp_spin)
-
-        refresh_db_btn = QPushButton("Refresh")
-        refresh_db_btn.clicked.connect(self.refresh_weapon_database_rows)
-        db_tools.addWidget(refresh_db_btn)
-        db_layout.addLayout(db_tools)
-
-        self.weapon_database_status = QLabel("Open a save to add weapons, or browse the built-in weapon database.")
-        self.weapon_database_status.setObjectName("subtleText")
-        self.weapon_database_status.setWordWrap(True)
-        db_layout.addWidget(self.weapon_database_status)
-
-        self.weapon_database_table = QTableView()
-        self.weapon_database_table.setModel(self.weapon_database_model)
-        self._table_clean(self.weapon_database_table)
-        self.weapon_database_table.setMinimumHeight(420)
-        self.weapon_database_table.selectionModel().selectionChanged.connect(lambda *_: self.update_weapon_database_status())
-        self.weapon_database_table.doubleClicked.connect(lambda *_: self.add_selected_database_weapon_to_empty_slot())
-        db_layout.addWidget(self.weapon_database_table, 1)
-
-        db_actions = QHBoxLayout()
-        for text, slot in [
-            ("Add Selected", self.add_selected_database_weapon_to_empty_slot),
-            ("Add Selected Max XP", self.add_selected_database_weapon_max_to_empty_slot),
-            ("Add All Missing", self.add_all_missing_database_weapons_to_empty_slots),
-            ("Batch Add From Text", self.batch_add_weapons_to_empty_slots),
-            ("Show Empty Slots", lambda _=False: self._show_weapon_tab(3)),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); db_actions.addWidget(btn)
-        db_actions.addStretch(1)
-        db_layout.addLayout(db_actions)
-
-        empty_tab = QWidget()
-        empty_layout = QVBoxLayout(empty_tab)
-        empty_layout.setContentsMargins(12, 12, 12, 12)
-        empty_layout.setSpacing(10)
-        self.weapon_empty_status = QLabel("Open a save to list reusable empty weapon slots.")
-        self.weapon_empty_status.setObjectName("subtleText")
-        self.weapon_empty_status.setWordWrap(True)
-        empty_layout.addWidget(self.weapon_empty_status)
-        self.weapon_empty_table = QTableView()
-        self.weapon_empty_table.setModel(self.weapon_empty_model)
-        self._table_clean(self.weapon_empty_table)
-        self.weapon_empty_table.setMinimumHeight(430)
-        empty_layout.addWidget(self.weapon_empty_table, 1)
-        empty_actions = QHBoxLayout()
-        for text, slot in [
-            ("Refresh Empty Slots", self.refresh_weapon_empty_slot_rows),
-            ("Open Database", lambda _=False: self._show_weapon_tab(2)),
-            ("Show Empty In Current Table", self.show_empty_weapons_in_current_table),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); empty_actions.addWidget(btn)
-        empty_actions.addStretch(1)
-        empty_layout.addLayout(empty_actions)
-
-        self.weapon_tabs.addTab(current_tab, "Current Weapons")
-        self.weapon_tabs.addTab(caps_tab, "Caps / Traits")
-        self.weapon_tabs.addTab(database_tab, "Database / Add")
-        self.weapon_tabs.addTab(empty_tab, "Empty Slots")
-        layout.addWidget(self.weapon_tabs, 1)
-        self._install_common_numeric_validators()
-        return page
 
 
 
@@ -5187,6 +2471,10 @@ class MainWindow(QMainWindow):
             return "—"
         name, _gbid, hx = self.hash_entry_parts(h)
         label = name or hx or f"0x{h:08X}"
+        # Strip Roman numeral suffix for cleaner display
+        import re
+        label = re.sub(r'\s+(I|II|III|IV|V|V\+|VI|VII|VIII|IX|X)\s*$', '', label.strip())
+        label = re.sub(r'\s*\[\w+\]\s*$', '', label.strip())
         try:
             lv = int(trait_level or 0)
         except Exception:
@@ -5221,14 +2509,6 @@ class MainWindow(QMainWindow):
         self._wrightstone_trait_grouped_cache = cached
         return cached
 
-    def _wrightstone_trait_fields_for_slot(self, slot: int, lane: int) -> Dict[int, UnitRecord]:
-        if not self.save:
-            return {}
-        try:
-            unit_id = WRIGHTSTONE_TRAIT_UNIT_BASE + int(slot) * 100 + int(lane)
-            return dict(self._wrightstone_trait_grouped().get(unit_id, {}) or {})
-        except Exception:
-            return {}
 
     def _wrightstone_slot_fields(self) -> Dict[int, Dict[int, UnitRecord]]:
         if not self.save:
@@ -5706,268 +2986,10 @@ class MainWindow(QMainWindow):
         prefix = "Auto-applied" if auto else "Applied"
         self.statusBar().showMessage(f"{prefix} wrightstone edit: {changed} field(s) changed. Save when ready.", 5000)
 
-    def apply_wrightstone_table_cell_edit(self, row_index: int, column: int, value: Any) -> bool:
-        if not self.save or row_index >= len(getattr(self, "wrightstone_rows_meta", [])):
-            return False
-        meta = self.wrightstone_rows_meta[row_index]
-        ok = False
-        if column in (1, 2, 3):
-            resolved = self._resolve_edit_hash(value, "wrightstone", allow_empty=True)
-            if resolved is None:
-                return False
-            if resolved not in (0, EMPTY_HASH) and not self._is_wrightstone_hash(resolved):
-                QMessageBox.warning(self, "Not a wrightstone", "That hash resolves to a non-wrightstone item, so it is hidden from this page.")
-                return False
-            ok = self._set_record_first_value(meta.get("stone_rec"), resolved, "wrightstone hash 2102 / FF360800")
-            if ok and resolved not in (0, EMPTY_HASH):
-                if meta.get("active_rec") is not None:
-                    self._set_record_first_value(meta.get("active_rec"), True, "wrightstone active 2104")
-                if meta.get("flags_rec") is not None:
-                    self._set_record_first_value(meta.get("flags_rec"), max(1, int(self._record_first_value(meta.get("flags_rec"), 0) or 0)), "wrightstone flags 2105")
-        elif column == 4:
-            parsed = self._parse_edit_int(value, "wrightstone value 2103")
-            if parsed is None:
-                return False
-            ok = self._set_record_first_value(meta.get("value_rec"), parsed, "wrightstone value 2103 / FF370800")
-        elif column == 5:
-            resolved = self._resolve_edit_hash(value, "trait 1", allow_empty=True)
-            if resolved is None:
-                return False
-            ok = self._set_record_first_value(meta.get("trait1_hash_rec"), resolved, "wrightstone trait 1 ID 1701")
-        elif column == 6:
-            parsed = self._parse_edit_int(value, "trait 1 level")
-            if parsed is None:
-                return False
-            ok = self._set_record_first_value(meta.get("trait1_level_rec"), parsed, "wrightstone trait 1 level 1702")
-        elif column == 7:
-            resolved = self._resolve_edit_hash(value, "trait 2", allow_empty=True)
-            if resolved is None:
-                return False
-            ok = self._set_record_first_value(meta.get("trait2_hash_rec"), resolved, "wrightstone trait 2 ID 1701")
-        elif column == 8:
-            parsed = self._parse_edit_int(value, "trait 2 level")
-            if parsed is None:
-                return False
-            ok = self._set_record_first_value(meta.get("trait2_level_rec"), parsed, "wrightstone trait 2 level 1702")
-        elif column == 9:
-            resolved = self._resolve_edit_hash(value, "trait 3", allow_empty=True)
-            if resolved is None:
-                return False
-            ok = self._set_record_first_value(meta.get("trait3_hash_rec"), resolved, "wrightstone trait 3 ID 1701")
-        elif column == 10:
-            parsed = self._parse_edit_int(value, "trait 3 level")
-            if parsed is None:
-                return False
-            ok = self._set_record_first_value(meta.get("trait3_level_rec"), parsed, "wrightstone trait 3 level 1702")
-        elif column == 11:
-            parsed = self._parse_edit_int(value, "wrightstone flags")
-            if parsed is None:
-                return False
-            ok = self._set_record_first_value(meta.get("flags_rec"), parsed, "wrightstone flags 2105")
-        if ok:
-            self._mark_stale_pages(["Wrightstones", "Weapons", "Save Health"])
-            self.refresh_wrightstone_rows()
-            self.statusBar().showMessage("Wrightstone row updated in memory. Save As to test.", 4000)
-        return bool(ok)
-
-
-    def _characters_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Characters Editor")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Character slot view. Common safe edits are changing the character hash, setting level, maxing visible levels, and swapping full character slot fields. Save As first when swapping.")
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.character_count_label = QLabel("Open a save to inspect character slots.")
-        self.character_count_label.setWordWrap(True)
-        self.character_count_label.setObjectName("subtleText")
-        layout.addWidget(self.character_count_label)
-        self.character_filter_edit = QLineEdit()
-        self.character_filter_edit.setPlaceholderText("Filter characters by name, GBID, hash, level, slot, or unit id...")
-        self._connect_debounced_text_changed(self.character_filter_edit, "characters_filter", self.refresh_character_rows, 180)
-        layout.addWidget(self.character_filter_edit)
-        filter_row = QHBoxLayout()
-        filter_row.addWidget(QLabel("Tip: double-click editable cells for character, level, or state."))
-        filter_row.addStretch(1)
-        layout.addLayout(filter_row)
-        self.character_table = QTableView()
-        self.character_table.setModel(self.character_model)
-        self._table_clean(self.character_table, hidden_columns=(3, 6))
-        self.character_table.setEditTriggers(
-            QAbstractItemView.EditTrigger.DoubleClicked
-            | QAbstractItemView.EditTrigger.SelectedClicked
-            | QAbstractItemView.EditTrigger.EditKeyPressed
-        )
-        self.character_table.selectionModel().selectionChanged.connect(lambda *_: self.update_character_detail())
-        self.character_table.doubleClicked.connect(lambda _: self.update_character_detail())
-        layout.addWidget(self.character_table, 1)
-        detail = make_card("Selected Character")
-        self._set_compact_detail(detail, max_height=272)
-        detail_layout = QVBoxLayout(detail)
-        detail_layout.setSpacing(10)
-
-        self.character_detail_title = QLabel("Select a character row")
-        self.character_detail_title.setObjectName("sectionTitle")
-        self.character_detail_title.setWordWrap(True)
-        detail_layout.addWidget(self.character_detail_title)
-
-        self.character_detail_label = QLabel("Pick a row above. Level, EXP, unlock, and state controls sync immediately when changed.")
-        self.character_detail_label.setWordWrap(True)
-        self.character_detail_label.setObjectName("subtleText")
-        detail_layout.addWidget(self.character_detail_label)
-
-        control_grid = QGridLayout()
-        control_grid.setHorizontalSpacing(12)
-        control_grid.setVerticalSpacing(8)
-        self.character_level_spin = QSpinBox(); self.character_level_spin.setRange(0, CHARACTER_VALUE_MAX); self.character_level_spin.setButtonSymbols(QSpinBox.ButtonSymbols.PlusMinus)
-        self.character_exp_spin = QSpinBox(); self.character_exp_spin.setRange(0, CHARACTER_VALUE_MAX); self.character_exp_spin.setButtonSymbols(QSpinBox.ButtonSymbols.PlusMinus)
-        self.character_unlock_spin = QSpinBox(); self.character_unlock_spin.setRange(0, CHARACTER_VALUE_MAX); self.character_unlock_spin.setButtonSymbols(QSpinBox.ButtonSymbols.PlusMinus)
-        self.character_state_spin = QSpinBox(); self.character_state_spin.setRange(0, CHARACTER_VALUE_MAX); self.character_state_spin.setButtonSymbols(QSpinBox.ButtonSymbols.PlusMinus)
-        for spin in (self.character_level_spin, self.character_exp_spin, self.character_unlock_spin, self.character_state_spin):
-            spin.setMinimumHeight(34)
-            spin.valueChanged.connect(self.sync_character_detail_controls)
-        control_grid.addWidget(QLabel("Level"), 0, 0)
-        control_grid.addWidget(self.character_level_spin, 0, 1)
-        control_grid.addWidget(QLabel("EXP / Progress"), 0, 2)
-        control_grid.addWidget(self.character_exp_spin, 0, 3)
-        control_grid.addWidget(QLabel("Unlock / Active"), 1, 0)
-        control_grid.addWidget(self.character_unlock_spin, 1, 1)
-        control_grid.addWidget(QLabel("State / Flags"), 1, 2)
-        control_grid.addWidget(self.character_state_spin, 1, 3)
-        detail_layout.addLayout(control_grid)
-
-        character_inline_row = QHBoxLayout()
-        for text, slot in [
-            ("Max Selected", self.max_selected_character_level),
-            ("Max All", self.max_all_character_levels),
-            ("Equip Copied Sigil/Gem", self.equip_copied_sigil_to_selected_character),
-            ("Change Character", self.edit_selected_character_hash),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); character_inline_row.addWidget(btn)
-        character_inline_row.addStretch(1)
-        detail_layout.addLayout(character_inline_row)
-        layout.addWidget(detail)
 
 
 
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Copy Slot", self.copy_selected_character_slot),
-            ("Paste Slot", self.paste_character_slot_to_selected),
-            ("Swap With Copied", self.swap_selected_character_with_copied),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addWidget(self._make_more_button("More", [
-            ("Max Visible Character Levels", self.max_visible_character_levels),
-            ("Max All Character Levels", self.max_all_character_levels),
-            ("Copy Character Slot", self.copy_selected_character_slot),
-            ("Paste Character Slot", self.paste_character_slot_to_selected),
-            ("Swap With Copied Character Slot", self.swap_selected_character_with_copied),
-            ("Copy RNG/Overmastery Slots", self.copy_selected_character_overmastery),
-            ("Paste RNG/Overmastery Slots", self.paste_selected_character_overmastery),
-            ("Equip Copied Sigil/Gem Here", self.equip_copied_sigil_to_selected_character),
-            ("Set RNG/Overmastery Slots Raw", self.edit_selected_character_overmastery),
-            ("Clear RNG/Overmastery Slots", self.clear_selected_character_overmastery),
-            ("Jump to Raw Unit", self.jump_to_character_unit),
-            ("Export CSV", self.export_characters_csv),
-        ]))
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
 
-
-    def _mastery_slots_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Masteries")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Mastery data is split into readable groups. Mastery Effects are the per-slot 1606/1607 effect rows, "
-            "Board Slot Keys are the 1601 layout rows, and Overmastery Slots are the four high-impact OP rows. "
-            "The OP preset buttons are experimental and are based on the before/after saves plus the Save Wizard Cheats_Mods / Masteries_SlotINFO notes you shared. Use Save As before testing. Sigil equipment is handled on the Sigils page."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-
-        mastery_card = make_card("Mastery Editor")
-        mastery_layout = QVBoxLayout(mastery_card)
-        mastery_controls = QHBoxLayout()
-        self.mastery_character_combo = QComboBox()
-        self.mastery_character_combo.setMinimumWidth(260)
-        self.mastery_character_combo.currentIndexChanged.connect(lambda *_: self.refresh_mastery_slot_rows())
-        self.mastery_mode_combo = QComboBox()
-        self.mastery_mode_combo.addItem("Mastery Effects", "effects")
-        self.mastery_mode_combo.addItem("Board Slot Keys", "board")
-        self.mastery_mode_combo.addItem("Overmastery Slots", "overmastery")
-        self.mastery_mode_combo.setMinimumWidth(190)
-        self.mastery_mode_combo.currentIndexChanged.connect(lambda *_: self.refresh_mastery_slot_rows())
-        self.mastery_slot_filter_edit = QLineEdit()
-        self.mastery_slot_filter_edit.setPlaceholderText("Search slot, effect name, GBID, or hash...")
-        self._connect_debounced_text_changed(self.mastery_slot_filter_edit, "mastery_slots", self.refresh_mastery_slot_rows, 180)
-        mastery_controls.addWidget(QLabel("Character"))
-        mastery_controls.addWidget(self.mastery_character_combo)
-        mastery_controls.addWidget(QLabel("View"))
-        mastery_controls.addWidget(self.mastery_mode_combo)
-        mastery_controls.addWidget(self.mastery_slot_filter_edit, 1)
-        for text, slot in [
-            ("Use Selected Character", self.use_selected_character_for_mastery_slots),
-            ("Refresh", self.refresh_mastery_slot_rows),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); mastery_controls.addWidget(btn)
-        mastery_layout.addLayout(mastery_controls)
-        self.mastery_slot_summary_label = QLabel("Select a character to load mastery rows.")
-        self.mastery_slot_summary_label.setObjectName("subtleText")
-        mastery_layout.addWidget(self.mastery_slot_summary_label)
-        self.mastery_slot_table = QTableView()
-        self.mastery_slot_table.setModel(self.mastery_slot_model)
-        self._table_clean(self.mastery_slot_table)
-        self.mastery_slot_table.setMinimumHeight(390)
-        self.mastery_slot_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.mastery_slot_table.selectionModel().selectionChanged.connect(lambda *_: self.update_mastery_slot_detail())
-        self.mastery_slot_table.doubleClicked.connect(lambda *_: self.apply_mastery_slot_inline_edits())
-        mastery_layout.addWidget(self.mastery_slot_table, 1)
-
-        selected_card = make_card("Selected Mastery Row")
-        selected_layout = QVBoxLayout(selected_card)
-        self.mastery_slot_detail_label = QLabel("Select a mastery row to see its effect, slot key, unit formula, and editable values.")
-        self.mastery_slot_detail_label.setWordWrap(True)
-        self.mastery_slot_detail_label.setObjectName("subtleText")
-        selected_layout.addWidget(self.mastery_slot_detail_label)
-        mastery_edit_grid = QGridLayout()
-        mastery_edit_grid.setHorizontalSpacing(10)
-        mastery_edit_grid.setVerticalSpacing(8)
-        self.mastery_slotinfo_edit = QLineEdit(); self.mastery_slotinfo_edit.setPlaceholderText("Board slot key / 1601, e.g. 0x280B6CB0")
-        self.mastery_id_edit = QLineEdit(); self.mastery_id_edit.setPlaceholderText("Mastery effect / 1606 name, GBID, or hash")
-        self.mastery_state_edit = QLineEdit(); self.mastery_state_edit.setPlaceholderText("Active state / 1607, usually 0 or 1")
-        for editor in (self.mastery_slotinfo_edit, self.mastery_id_edit, self.mastery_state_edit):
-            editor.setMinimumHeight(30)
-            editor.returnPressed.connect(self.apply_mastery_slot_inline_edits)
-        mastery_edit_grid.addWidget(QLabel("Slot Key / 1601"), 0, 0)
-        mastery_edit_grid.addWidget(self.mastery_slotinfo_edit, 0, 1)
-        mastery_edit_grid.addWidget(QLabel("Effect / 1606"), 0, 2)
-        mastery_edit_grid.addWidget(self.mastery_id_edit, 0, 3)
-        mastery_edit_grid.addWidget(QLabel("State / 1607"), 1, 0)
-        mastery_edit_grid.addWidget(self.mastery_state_edit, 1, 1)
-        selected_layout.addLayout(mastery_edit_grid)
-        mastery_actions = QHBoxLayout()
-        for text, slot in [
-            ("Apply Row", self.apply_mastery_slot_inline_edits),
-            ("Install OP Pattern", self.install_mastery_skiller_op_selected),
-            ("Install OP Pattern To All", self.install_mastery_skiller_op_all),
-            ("Copy Values", self.copy_selected_mastery_slot_pair),
-            ("Export CSV", self.export_mastery_slots_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); mastery_actions.addWidget(btn)
-        mastery_actions.addStretch(1)
-        selected_layout.addLayout(mastery_actions)
-        mastery_layout.addWidget(selected_card)
-        layout.addWidget(mastery_card, 1)
-        return page
 
     def _apply_value_preset_to_line_edit(self, combo: QComboBox, edit: QLineEdit) -> None:
         data = combo.currentData()
@@ -6297,741 +3319,40 @@ class MainWindow(QMainWindow):
         return page
 
 
-    def _gbid_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("GBID / Hash Browser")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Search the loaded item/sigil hash database by ID, name, hex hash, or decimal hash. Double-click a row to copy its hex hash.")
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-        self.gbid_filter = QLineEdit()
-        self.gbid_filter.setPlaceholderText("Search e.g. Damage Cap, GEEN_020, EE732781")
-        self.gbid_filter.textChanged.connect(self.gbid_model.set_filter)
-        layout.addWidget(self.gbid_filter)
-        quick_filter_row = QHBoxLayout()
-        for label, text in [
-            ("Weapons", "weapon"), ("Sigils", "sigil"), ("Materials", "material"),
-            ("Currency", "currency"), ("Characters", "character"), ("Clear", ""),
-        ]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, t=text: self.gbid_filter.setText(t))
-            quick_filter_row.addWidget(btn)
-        quick_filter_row.addStretch(1)
-        layout.addLayout(quick_filter_row)
-        self.gbid_table = QTableView()
-        self.gbid_table.setModel(self.gbid_model)
-        self._table_clean(self.gbid_table, hidden_columns=(4, 5))
-        self.gbid_table.doubleClicked.connect(lambda _: self.copy_selected_gbid_hash())
-        layout.addWidget(self.gbid_table, 1)
-        row = QHBoxLayout()
-        copy_hex = QPushButton("Copy Hex Hash")
-        copy_hex.clicked.connect(self.copy_selected_gbid_hash)
-        copy_dec = QPushButton("Copy Decimal Hash")
-        copy_dec.clicked.connect(self.copy_selected_gbid_decimal)
-        copy_id = QPushButton("Copy ID")
-        copy_id.clicked.connect(self.copy_selected_gbid_id)
-        add_item_btn = QPushButton("Add as Item")
-        add_item_btn.clicked.connect(self.add_selected_gbid_as_item)
-        add_sigil_btn = QPushButton("Add as Sigil")
-        add_sigil_btn.clicked.connect(self.add_selected_gbid_as_sigil)
-        add_weapon_btn = QPushButton("Add as Weapon")
-        add_weapon_btn.clicked.connect(self.add_selected_gbid_as_weapon)
-        for btn in [copy_hex, copy_dec, copy_id, add_item_btn, add_sigil_btn, add_weapon_btn]:
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
-
-    def _item_id_catalog_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Community Item IDs")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Focused lookup for the Community Item IDs page: sigils/gems, ITEM_* inventory objects, weapons, characters, and trait/skill hashes. "
-            "Use Download Full Community Item IDs to pull the complete current CSV on your PC, then search/add from the normal GBID Browser."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.item_id_catalog_summary = QPlainTextEdit()
-        self.item_id_catalog_summary.setReadOnly(True)
-        self.item_id_catalog_summary.setMaximumHeight(155)
-        layout.addWidget(self.item_id_catalog_summary)
-        self.item_id_catalog_filter = QLineEdit()
-        self.item_id_catalog_filter.setPlaceholderText("Search item_id.csv rows: damage cap, ITEM_31, wrightstone, WEP_PL, color pack...")
-        self.item_id_catalog_filter.textChanged.connect(lambda _: self.refresh_item_id_catalog_rows())
-        layout.addWidget(self.item_id_catalog_filter)
-        quick_row = QHBoxLayout()
-        for label, text in [("Sigils", "GEEN"), ("ITEM_*", "ITEM_"), ("Materials", "material"), ("Wrightstones", "wrightstone"), ("Weapons", "WEP_"), ("Clear", "")]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, t=text: self.item_id_catalog_filter.setText(t))
-            quick_row.addWidget(btn)
-        quick_row.addStretch(1)
-        layout.addLayout(quick_row)
-        self.item_id_catalog_table = QTableView()
-        self.item_id_catalog_table.setModel(self.item_id_catalog_model)
-        self._table_clean(self.item_id_catalog_table, hidden_columns=(5,))
-        self.item_id_catalog_table.doubleClicked.connect(lambda _: self.copy_selected_item_id_catalog_hash())
-        layout.addWidget(self.item_id_catalog_table, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh", self.refresh_item_id_catalog_rows),
-            ("Download Full Community Item IDs", self.download_item_ids),
-            ("Copy Hash", self.copy_selected_item_id_catalog_hash),
-            ("Copy GBID", self.copy_selected_item_id_catalog_gbid),
-            ("Export Catalog CSV", self.export_item_id_catalog_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.refresh_item_id_catalog_rows()
-        return page
 
 
 
-    def _sigil_gem_id_catalog_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Community Sigil/Gem IDs")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Focused lookup for the Community Sigil/Gem IDs page: GEEN_* sigil inventory IDs, tier variants, plus variants, and their GBFR hashes. "
-            "Use this when adding sigils or checking why a sigil appears as unknown. Trait/property SKILL_* IDs live on the Trait/Skill ID Catalog page."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-
-        self.sigil_gem_catalog_summary = QPlainTextEdit()
-        self.sigil_gem_catalog_summary.setReadOnly(True)
-        self.sigil_gem_catalog_summary.setMaximumHeight(175)
-        layout.addWidget(self.sigil_gem_catalog_summary)
-
-        self.sigil_gem_catalog_filter = QLineEdit()
-        self.sigil_gem_catalog_filter.setPlaceholderText("Search sigils/gems: Damage Cap, War Elemental, GEEN_020, V+, resistance...")
-        self.sigil_gem_catalog_filter.textChanged.connect(lambda _: self.refresh_sigil_gem_catalog_rows())
-        layout.addWidget(self.sigil_gem_catalog_filter)
-
-        quick_row = QHBoxLayout()
-        for label, text in [
-            ("Offense", "offense"),
-            ("Utility", "utility"),
-            ("Resistance", "resistance"),
-            ("V", " tier V"),
-            ("V+", "Plus"),
-            ("Damage Cap", "Damage Cap"),
-            ("Clear", ""),
-        ]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, t=text: self.sigil_gem_catalog_filter.setText(t))
-            quick_row.addWidget(btn)
-        quick_row.addStretch(1)
-        layout.addLayout(quick_row)
-
-        self.sigil_gem_hide_dummy = QCheckBox("Hide reserved / dummy rows")
-        self.sigil_gem_hide_dummy.setChecked(True)
-        self.sigil_gem_hide_dummy.toggled.connect(lambda _: self.refresh_sigil_gem_catalog_rows())
-        layout.addWidget(self.sigil_gem_hide_dummy)
-
-        self.sigil_gem_catalog_table = QTableView()
-        self.sigil_gem_catalog_table.setModel(self.sigil_gem_catalog_model)
-        self._table_clean(self.sigil_gem_catalog_table, hidden_columns=(9,))
-        self.sigil_gem_catalog_table.doubleClicked.connect(lambda _: self.copy_selected_sigil_gem_catalog_hash())
-        layout.addWidget(self.sigil_gem_catalog_table, 1)
-
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh", self.refresh_sigil_gem_catalog_rows),
-            ("Download Full Community IDs", self.download_item_ids),
-            ("Copy Hash", self.copy_selected_sigil_gem_catalog_hash),
-            ("Copy GBID", self.copy_selected_sigil_gem_catalog_gbid),
-            ("Add Selected Sigil", self.add_selected_sigil_gem_catalog_to_empty_slot),
-            ("Export Catalog CSV", self.export_sigil_gem_catalog_csv),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.refresh_sigil_gem_catalog_rows()
-        return page
-
-
-    def _trait_skill_id_catalog_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Community Trait/Skill IDs")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Focused lookup for the Community Trait/Skill IDs page: SKILL_* trait/property hashes used by sigil traits, wrightstone properties, overmastery research, and unknown hash cleanup. "
-            "These are not the same thing as GEEN_* sigil inventory item IDs."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.trait_skill_catalog_summary = QPlainTextEdit()
-        self.trait_skill_catalog_summary.setReadOnly(True)
-        self.trait_skill_catalog_summary.setMaximumHeight(160)
-        layout.addWidget(self.trait_skill_catalog_summary)
-        self.trait_skill_catalog_filter = QLineEdit()
-        self.trait_skill_catalog_filter.setPlaceholderText("Search trait/skill IDs: ATK, DMG Cap, War Elemental, SKILL_020, character warpath, unused...")
-        self.trait_skill_catalog_filter.textChanged.connect(lambda _: self.refresh_trait_skill_catalog_rows())
-        layout.addWidget(self.trait_skill_catalog_filter)
-        quick_row = QHBoxLayout()
-        for label, text in [("Offense", "offense"), ("Defense", "defense"), ("Resistance", "resistance"), ("Character", "character"), ("Special", "special"), ("DMG Cap", "dmg cap"), ("Clear", "")]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, t=text: self.trait_skill_catalog_filter.setText(t))
-            quick_row.addWidget(btn)
-        quick_row.addStretch(1)
-        layout.addLayout(quick_row)
-        self.trait_skill_hide_unused = QCheckBox("Hide unused / caution rows")
-        self.trait_skill_hide_unused.setChecked(True)
-        self.trait_skill_hide_unused.toggled.connect(lambda _: self.refresh_trait_skill_catalog_rows())
-        layout.addWidget(self.trait_skill_hide_unused)
-        self.trait_skill_catalog_table = QTableView()
-        self.trait_skill_catalog_table.setModel(self.trait_skill_catalog_model)
-        self._table_clean(self.trait_skill_catalog_table, hidden_columns=(7,))
-        self.trait_skill_catalog_table.doubleClicked.connect(lambda _: self.copy_selected_trait_skill_catalog_hash())
-        layout.addWidget(self.trait_skill_catalog_table, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh", self.refresh_trait_skill_catalog_rows),
-            ("Download Full Community IDs", self.download_item_ids),
-            ("Copy Hash", self.copy_selected_trait_skill_catalog_hash),
-            ("Copy Skill ID", self.copy_selected_trait_skill_catalog_id),
-            ("Export Catalog CSV", self.export_trait_skill_catalog_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.refresh_trait_skill_catalog_rows()
-        return page
-
-
-    def _model_id_catalog_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Community Model IDs")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Focused lookup for the Community Model IDs page: player/NPC/enemy model IDs, map objects, player weapon model IDs, and enemy weapon IDs. "
-            "The Hash column is generated with the same GBFR hash helper where the ID is hashable, so these rows can help clean up model-like hash fields in saves."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.model_id_catalog_summary = QPlainTextEdit()
-        self.model_id_catalog_summary.setReadOnly(True)
-        self.model_id_catalog_summary.setMaximumHeight(150)
-        layout.addWidget(self.model_id_catalog_summary)
-        self.model_id_catalog_filter = QLineEdit()
-        self.model_id_catalog_filter.setPlaceholderText("Search model IDs: PL, NP, EM, WP, Bahamut, Lucilius, Rukalsa, cat...")
-        self.model_id_catalog_filter.textChanged.connect(lambda _: self.refresh_model_id_catalog_rows())
-        layout.addWidget(self.model_id_catalog_filter)
-        quick_row = QHBoxLayout()
-        for label, text in [("Players", "Model Player"), ("NPCs", "Model NPC"), ("Enemies", "Model Enemy"), ("Player Weapons", "Model Player Weapon"), ("Map Objects", "Model Map"), ("Bahamut", "Bahamut"), ("Clear", "")]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, t=text: self.model_id_catalog_filter.setText(t))
-            quick_row.addWidget(btn)
-        quick_row.addStretch(1)
-        layout.addLayout(quick_row)
-        self.model_id_catalog_table = QTableView()
-        self.model_id_catalog_table.setModel(self.model_id_catalog_model)
-        self._table_clean(self.model_id_catalog_table, hidden_columns=(7,))
-        self.model_id_catalog_table.doubleClicked.connect(lambda _: self.copy_selected_model_id_catalog_hash())
-        layout.addWidget(self.model_id_catalog_table, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh", self.refresh_model_id_catalog_rows),
-            ("Copy Hash", self.copy_selected_model_id_catalog_hash),
-            ("Copy Model ID", self.copy_selected_model_id_catalog_id),
-            ("Export Catalog CSV", self.export_model_id_catalog_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.refresh_model_id_catalog_rows()
-        return page
-
-    def _phase_id_catalog_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Community Phase IDs")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Focused lookup for the Community Phase IDs page. Phase IDs are p### jump codes such as p720 for Lucilius Arena; "
-            "the related ph### entity code is shown beside it for scripts/entity-prefix research. Hash columns are generated locally for save-field cleanup."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.phase_id_catalog_summary = QPlainTextEdit()
-        self.phase_id_catalog_summary.setReadOnly(True)
-        self.phase_id_catalog_summary.setMaximumHeight(165)
-        layout.addWidget(self.phase_id_catalog_summary)
-        self.phase_id_catalog_filter = QLineEdit()
-        self.phase_id_catalog_filter.setPlaceholderText("Search phase IDs: p720, Lucilius, Grandcypher, Folca, Seedhollow, title screen...")
-        self.phase_id_catalog_filter.textChanged.connect(lambda _: self.refresh_phase_id_catalog_rows())
-        layout.addWidget(self.phase_id_catalog_filter)
-        quick_row = QHBoxLayout()
-        for label, text in [("Lucilius", "Lucilius"), ("Grandcypher", "Grandcypher"), ("Folca", "Folca"), ("Seedhollow", "Seedhollow"), ("System/Menu", "System"), ("Unknown", "?"), ("Clear", "")]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, t=text: self.phase_id_catalog_filter.setText(t))
-            quick_row.addWidget(btn)
-        quick_row.addStretch(1)
-        layout.addLayout(quick_row)
-        self.phase_id_catalog_table = QTableView()
-        self.phase_id_catalog_table.setModel(self.phase_id_catalog_model)
-        self._table_clean(self.phase_id_catalog_table, hidden_columns=(7, 8))
-        self.phase_id_catalog_table.doubleClicked.connect(lambda _: self.copy_selected_phase_id_catalog_hash())
-        layout.addWidget(self.phase_id_catalog_table, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh", self.refresh_phase_id_catalog_rows),
-            ("Copy Phase Hash", self.copy_selected_phase_id_catalog_hash),
-            ("Copy Phase ID", self.copy_selected_phase_id_catalog_id),
-            ("Copy Entity Code", self.copy_selected_phase_id_catalog_entity_code),
-            ("Export Catalog CSV", self.export_phase_id_catalog_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.refresh_phase_id_catalog_rows()
-        return page
 
 
 
-    def _quest_id_catalog_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Community Quest IDs")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Focused lookup for the Community Quest IDs page. Quest IDs are grouped by story, side/challenge, Fate Episode, quest-counter, town/lobby, practice, and misc ranges. "
-            "Numeric Value is useful when matching quest/progression fields in the save map."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.quest_id_catalog_summary = QPlainTextEdit()
-        self.quest_id_catalog_summary.setReadOnly(True)
-        self.quest_id_catalog_summary.setMaximumHeight(165)
-        layout.addWidget(self.quest_id_catalog_summary)
-        self.quest_id_catalog_filter = QLineEdit()
-        self.quest_id_catalog_filter.setPlaceholderText("Search quest IDs: 407321, Zero, Bahamut, Fate, Grandcypher, Folca, Practice...")
-        self.quest_id_catalog_filter.textChanged.connect(lambda _: self.refresh_quest_id_catalog_rows())
-        layout.addWidget(self.quest_id_catalog_filter)
-        quick_row = QHBoxLayout()
-        for label, text in [("Story", "Main Quest"), ("Side", "Challenge"), ("Fate", "Fate"), ("Quest Counter", "Multiplayer"), ("Towns", "Towns"), ("Practice", "Practice"), ("Zero", "Zero"), ("Clear", "")]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, t=text: self.quest_id_catalog_filter.setText(t))
-            quick_row.addWidget(btn)
-        quick_row.addStretch(1)
-        layout.addLayout(quick_row)
-        self.quest_id_catalog_table = QTableView()
-        self.quest_id_catalog_table.setModel(self.quest_id_catalog_model)
-        self._table_clean(self.quest_id_catalog_table, hidden_columns=(6, 7))
-        self.quest_id_catalog_table.doubleClicked.connect(lambda _: self.copy_selected_quest_id_catalog_id())
-        layout.addWidget(self.quest_id_catalog_table, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh", self.refresh_quest_id_catalog_rows),
-            ("Copy Quest ID", self.copy_selected_quest_id_catalog_id),
-            ("Copy Numeric Value", self.copy_selected_quest_id_catalog_numeric),
-            ("Export Catalog CSV", self.export_quest_id_catalog_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.refresh_quest_id_catalog_rows()
-        return page
-
-    def _reference_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Reference Tables / Rates")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "A readable lookup for rates, mechanics notes, weapon-material references, and source-page coverage. "
-            "This is not raw save data; it is here so you can understand what IDs/items are tied to in-game systems."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.reference_filter = QLineEdit()
-        self.reference_filter.setPlaceholderText("Search references: curio, grand success, quick quest, weapon materials, emote, transmutation...")
-        self.reference_filter.textChanged.connect(lambda _: self.refresh_reference_rows())
-        layout.addWidget(self.reference_filter)
-        quick_row = QHBoxLayout()
-        for label, text in [("Gacha", "gacha"), ("Curio", "curio"), ("Weapon Materials", "weapon materials"), ("Quick Quest", "quick quest"), ("Sigil Synthesis", "synthesis"), ("Clear", "")]:
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda _=False, t=text: self.reference_filter.setText(t))
-            quick_row.addWidget(btn)
-        quick_row.addStretch(1)
-        layout.addLayout(quick_row)
-        self.reference_table = QTableView()
-        self.reference_table.setModel(self.reference_model)
-        self._table_clean(self.reference_table, hidden_columns=(5,))
-        self.reference_table.doubleClicked.connect(lambda _: self.copy_selected_reference_value())
-        layout.addWidget(self.reference_table, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh", self.refresh_reference_rows),
-            ("Copy Value", self.copy_selected_reference_value),
-            ("Copy Notes", self.copy_selected_reference_notes),
-            ("Export CSV", self.export_reference_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.refresh_reference_rows()
-        return page
 
 
-    def _database_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Resource Database Coverage")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "A compact view of what the packaged databases currently know. Use this to see whether missing names are GBID/hash rows, non-hash resource IDs, mechanics notes, or save-unit labels."
-        )
-        help_text.setWordWrap(True)
-        help_text.setObjectName("helpText")
-        layout.addWidget(help_text)
-        self.database_filter = QLineEdit()
-        self.database_filter.setPlaceholderText("Filter coverage by database/category, e.g. weapon, quest, mechanics, overmastery...")
-        self.database_filter.textChanged.connect(lambda _: self.refresh_database_rows())
-        layout.addWidget(self.database_filter)
-        self.database_table = QTableView()
-        self.database_table.setModel(self.database_model)
-        self._table_clean(self.database_table)
-        layout.addWidget(self.database_table, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Refresh Counts", self.refresh_database_rows),
-            ("Show Missing/Unknown Save Hashes", self.show_unknown_hash_scan),
-            ("Export Coverage CSV", self.export_database_coverage_csv),
-            ("Open Resource IDs", lambda: self._show_page("Resource IDs")),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
 
 
-    def _resource_ids_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Resource ID Browser")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Search non-hash public IDs scraped from Community resources: quest IDs, model IDs, phase IDs, buff/debuff IDs, actions, motions, obj IDs, and user attributes. "
-            "These are used to make value previews and research output more readable."
-        )
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-        self.resource_id_filter = QLineEdit()
-        self.resource_id_filter.setPlaceholderText("Search category, ID, name, notes...")
-        self.resource_id_filter.textChanged.connect(self.resource_id_model.set_filter)
-        layout.addWidget(self.resource_id_filter)
-        self.resource_id_table = QTableView()
-        self.resource_id_table.setModel(self.resource_id_model)
-        self.resource_id_table.setSortingEnabled(True)
-        self.resource_id_table.doubleClicked.connect(lambda idx: self.copy_resource_id())
-        layout.addWidget(self.resource_id_table, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Copy ID", self.copy_resource_id),
-            ("Copy Name", self.copy_resource_name),
-            ("Export Resource IDs CSV", self.export_resource_ids_csv),
-            ("Download Community Resource IDs", self.download_resource_ids),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
 
 
-    def _entity_prefixes_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Entity Prefix Decoder")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Decode GBFR asset/entity prefixes from IDs or paths, such as pl0000, wp2200, em1800, ph720, or st101f00. "
-            "The prefix database is also merged into Resource IDs so model/phase/stage references are easier to read."
-        )
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-
-        self.entity_prefix_input = QLineEdit()
-        self.entity_prefix_input.setPlaceholderText("Enter code/path: pl0000, wp2200, em1800, ph720, st101f00...")
-        self.entity_prefix_input.returnPressed.connect(self.decode_entity_prefix)
-        layout.addWidget(self.entity_prefix_input)
-
-        row = QHBoxLayout()
-        decode_btn = QPushButton("Decode Prefix")
-        decode_btn.clicked.connect(self.decode_entity_prefix)
-        copy_btn = QPushButton("Copy Result")
-        copy_btn.clicked.connect(self.copy_entity_prefix_result)
-        search_btn = QPushButton("Show Prefix Rows in Resource IDs")
-        search_btn.clicked.connect(self.show_entity_prefix_resource_rows)
-        for btn in [decode_btn, copy_btn, search_btn]:
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-
-        self.entity_prefix_result = QPlainTextEdit()
-        self.entity_prefix_result.setReadOnly(True)
-        self.entity_prefix_result.setPlainText(
-            "Examples:\n"
-            "  pl0000  -> Player body\n"
-            "  wp2200  -> Player weapon\n"
-            "  em1800  -> Enemy body\n"
-            "  ph720   -> Phase\n"
-            "  st101f00 -> Stage / room / map"
-        )
-        layout.addWidget(self.entity_prefix_result, 1)
-        return page
 
 
-    def _hash_tools_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Hash Tools / ID Generator")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel(
-            "Compute GBFR's custom XXHash32 for GBID strings. This is useful when the save has a hash but the database is missing a row, or when you want to test likely IDs such as WEP_PL0200_01 or GEEN_020_04."
-        )
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-
-        self.hash_input = QLineEdit()
-        self.hash_input.setPlaceholderText("Enter one ID/name per line or comma-separated: GEEN_000_00, WEP_PL0200_01")
-        self.hash_input.returnPressed.connect(self.compute_hash_tools)
-        layout.addWidget(self.hash_input)
-
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Compute Hash", self.compute_hash_tools),
-            ("Copy Results", self.copy_hash_tool_results),
-            ("Export Results CSV", self.export_hash_tool_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-
-        self.hash_results = QPlainTextEdit()
-        self.hash_results.setReadOnly(True)
-        self.hash_results.setPlainText("Examples:\nGEEN_000_00 -> 95858B63 / Attack Power I\nWEP_PL0200_01 -> 3B2082B6 / Rukalsa")
-        layout.addWidget(self.hash_results, 1)
-        return page
-
-    def _data_sources_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("GBID Data Sources")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Paste public CSV URLs or normal Google Sheets edit links. The editor converts Google Sheets gid tabs to CSV export URLs and merges any rows with an ID/GBID, name, and 8-digit hash. Extra columns become searchable tooltip aliases.")
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-        self.sources_text = QPlainTextEdit()
-        self.sources_text.setPlaceholderText("One URL per line. Google Sheets links with gid= are supported.")
-        default_sources = self.default_source_urls_text()
-        self.sources_text.setPlainText(default_sources)
-        layout.addWidget(self.sources_text, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Audit Google Sheet Tabs", self.audit_google_sheet_sources),
-            ("Download + Merge These Sources", self.download_sources_from_page),
-            ("Download Community Item IDs", self.download_item_ids),
-            ("Import Local CSV/TSV", self.import_item_csv),
-            ("Export Merged DB CSV", self.export_item_db_csv),
-        ]:
-            btn = QPushButton(text); btn.clicked.connect(slot); row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.sources_status = QPlainTextEdit()
-        self.sources_status.setReadOnly(True)
-        self.sources_status.setMaximumHeight(180)
-        self.sources_status.setPlainText(f"Packaged seed rows loaded: {len(self.item_db)}\nPackaged Google Sheet tabs: {len(source_urls_from_text(default_sources))}")
-        layout.addWidget(self.sources_status)
-        return page
 
 
-    def _hash_scan_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Hash Scan")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Scans the loaded save for uint values that resolve to known GBIDs, plus unknown values in hash-like save fields. This is useful for finding weapons, sigils, materials, currencies, abilities, and still-unknown hashes.")
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-        row = QHBoxLayout()
-        known_btn = QPushButton("Scan Known Hashes")
-        known_btn.clicked.connect(lambda: self.run_hash_scan(False))
-        unknown_btn = QPushButton("Scan + Unknown Hash Fields")
-        unknown_btn.clicked.connect(lambda: self.run_hash_scan(True))
-        export_btn = QPushButton("Export Hash Scan CSV")
-        export_btn.clicked.connect(self.export_hash_scan_csv)
-        resolve_btn = QPushButton("Resolve Unknown ID Patterns")
-        resolve_btn.clicked.connect(self.resolve_unknown_hash_patterns)
-        export_candidates_btn = QPushButton("Export Pattern Matches CSV")
-        export_candidates_btn.clicked.connect(self.export_hash_candidate_csv)
-        jump_btn = QPushButton("Jump Selected Hash to Raw Unit")
-        jump_btn.clicked.connect(self.jump_to_hash_scan_unit)
-        for btn in [known_btn, unknown_btn, resolve_btn, export_candidates_btn, jump_btn, export_btn]:
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.hash_scan_table = QTableView()
-        self.hash_scan_table.setModel(self.hash_scan_model)
-        self.hash_scan_table.doubleClicked.connect(lambda _: self.jump_to_hash_scan_unit())
-        layout.addWidget(self.hash_scan_table, 1)
-        self.hash_scan_text = QPlainTextEdit()
-        self.hash_scan_text.setReadOnly(True)
-        self.hash_scan_text.setMaximumHeight(170)
-        layout.addWidget(self.hash_scan_text)
-        return page
-
-    def _research_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Research / Safe Hunting Tools")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("This page surfaces high-value known and candidate fields. It does not claim unknown fields are safe; use before/after diffs and value search before editing.")
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-        row = QHBoxLayout()
-        self.value_search_edit = QLineEdit()
-        self.value_search_edit.setPlaceholderText("Search exact value in loaded save, e.g. 999, 0xEE732781, 12345")
-        search_btn = QPushButton("Search Values")
-        search_btn.clicked.connect(self.search_loaded_values)
-        export_btn = QPushButton("Export Value Search CSV")
-        export_btn.clicked.connect(self.export_value_search_csv)
-        refresh_btn = QPushButton("Refresh Candidates")
-        refresh_btn.clicked.connect(self.refresh_candidate_rows)
-        row.addWidget(self.value_search_edit, 1)
-        row.addWidget(search_btn)
-        row.addWidget(export_btn)
-        row.addWidget(refresh_btn)
-        layout.addLayout(row)
-        self.value_search_results: List[Dict[str, Any]] = []
-        self.candidate_table = QTableView()
-        self.candidate_table.setModel(self.candidate_model)
-        self.candidate_table.doubleClicked.connect(lambda _: self.jump_to_candidate_unit())
-        layout.addWidget(self.candidate_table, 1)
-        self.research_text = QPlainTextEdit()
-        self.research_text.setReadOnly(True)
-        self.research_text.setMaximumHeight(180)
-        layout.addWidget(self.research_text)
-        return page
 
 
-    def _compare_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Compare Saves")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        help_text = QLabel("Load two saves to see exactly which save-unit records changed. This is the fastest way to identify rupies, MSP, item counts, weapon XP, sigil locks, and other unknown fields from before/after samples.")
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-        row = QHBoxLayout()
-        before_btn = QPushButton("Choose Before")
-        before_btn.clicked.connect(lambda: self.choose_compare_path(True))
-        after_btn = QPushButton("Choose After")
-        after_btn.clicked.connect(lambda: self.choose_compare_path(False))
-        run_btn = QPushButton("Run Compare")
-        run_btn.clicked.connect(self.run_compare)
-        export_json_btn = QPushButton("Export JSON Diff")
-        export_json_btn.clicked.connect(lambda: self.export_compare("json"))
-        export_csv_btn = QPushButton("Export CSV Diff")
-        export_csv_btn.clicked.connect(lambda: self.export_compare("csv"))
-        for btn in [before_btn, after_btn, run_btn, export_json_btn, export_csv_btn]:
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        self.compare_label = QLabel("Before: not selected\nAfter: not selected")
-        self.compare_label.setWordWrap(True)
-        layout.addWidget(self.compare_label)
-        self.compare_text = QPlainTextEdit()
-        self.compare_text.setReadOnly(True)
-        layout.addWidget(self.compare_text, 1)
-        return page
 
-    def _raw_tools_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QLabel("Raw Tools")
-        header.setObjectName("pageHeader")
-        layout.addWidget(header)
-        self.raw_text = QPlainTextEdit()
-        self.raw_text.setReadOnly(True)
-        layout.addWidget(self.raw_text, 1)
-        row = QHBoxLayout()
-        for text, slot in [
-            ("Export JSON Report", self.export_report),
-            ("Import Item CSV", self.import_item_csv),
-            ("Download Item IDs", self.download_item_ids),
-            ("Download Sheet Sources", self.download_sources_from_page),
-            ("Export GBID DB", self.export_item_db_csv),
-        ]:
-            btn = QPushButton(text)
-            btn.clicked.connect(slot)
-            row.addWidget(btn)
-        row.addStretch(1)
-        layout.addLayout(row)
-        return page
+
+
+
+
+
+
+
+
+
 
     def copy_text(self, text: str) -> None:
         QApplication.clipboard().setText(text)
         self.statusBar().showMessage(f"Copied: {text}", 3000)
 
-    def default_source_urls_text(self) -> str:
-        # Source website lists are intentionally not shown in the end-user build.
-        return ""
 
-    def merge_item_db(self, db: ItemDatabase, label: str = "Imported") -> None:
-        before = len(self.item_db)
-        self.item_db.merge(db)
-        self.unit_model.set_item_db(self.item_db)
-        self.gbid_model.set_db(self.item_db)
-        self.refresh_item_aware_views()
-        self.refresh_unit_map_rows()
-        self.refresh_save_map_rows()
-        self.refresh_id_audit_rows()
-        self.refresh_candidate_rows()
-        self.refresh_database_rows()
-        self.refresh_item_id_catalog_rows()
-        self.refresh_sigil_gem_catalog_rows()
-        self.refresh_trait_skill_catalog_rows()
-        self.refresh_model_id_catalog_rows()
-        self.refresh_phase_id_catalog_rows()
-        self.refresh_quest_id_catalog_rows()
-        self.refresh_preset_rows()
-        self.refresh_save_wizard_rows()
-        added = len(self.item_db) - before
-        if hasattr(self, "sources_status"):
-            self.sources_status.setPlainText(f"{label}: source rows {len(db)} | new merged hashes {added} | total DB rows {len(self.item_db)}")
 
 
 
@@ -7093,40 +3414,8 @@ class MainWindow(QMainWindow):
             lines.append("<pre>" + preview.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + "</pre>")
         self.preset_detail_label.setText("<br>".join(lines))
 
-    def copy_selected_preset_text(self) -> None:
-        pack = self.current_preset_pack()
-        if not pack:
-            QMessageBox.information(self, "No preset", "Select a preset first.")
-            return
-        QApplication.clipboard().setText(pack.to_batch_text())
-        self.statusBar().showMessage(f"Copied preset batch text: {pack.name}", 3000)
 
-    def export_preset_packs_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export preset packs", "gbfr_preset_packs.csv", "CSV (*.csv)")
-        if not path:
-            return
-        with open(path, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["key", "name", "category", "description", "items", "sigils", "weapons", "notes"])
-            for pack in list_preset_packs():
-                writer.writerow([
-                    pack.key,
-                    pack.name,
-                    pack.category,
-                    pack.description,
-                    "\n".join(f"{n}, {q}" for n, q in pack.items),
-                    "\n".join(f"{n}, {lvl} {'locked' if lock else 'unlocked'}" for n, lvl, lock in pack.sigils),
-                    "\n".join(f"{n}, {xp}" for n, xp in pack.weapons),
-                    pack.notes,
-                ])
-        QMessageBox.information(self, "Exported", f"Exported {len(list_preset_packs())} preset packs.")
 
-    def apply_selected_preset_pack(self) -> None:
-        pack = self.current_preset_pack()
-        if not pack:
-            QMessageBox.information(self, "No preset", "Select a preset first.")
-            return
-        self.apply_preset_pack(pack)
 
     def _wallet_field_for_item_key(self, key: str, item_hash: Optional[int] = None) -> Optional[tuple[int, str, int]]:
         """Return direct UserDataManager wallet field for database names that are not real item stacks.
@@ -7158,256 +3447,18 @@ class MainWindow(QMainWindow):
                 return labels["rupies"]
         return None
 
-    def apply_preset_pack(self, pack: PresetPack) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        errors: List[str] = []
-        resolved_items: List[tuple[int, int, str]] = []
-        resolved_wallets: List[tuple[int, int, str, int]] = []
-        resolved_sigils: List[tuple[int, int, bool, str]] = []
-        resolved_weapons: List[tuple[int, int, str]] = []
-        # Preset packs are curated, so be strict: do not apply generated or
-        # unknown hashes from a preset. Manual Add/Batch tools can still accept
-        # raw hashes, but presets should never surprise the user with
-        # "Unknown · 0x..." rows.
-        for key, qty in pack.items:
-            h = self._resolve_hash_from_text(key)
-            entry = self.item_db.lookup_hash(h) if h is not None else None
-            if h is None or entry is None:
-                errors.append(f"Item unresolved or unnamed: {key}")
-            else:
-                wallet = self._wallet_field_for_item_key(key, h)
-                if wallet is not None:
-                    field_id, label, cap = wallet
-                    resolved_wallets.append((field_id, min(int(qty), int(cap)), label, int(cap)))
-                elif entry.category in {"Sigil", "Weapon", "Character", "Trait / Skill"}:
-                    errors.append(f"Item category mismatch: {key} resolved as {entry.category}")
-                else:
-                    resolved_items.append((h, qty, key))
-        for key, level, locked in pack.sigils:
-            h = self._resolve_hash_from_text(key)
-            entry = self.item_db.lookup_hash(h) if h is not None else None
-            if h is None or entry is None:
-                errors.append(f"Sigil unresolved or unnamed: {key}")
-            elif not self._is_sigil_db_entry(entry):
-                errors.append(f"Sigil category mismatch: {key} resolved as {entry.category}")
-            else:
-                resolved_sigils.append((h, level, locked, key))
-        for key, xp in pack.weapons:
-            h = self._resolve_hash_from_text(key)
-            entry = self.item_db.lookup_hash(h) if h is not None else None
-            if h is None or entry is None:
-                errors.append(f"Weapon unresolved or unnamed: {key}")
-            elif entry.category != "Weapon":
-                errors.append(f"Weapon category mismatch: {key} resolved as {entry.category}")
-            else:
-                resolved_weapons.append((h, xp, key))
-        if not (resolved_wallets or resolved_items or resolved_sigils or resolved_weapons):
-            QMessageBox.warning(self, "Preset unresolved", "None of this preset's rows resolved.\n" + "\n".join(errors[:12]))
-            return
-        if len(resolved_items) > self.count_empty_item_slots() or len(resolved_sigils) > self.count_empty_sigil_slots() or len(resolved_weapons) > self.count_empty_weapon_slots():
-            QMessageBox.warning(
-                self,
-                "Not enough empty slots",
-                "This preset needs more empty reusable slots than the save currently exposes.\n\n"
-                f"Needs: {len(resolved_items)} item, {len(resolved_sigils)} sigil, {len(resolved_weapons)} weapon slots.\n"
-                f"Available: {self.count_empty_item_slots()} item, {self.count_empty_sigil_slots()} sigil, {self.count_empty_weapon_slots()} weapon slots."
-            )
-            return
-        added: List[str] = []
-        for field_id, qty, label, _cap in resolved_wallets:
-            rec = self.save.find_first("int", field_id, 0) if self.save else None
-            if rec is None:
-                errors.append(f"Wallet field missing: {label} ({field_id})")
-                continue
-            if self._set_record_first_value(rec, int(qty), f"{label} wallet value"):
-                added.append(f"Set {label} -> {int(qty):,} (UserDataManager {field_id})")
-        for h, qty, _ in resolved_items:
-            result = self._add_item_hash_qty_to_empty_slot(h, qty, flag=1)
-            if result:
-                added.append(result)
-        for h, level, locked, _ in resolved_sigils:
-            result = self._add_sigil_hash_level_to_empty_slot(h, level, locked)
-            if result:
-                added.append(result)
-        for h, xp, _ in resolved_weapons:
-            result = self._add_weapon_hash_xp_to_empty_slot(h, xp)
-            if result:
-                added.append(result)
-        self._after_editor_patch(f"Applied preset {pack.name}: {len(added)} rows added in memory.")
 
 
 
 
 
-    def refresh_save_wizard_rows(self) -> None:
-        if not hasattr(self, "save_wizard_model"):
-            return
-        q = self.save_wizard_filter_edit.text().strip() if hasattr(self, "save_wizard_filter_edit") else ""
-        rows = []
-        # Built-in Save Wizard mappings are now shown as action buttons above.
-        # The table is reserved for imported/raw sheet references so it no
-        # longer duplicates Preset Packs.
-        imported = list(getattr(self, "_imported_save_wizard_rows", []))
-        if q and imported:
-            toks = q.lower().split()
-            imported = [r for r in imported if all(t in " ".join([r.key, r.name, r.category, r.description, r.source]).lower() for t in toks)]
-        for cheat in imported:
-            rows.append([
-                cheat.category,
-                cheat.name,
-                cheat.source,
-                "Reference only" if not cheat.safe else "Mapped",
-                cheat.description,
-                cheat.key,
-            ])
-        if not rows and not imported and not q:
-            rows.append([
-                "Sheet",
-                "No sheet rows loaded yet",
-                "—",
-                "Reference only",
-                "Use Load Sheet Tab to import the Google Sheet for research. Use the mapped cheat buttons above for actual edits.",
-                "__none__",
-            ])
-        self.save_wizard_model.set_rows(rows)
-        if hasattr(self, "save_wizard_table"):
-            self._auto_fit_table(self.save_wizard_table)
-        self.update_save_wizard_detail()
 
-    def current_save_wizard_cheat(self) -> Optional[SaveWizardCheat]:
-        if not hasattr(self, "save_wizard_table"):
-            return None
-        idx = self.save_wizard_table.currentIndex()
-        if not idx.isValid():
-            return None
-        row = self.save_wizard_model.rows[idx.row()] if 0 <= idx.row() < len(self.save_wizard_model.rows) else None
-        if not row:
-            return None
-        key = str(row[5])
-        if key == "__none__":
-            return None
-        for cheat in getattr(self, "_imported_save_wizard_rows", []):
-            if cheat.key == key:
-                return cheat
-        try:
-            return get_builtin_save_wizard_cheat(key)
-        except Exception:
-            return None
 
-    def update_save_wizard_detail(self) -> None:
-        if not hasattr(self, "save_wizard_detail_label"):
-            return
-        cheat = self.current_save_wizard_cheat()
-        if not cheat:
-            mapped = len(list_builtin_save_wizard_cheats(""))
-            imported = len(getattr(self, "_imported_save_wizard_rows", []))
-            self.save_wizard_detail_label.setText(
-                f"Mapped editor-native cheats: {mapped}<br>Imported sheet reference rows: {imported}<br><br>"
-                "Use the cheat buttons above to patch a save. Use the sheet table to track raw Save Wizard rows we still need to map."
-            )
-            return
-        lines = [
-            f"<b>{cheat.name}</b>",
-            f"Category: {cheat.category}",
-            f"Source: {cheat.source}",
-            f"Status: {'mapped safe editor-native action' if cheat.safe else 'reference-only imported row'}",
-            cheat.description,
-        ]
-        if cheat.safe:
-            lines.insert(3, f"Action: {cheat.display_action()}")
-        else:
-            lines.append("This row will not apply until it is mapped to a safe editor-native action.")
-        self.save_wizard_detail_label.setText("<br>".join(lines))
 
-    def export_save_wizard_cheats_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export Save Wizard cheat list", "gbfr_save_wizard_cheats.csv", "CSV (*.csv)")
-        if not path:
-            return
-        cheats = list_builtin_save_wizard_cheats("") + list(getattr(self, "_imported_save_wizard_rows", []))
-        with open(path, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["key", "name", "category", "action", "target", "safe", "description", "source"])
-            for c in cheats:
-                writer.writerow([c.key, c.name, c.category, c.action, c.target, c.safe, c.description, c.source])
-        QMessageBox.information(self, "Exported", f"Exported {len(cheats)} Save Wizard cheat rows.")
 
-    def load_save_wizard_sheet_tab(self) -> None:
-        url, ok = QInputDialog.getText(self, "Load Save Wizard sheet tab", "Google Sheets URL:", text=SAVE_WIZARD_SHEET_URL)
-        if not ok or not url.strip():
-            return
-        try:
-            text = load_sheet_csv(url.strip())
-            rows = parse_sheet_cheats(text, source=url.strip())
-        except Exception as exc:
-            QMessageBox.warning(self, "Sheet load failed", f"Could not load the sheet tab from this PC.\n\n{exc}\n\nThe bundled editor-native Save Wizard cheats still work offline.")
-            return
-        self._imported_save_wizard_rows = rows
-        self.refresh_save_wizard_rows()
-        QMessageBox.information(self, "Sheet loaded", f"Loaded {len(rows)} reference rows from the Save Wizard tab. Imported raw code rows are reference-only until mapped to safe editor actions.")
 
-    def apply_selected_save_wizard_cheat(self) -> None:
-        cheat = self.current_save_wizard_cheat()
-        if not cheat:
-            QMessageBox.information(self, "No cheat selected", "Select a Save Wizard cheat first.")
-            return
-        self.apply_save_wizard_cheat(cheat)
 
-    def apply_save_wizard_cheat(self, cheat: SaveWizardCheat) -> None:
-        if not cheat.safe or cheat.action == "reference_only":
-            QMessageBox.information(self, "Reference-only row", "This imported sheet row is listed for research only. I will not blindly apply raw Save Wizard offset/code patches until it is mapped to a safe named editor action.")
-            return
-        if cheat.action == "preset":
-            try:
-                self.apply_preset_pack(get_preset_pack(cheat.target))
-            except Exception as exc:
-                QMessageBox.warning(self, "Preset unavailable", str(exc))
-            return
-        if cheat.action == "max_items":
-            self.cheat_max_known_item_quantities()
-            return
-        if cheat.action == "max_sigils":
-            self.cheat_max_sigil_levels_and_locks()
-            return
-        if cheat.action == "max_weapons":
-            self.cheat_max_weapon_xp_and_flags()
-            return
-        if cheat.action == "max_characters":
-            self.cheat_max_character_levels()
-            return
-        if cheat.action == "complete_quests":
-            self.cheat_complete_progression_group("", cheat.name)
-            return
-        if cheat.action == "complete_progression_group":
-            self.cheat_complete_progression_group(cheat.target, cheat.name)
-            return
-        if cheat.action == "unlock_titles":
-            self.cheat_unlock_title_archive_candidates()
-            return
-        if cheat.action == "add_all_known_v_sigils":
-            self.cheat_add_all_known_v_sigils()
-            return
-        if cheat.action == "add_all_known_materials":
-            self.cheat_add_all_known_materials()
-            return
-        if cheat.action == "repair_unsafe_material_addall":
-            self.repair_unsafe_material_add_all_rows()
-            return
-        QMessageBox.warning(self, "Unsupported action", f"No apply handler for {cheat.action}")
 
-    def _existing_hashes_for_fields(self, field_ids: List[int]) -> set[int]:
-        if not self.save:
-            return set()
-        hashes: set[int] = set()
-        grouped = self.save.group_by_unit(field_ids)
-        for fields in grouped.values():
-            for fid in field_ids:
-                rec = fields.get(fid)
-                value = self._record_first_value(rec, 0) if rec is not None else 0
-                if value not in (0, EMPTY_HASH):
-                    hashes.add(int(value) & 0xFFFFFFFF)
-        return hashes
 
     def _first_non_empty_record(self, fields: Dict[int, UnitRecord], field_ids: Iterable[int]) -> Optional[UnitRecord]:
         """Return the first record whose first value is not an empty/placeholder hash.
@@ -7437,46 +3488,8 @@ class MainWindow(QMainWindow):
                 return rec
         return None
 
-    def _known_v_sigil_entries(self):
-        rows = []
-        for entry in self.item_db.by_hash.values():
-            item_id = entry.item_id.upper()
-            if not self._is_sigil_db_entry(entry) or not item_id.startswith("GEEN_"):
-                continue
-            if item_id.endswith("_04") or item_id.endswith("_14") or entry.display_name.endswith(" V") or entry.display_name.endswith(" V+"):
-                rows.append(entry)
-        return sorted(rows, key=lambda e: (e.item_id, e.display_name))
 
-    def cheat_add_all_known_v_sigils(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        existing = self._existing_hashes_for_fields([2703])
-        entries = [e for e in self._known_v_sigil_entries() if (e.hash_value & 0xFFFFFFFF) not in existing]
-        if not entries:
-            self.statusBar().showMessage("No missing V/V+ sigils found, or all bundled known V/V+ sigils already exist.", 5000)
-            return
-        empty = self.count_empty_sigil_slots()
-        if empty <= 0:
-            self.statusBar().showMessage("No reusable empty sigil slots were found.", 5000)
-            return
-        add_entries = entries[:empty]
-        added = []
-        for e in add_entries:
-            result = self._add_sigil_hash_level_to_empty_slot(e.hash_value, SIGIL_LEVEL_MAX, True)
-            if result:
-                added.append(result)
-        self._after_editor_patch(f"Save Wizard cheat applied: added {len(added)} known V/V+ sigils.")
 
-    def _material_cheat_quantity(self, name: str) -> int:
-        low = name.lower()
-        if "rupie" in low:
-            return 99_999_999
-        if "mastery point" in low:
-            return 9_999_999
-        if "damascus" in low or "ambrosia" in low:
-            return 99
-        return 999
 
     def _load_material_bank_templates(self) -> Dict[int, Dict[str, int]]:
         """Load known-good ItemManager 180x activation templates.
@@ -7519,9 +3532,6 @@ class MainWindow(QMainWindow):
 
     MATERIAL_BANK_CATEGORIES = {"Material", "Currency", "Consumable", "Glitterstone", "Ticket", "Wrightstone"}
 
-    def _is_material_bank_entry(self, item_hash: int) -> bool:
-        entry = self.item_db.lookup_hash(int(item_hash) & 0xFFFFFFFF) if hasattr(self, "item_db") else None
-        return bool(entry and entry.category in self.MATERIAL_BANK_CATEGORIES)
 
     def _is_sigil_db_entry(self, entry: Any) -> bool:
         if not entry:
@@ -7552,201 +3562,13 @@ class MainWindow(QMainWindow):
         extra = self._record_first_value(fields.get(1807), 0)
         return int(qty or 0) > 0 or int(state or 0) != 0 or int(index or 0) != 0 or int(extra or 0) != 0
 
-    def _item_meta_is_safe_bulk_quantity_target(self, meta: Dict[str, Any]) -> bool:
-        if not self._item_meta_has_real_quantity(meta):
-            return False
-        if meta.get("wallet_value"):
-            return True
-        h = self._record_first_value(meta.get("hash_rec"), 0)
-        fields = {
-            1801: meta.get("hash_rec"),
-            1802: meta.get("qty_rec"),
-            1803: meta.get("flag_rec"),
-            1804: meta.get("index_rec"),
-            1805: meta.get("value_1805_rec"),
-            1806: meta.get("value_1806_rec"),
-            1807: meta.get("extra_rec"),
-        }
-        if self._material_bank_slot_is_active(fields):
-            return True
-        # Safe-add templates mean this row is a known 1801 material catalog row
-        # that can be activated by restoring 1803-1807 before/while setting 1802.
-        try:
-            return bool(h and self._material_template_for_hash(int(h) & 0xFFFFFFFF))
-        except Exception:
-            return False
 
-    def _set_item_meta_quantity_safely(self, meta: Dict[str, Any], quantity: int) -> bool:
-        """Set a visible item quantity through the correct backing writer.
 
-        Wallet rows write directly. 180x material rows go through the upsert
-        writer so inactive template-backed rows get their companion 1803-1807
-        state restored instead of only changing 1802.
-        """
-        if not meta or not self._item_meta_has_real_quantity(meta):
-            return False
-        if meta.get("wallet_value"):
-            return self._set_record_first_value(meta.get("qty_rec"), max(0, int(quantity)), "wallet quantity")
-        h = self._record_first_value(meta.get("hash_rec"), 0)
-        if h not in ("", 0, EMPTY_HASH) and self._is_material_bank_entry(int(h) & 0xFFFFFFFF):
-            return bool(self._upsert_material_bank_quantity(int(h) & 0xFFFFFFFF, max(1, int(quantity)), flag=None))
-        return self._set_record_first_value(meta.get("qty_rec"), max(0, int(quantity)), "item quantity")
 
-    def _unit_record(self, unit_id: int, field_id: int) -> Optional[UnitRecord]:
-        """Return the exact save-unit record for a manager field/unit pair.
 
-        This keeps writes routed through the documented Save Unit layout instead
-        of whichever similarly-shaped row the UI happened to select first.
-        """
-        if not self.save:
-            return None
-        rows = self.save.find(id_type=int(field_id), unit_id=int(unit_id))
-        return rows[0] if rows else None
 
-    def _set_unit_first_value(self, unit_id: int, field_id: int, value: Any, label: str) -> bool:
-        return self._set_record_first_value(self._unit_record(unit_id, field_id), value, f"{label} ({field_id}/unit {unit_id})")
 
-    def _find_existing_material_bank_slot(self, item_hash: int) -> Optional[Dict[str, Any]]:
-        """Find an existing ItemManager material/currency stack by 1801 hash.
 
-        Community's Save Unit list groups material bank rows under ItemManager
-        1801/1802/1803/1804/1807. For stackable materials/currency, 1801 is
-        the item hash and 1802 is the real quantity. Updating an existing row is
-        safer than adding duplicate rows into unrelated 210x item slots.
-        """
-        if not self.save:
-            return None
-        wanted = int(item_hash) & 0xFFFFFFFF
-        grouped = self.save.group_by_unit([1801, 1802, 1803, 1804, 1805, 1806, 1807])
-        for unit_id, fields in sorted(grouped.items()):
-            hrec = fields.get(1801)
-            qrec = fields.get(1802)
-            if not hrec or not qrec:
-                continue
-            if (self._record_first_value(hrec, 0) & 0xFFFFFFFF) == wanted:
-                if not self._material_bank_slot_is_active(fields):
-                    continue
-                return {
-                    "unit_id": unit_id,
-                    "label": "180x Material/Currency bank slot",
-                    "hash_rec": hrec,
-                    "qty_rec": qrec,
-                    "flag_rec": fields.get(1803),
-                    "index_rec": fields.get(1804),
-                    "value_1805_rec": fields.get(1805),
-                    "value_1806_rec": fields.get(1806),
-                    "extra_rec": fields.get(1807),
-                    "quantity_is_real": True,
-                }
-        return None
-
-    def _find_inactive_material_bank_slot_with_template(self, item_hash: int) -> Optional[Dict[str, Any]]:
-        """Find a matching inactive 1801 row that can be safely activated.
-
-        This does not create new FlatBuffer rows and does not place an item hash
-        into an unrelated empty slot. It only touches a row where the game's
-        save already has that exact 1801 hash, then restores known companion
-        1803/1804/etc state from material_bank_templates_seed.csv.
-        """
-        if not self.save:
-            return None
-        wanted = int(item_hash) & 0xFFFFFFFF
-        template = self._material_template_for_hash(wanted)
-        if not template:
-            return None
-        if int(template.get("state_1803", 0) or 0) == 0 and int(template.get("index_1804", 0) or 0) == 0:
-            return None
-        grouped = self.save.group_by_unit([1801, 1802, 1803, 1804, 1805, 1806, 1807])
-        for unit_id, fields in sorted(grouped.items()):
-            hrec = fields.get(1801)
-            qrec = fields.get(1802)
-            if not hrec or not qrec:
-                continue
-            if (self._record_first_value(hrec, 0) & 0xFFFFFFFF) != wanted:
-                continue
-            if self._material_bank_slot_is_active(fields):
-                continue
-            return {
-                "unit_id": unit_id,
-                "label": "180x inactive material row activated from template",
-                "hash_rec": hrec,
-                "qty_rec": qrec,
-                "flag_rec": fields.get(1803),
-                "index_rec": fields.get(1804),
-                "value_1805_rec": fields.get(1805),
-                "value_1806_rec": fields.get(1806),
-                "extra_rec": fields.get(1807),
-                "quantity_is_real": True,
-                "template": template,
-            }
-        return None
-
-    def _write_material_bank_slot(self, slot: Dict[str, Any], item_hash: int, qty: int, flag: Optional[int] = 1) -> int:
-        """Write a stackable item to documented ItemManager 180x fields.
-
-        Returns the number of scalar records that actually changed.
-        """
-        changed = 0
-        template = slot.get("template") or {}
-        if self._set_record_first_value(slot.get("hash_rec"), int(item_hash) & 0xFFFFFFFF, "ItemManager 1801 item hash"):
-            changed += 1
-        if self._set_record_first_value(slot.get("qty_rec"), max(0, int(qty)), "ItemManager 1802 quantity"):
-            changed += 1
-
-        # When activating an inactive material/catalog row, quantity alone is
-        # unsafe. Restore the companion fields from a matching known-good row.
-        if template:
-            for rec_key, tmpl_key, label in [
-                ("flag_rec", "state_1803", "ItemManager 1803 state"),
-                ("index_rec", "index_1804", "ItemManager 1804 index/state"),
-                ("value_1805_rec", "value_1805", "ItemManager 1805 companion"),
-                ("value_1806_rec", "value_1806", "ItemManager 1806 companion"),
-                ("extra_rec", "extra_1807", "ItemManager 1807 extra"),
-            ]:
-                rec = slot.get(rec_key)
-                if rec is None:
-                    continue
-                value = int(template.get(tmpl_key, 0) or 0)
-                if value == 0 and tmpl_key in {"state_1803", "index_1804"}:
-                    continue
-                if self._set_record_first_value(rec, value, label):
-                    changed += 1
-            return changed
-
-        if flag is not None and slot.get("flag_rec") is not None:
-            current = self._record_first_value(slot.get("flag_rec"), 0)
-            # Preserve non-zero state unless the caller explicitly asked for a value.
-            new_flag = int(flag) if current == 0 or flag is not None else current
-            if self._set_record_first_value(slot.get("flag_rec"), new_flag, "ItemManager 1803 state"):
-                changed += 1
-        return changed
-
-    def _upsert_material_bank_quantity(self, item_hash: int, qty: int, flag: Optional[int] = 1) -> Optional[str]:
-        """Update existing 1801/1802 material stack or safely activate a matching 180x row.
-
-        Adding/activating an item should never leave the stack at 0. Direct row
-        edits may still set a quantity to 0, but add/cheat paths normalize to at
-        least 1 so the game does not see a newly obtained item with no stack.
-        """
-        if not self.save:
-            return None
-        qty = max(1, int(qty))
-        slot = self._find_existing_material_bank_slot(item_hash)
-        action = "Updated"
-        if not slot:
-            slot = self._find_inactive_material_bank_slot_with_template(item_hash)
-            action = "Activated"
-        if not slot:
-            # Still no safe target: do not invent a new row. Missing materials
-            # can only be added when the save already contains the matching
-            # inactive 1801 row and we have a known-good companion template.
-            return None
-        changed = self._write_material_bank_slot(slot, item_hash, qty, flag)
-        entry = self.item_db.lookup_hash(int(item_hash) & 0xFFFFFFFF)
-        display = f"{entry.display_name} ({entry.item_id})" if entry else f"0x{int(item_hash) & 0xFFFFFFFF:08X}"
-        if changed:
-            return f"{action} {display} x{int(qty):,} -> 180x unit {slot['unit_id']} ({changed} field{'s' if changed != 1 else ''})"
-        return f"No change for {display}; 180x unit {slot['unit_id']} already matched x{int(qty):,}"
 
     def _known_material_entries(self):
         blocked = {"Sigil", "Weapon", "Character", "Trait / Skill", "Other"}
@@ -7768,67 +3590,7 @@ class MainWindow(QMainWindow):
                 rows.append(entry)
         return sorted(rows, key=lambda e: (e.category, e.item_id, e.display_name))
 
-    def cheat_add_all_known_materials(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        candidates = []
-        existing_active = 0
-        for entry in self._known_material_entries():
-            h = int(entry.hash_value) & 0xFFFFFFFF
-            if self._find_existing_material_bank_slot(h):
-                existing_active += 1
-                continue
-            slot = self._find_inactive_material_bank_slot_with_template(h)
-            if slot:
-                qty = self._material_cheat_quantity(entry.display_name)
-                candidates.append((entry, slot, qty))
-        if not candidates:
-            self.statusBar().showMessage("No missing material rows can be safely activated in this save. Max Existing Items is still safe.", 6000)
-            return
-        added = []
-        for entry, _slot, qty in candidates:
-            result = self._upsert_material_bank_quantity(entry.hash_value, qty, flag=None)
-            if result:
-                added.append(result)
-        self._after_editor_patch(f"Safely activated {len(added)} missing material rows in memory.")
 
-    def repair_unsafe_material_add_all_rows(self) -> None:
-        """Clear likely bad 1802 quantities created by old Add All Materials builds.
-
-        The crash pattern we confirmed is: 1801 has a catalog hash, but 1803,
-        1804, and 1807 are all zero. Old builds filled 1802 anyway, which can
-        make the game treat a locked/inactive catalog row as a real inventory
-        stack and crash. This repair only clears those suspicious quantities; it
-        does not touch rows with non-zero state/index/extra fields.
-        """
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        grouped = self.save.group_by_unit([1801, 1802, 1803, 1804, 1807])
-        candidates = []
-        for unit_id, fields in sorted(grouped.items()):
-            hash_rec = fields.get(1801)
-            qty_rec = fields.get(1802)
-            if not hash_rec or not qty_rec:
-                continue
-            item_hash = self._record_first_value(hash_rec, 0)
-            qty = int(self._record_first_value(qty_rec, 0) or 0)
-            state = int(self._record_first_value(fields.get(1803), 0) or 0)
-            index = int(self._record_first_value(fields.get(1804), 0) or 0)
-            extra = int(self._record_first_value(fields.get(1807), 0) or 0)
-            if item_hash not in (0, EMPTY_HASH) and qty > 0 and state == 0 and index == 0 and extra == 0:
-                entry = self.item_db.lookup_hash(int(item_hash) & 0xFFFFFFFF) if hasattr(self, "item_db") else None
-                name = f"{entry.display_name} ({entry.item_id})" if entry else f"0x{int(item_hash) & 0xFFFFFFFF:08X}"
-                candidates.append((unit_id, qty_rec, name, qty))
-        if not candidates:
-            self.statusBar().showMessage("No likely Add All Materials crash rows were found. Rows with normal state/index data were left untouched.", 6000)
-            return
-        changed = 0
-        for _unit_id, qty_rec, _name, _qty in candidates:
-            if self._set_record_first_value(qty_rec, 0, "repair unsafe inactive 1802 quantity"):
-                changed += 1
-        self._after_editor_patch(f"Repaired {changed} unsafe inactive material quantity rows in memory.")
 
     def _wallet_quantity_targets(self) -> List[tuple[UnitRecord, str, int]]:
         """UserDataManager wallet/profile values that the game reads directly.
@@ -7941,284 +3703,15 @@ class MainWindow(QMainWindow):
             targets.append({"unit": unit_id, "name": name, "level_rec": level_rec, "xp_rec": (self.save.find(id_type=1303, unit_id=unit_id) or [None])[0]})
         return targets
 
-    def _character_min_xp_for_level(self, level: int) -> int:
-        """Conservative observed EXP floor for character level edits.
 
-        GBFR stores both displayed level (1308) and a character EXP/progress
-        value (1303). Samples show Lv3≈386, Lv9≈2555, Lv18≈26696,
-        and Lv100=8,400,000. We raise EXP to a safe floor with those
-        anchors so the game is less likely to recompute the edited level away.
-        """
-        level = max(1, min(100, int(level)))
-        anchors = [(1, 0), (3, 386), (9, 2555), (18, 26696), (100, 8_400_000)]
-        for lv, xp in anchors:
-            if level == lv:
-                return xp
-        for (lv0, xp0), (lv1, xp1) in zip(anchors, anchors[1:]):
-            if lv0 <= level <= lv1:
-                t = (level - lv0) / max(1, (lv1 - lv0))
-                return int(round(xp0 + (xp1 - xp0) * t))
-        return 8_400_000
 
-    def _set_character_level_bundle(self, meta_or_target: Dict[str, Any], level: int) -> int:
-        """Set both level field 1308 and matching EXP/progress field 1303."""
-        patched = 0
-        if self._set_record_first_value(meta_or_target.get("level_rec"), int(level), "character level"):
-            patched += 1
-        xp_rec = meta_or_target.get("xp_rec")
-        if xp_rec is not None:
-            current_xp = self._record_first_value(xp_rec, 0)
-            target_xp = 8_400_000 if int(level) >= 100 else self._character_min_xp_for_level(int(level))
-            try:
-                target_xp = max(int(current_xp), int(target_xp))
-            except Exception:
-                pass
-            if self._set_record_first_value(xp_rec, target_xp, "character EXP/progress"):
-                patched += 1
-        return patched
 
-    def cheat_set_known_item_quantities_custom(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        value, ok = QInputDialog.getInt(self, "Set Known Item Quantities", "Exact quantity/value for all known existing items/materials/currency rows:", 999, 0, 99_999_999)
-        if not ok:
-            return
-        targets = self._known_item_quantity_targets()
-        if not targets:
-            QMessageBox.information(self, "No known items", "No known item quantity rows were found to patch.")
-            return
-        patched = 0
-        for rec, _, _ in targets:
-            if getattr(rec, "id_type", None) == 1802:
-                hash_rec = (self.save.find(id_type=1801, unit_id=rec.unit_id) or [None])[0]
-                h = self._record_first_value(hash_rec, 0)
-                if h not in (0, EMPTY_HASH) and self._upsert_material_bank_quantity(int(h) & 0xFFFFFFFF, int(value), flag=None):
-                    patched += 1
-            elif self._set_record_first_value(rec, value, "item quantity"):
-                patched += 1
-        self._after_editor_patch(f"Specific value cheat applied: set {patched} known item quantities to {value:,}.")
 
-    def cheat_set_known_sigil_levels_custom(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        value, ok = QInputDialog.getInt(self, "Set Known Sigil Levels", "Exact sigil level for all known existing sigils:", SIGIL_LEVEL_MAX, 0, SIGIL_LEVEL_TEST_MAX)
-        if not ok:
-            return
-        value = self._clamp_sigil_level_value(value, minimum=0)
-        lock = False
-        targets = self._known_sigil_level_targets()
-        if not targets:
-            self.statusBar().showMessage("No known sigil rows were found to patch.", 4000)
-            return
-        patched = 0
-        trait_patched = 0
-        flags_patched = 0
-        for t in targets:
-            if self._set_record_first_value(t.get("level_rec"), value, "sigil level 2704 / FF900A"):
-                patched += 1
-            for rec_key, label in (("trait1_level_rec", "sigil trait 1 level 1702 / FFA60600"), ("trait2_level_rec", "sigil trait 2 level 1702 / FFA60600")):
-                rec = t.get(rec_key)
-                trait_hash_key = "trait1_hash_rec" if rec_key == "trait1_level_rec" else "trait2_hash_rec"
-                trait_hash = self._record_first_value(t.get(trait_hash_key), EMPTY_HASH)
-                if rec is not None and trait_hash not in (0, EMPTY_HASH):
-                    if self._set_record_first_value(rec, value, label):
-                        trait_patched += 1
-            flags_rec = t.get("flags_rec")
-            if flags_rec is not None:
-                cur = self._record_first_value(flags_rec, 0)
-                owner = self._record_first_value(t.get("owner_rec"), EMPTY_HASH)
-                assigned = (int(owner or EMPTY_HASH) & 0xFFFFFFFF) not in (0, EMPTY_HASH)
-                # Preserve/normalize Save Wizard-style inventory/assignment flags.
-                if self._set_record_first_value(flags_rec, self._safe_sigil_flags(cur, locked=True, assigned=assigned), "sigil flags 2707"):
-                    flags_patched += 1
-        self._after_editor_patch(f"Specific value cheat applied: set {patched} sigil level row(s) and {trait_patched} linked trait level row(s) to {value:,}; normalized {flags_patched} flag row(s).")
 
-    def cheat_set_known_weapon_xp_custom(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        value, ok = QInputDialog.getInt(self, "Set Known Weapon XP", "Exact XP/progress value for all known existing weapons:", WEAPON_XP_MAX, 0, WEAPON_XP_MAX)
-        if not ok:
-            return
-        value = self._clamp_weapon_xp_value(value)
-        targets = self._known_weapon_xp_targets()
-        if not targets:
-            self.statusBar().showMessage("No known weapon rows were found to patch.", 4000)
-            return
-        patched = 0
-        flags_patched = 0
-        for t in targets:
-            if self._set_record_first_value(t.get("xp_rec"), value, "weapon XP"):
-                patched += 1
-            flags_rec = t.get("flags_rec")
-            if flags_rec is not None:
-                cur = self._record_first_value(flags_rec, 0)
-                if self._set_record_first_value(flags_rec, int(cur or 0) | 1, "weapon flags"):
-                    flags_patched += 1
-        try:
-            self.refresh_weapon_rows()
-        except Exception:
-            pass
-        self._after_editor_patch(f"Specific value cheat applied: set {patched} known weapon XP/progress rows to {value:,} and enabled {flags_patched} flag rows.", refresh=False)
 
-    def cheat_set_character_levels_custom(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        value, ok = QInputDialog.getInt(self, "Set Character Levels", "Exact level for all visible/known character slots:", CHARACTER_VALUE_MAX, 1, CHARACTER_VALUE_MAX)
-        if not ok:
-            return
-        value = self._clamp_character_value(value, minimum=1)
-        targets = self._character_level_targets()
-        if not targets:
-            self.statusBar().showMessage("No character level rows were found to patch.", 4000)
-            return
-        patched = 0
-        for t in targets:
-            if self._set_record_first_value(t.get("level_rec"), value, "character level"):
-                patched += 1
-            if self._set_record_first_value(t.get("xp_rec"), value, "character EXP/progress"):
-                patched += 1
-        self._after_editor_patch(f"Specific value cheat applied: updated {patched} character level/EXP fields to {value:,}.")
 
-    def cheat_max_character_levels(self) -> None:
-        """Max every known character numeric row in the loaded save."""
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        targets = self._character_level_targets()
-        if not targets:
-            self.statusBar().showMessage("No character level rows were found to patch.", 4000)
-            return
-        patched = 0
-        for t in targets:
-            patched += self._set_character_max_bundle(t)
-        self._after_editor_patch(f"Cheat applied: maxed {len(targets)} character slots / {patched} numeric fields to {CHARACTER_VALUE_MAX:,}.")
 
-    def cheat_max_known_item_quantities(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        targets = self._known_item_quantity_targets()
-        if not targets:
-            self.statusBar().showMessage("No known item/currency quantity rows were found to patch.", 4000)
-            return
-        patched_targets: List[tuple[UnitRecord, int, str]] = []
-        for rec, name, unit_or_cap in targets:
-            low = str(name).lower()
-            if "rupie" in low:
-                cap = 99_999_999
-            elif "mastery point" in low:
-                cap = 9_999_999
-            elif "commendation" in low or "damascus" in low or "ambrosia" in low:
-                cap = 999
-            else:
-                cap = 999
-            patched_targets.append((rec, cap, name))
-        patched = 0
-        for rec, cap, _ in patched_targets:
-            if getattr(rec, "id_type", None) == 1802:
-                hash_rec = (self.save.find(id_type=1801, unit_id=rec.unit_id) or [None])[0]
-                item_hash = self._record_first_value(hash_rec, 0)
-                if item_hash not in (0, EMPTY_HASH) and self._upsert_material_bank_quantity(int(item_hash) & 0xFFFFFFFF, int(cap), flag=None):
-                    patched += 1
-            elif self._set_record_first_value(rec, cap, "wallet/material quantity"):
-                patched += 1
-        self._after_editor_patch(f"Cheat applied: patched {patched} wallet/material quantities.")
 
-    def cheat_max_sigil_levels_and_locks(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        self._sigil_trait_grouped_cache = None
-        grouped = self.save.group_by_unit([2702, 2703, 2704, 2706, 2707])
-        targets: List[Dict[str, Any]] = []
-        unknown = 0
-        paired_mismatch = 0
-        seen_levels = set()
-        for unit_id, fields in sorted(grouped.items()):
-            hash_rec = self._first_non_empty_record(fields, [2703])
-            h = self.value1(hash_rec, 0)
-            if not hash_rec or h in ("", 0, EMPTY_HASH):
-                continue
-            level_rec = self._sigil_level_record_for_hash_record(hash_rec, fields)
-            if not level_rec:
-                continue
-            # Avoid writing the same paired level row twice if the save exposes
-            # duplicate/hash mirror rows.
-            if level_rec.key in seen_levels:
-                continue
-            seen_levels.add(level_rec.key)
-            entry = self.item_db.lookup_hash(int(h) & 0xFFFFFFFF)
-            if not self._is_sigil_db_entry(entry):
-                unknown += 1
-                name = f"Unknown 0x{int(h) & 0xFFFFFFFF:08X}"
-            else:
-                name = entry.display_name
-            if int(getattr(hash_rec, "unit_id", unit_id)) != int(getattr(level_rec, "unit_id", unit_id)):
-                paired_mismatch += 1
-            targets.append({"unit": unit_id, "name": name, "level_rec": level_rec, "owner_rec": fields.get(2706), "flags_rec": fields.get(2707)})
-        if not targets:
-            self.statusBar().showMessage("No active sigil rows were found to patch.", 4000)
-            return
-        patched = 0
-        trait_patched = 0
-        flags_patched = 0
-        for t in targets:
-            if self._set_record_first_value(t.get("level_rec"), SIGIL_LEVEL_MAX, "sigil level 2704 / FF900A"):
-                patched += 1
-            for rec_key, label in (("trait1_level_rec", "sigil trait 1 level 1702 / FFA60600"), ("trait2_level_rec", "sigil trait 2 level 1702 / FFA60600")):
-                rec = t.get(rec_key)
-                trait_hash_key = "trait1_hash_rec" if rec_key == "trait1_level_rec" else "trait2_hash_rec"
-                trait_hash = self._record_first_value(t.get(trait_hash_key), EMPTY_HASH)
-                if rec is not None and trait_hash not in (0, EMPTY_HASH):
-                    if self._set_record_first_value(rec, SIGIL_LEVEL_MAX, label):
-                        trait_patched += 1
-            flags_rec = t.get("flags_rec")
-            if flags_rec is not None:
-                cur = self._record_first_value(flags_rec, 0)
-                owner = self._record_first_value(t.get("owner_rec"), EMPTY_HASH)
-                assigned = (int(owner or EMPTY_HASH) & 0xFFFFFFFF) not in (0, EMPTY_HASH)
-                if self._set_record_first_value(flags_rec, self._safe_sigil_flags(cur, locked=True, assigned=assigned), "sigil flags 2707"):
-                    flags_patched += 1
-        self._after_editor_patch(f"Cheat applied: set {patched} active sigil level row(s) and {trait_patched} linked trait level row(s) to {SIGIL_LEVEL_MAX:,}; normalized {flags_patched} flag row(s).")
-
-    def cheat_max_weapon_xp_and_flags(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        grouped = self.save.group_by_unit([2803, 2804, 2815])
-        targets: List[Dict[str, Any]] = []
-        for unit_id, fields in sorted(grouped.items()):
-            hash_rec = self._first_non_empty_record(fields, [2803])
-            h = self.value1(hash_rec, 0)
-            xp_rec = fields.get(2804)
-            if not xp_rec or h in ("", 0, EMPTY_HASH):
-                continue
-            entry = self.item_db.lookup_hash(int(h) & 0xFFFFFFFF)
-            if not entry or entry.category != "Weapon":
-                continue
-            targets.append({"unit": unit_id, "name": entry.display_name, "xp_rec": xp_rec, "flags_rec": fields.get(2815)})
-        if not targets:
-            self.statusBar().showMessage("No known weapon rows were found to patch.", 4000)
-            return
-        patched = 0
-        flags_patched = 0
-        for t in targets:
-            if self._set_record_first_value(t.get("xp_rec"), WEAPON_XP_MAX, "weapon XP"):
-                patched += 1
-            flags_rec = t.get("flags_rec")
-            if flags_rec is not None:
-                cur = self._record_first_value(flags_rec, 0)
-                if self._set_record_first_value(flags_rec, int(cur or 0) | 1, "weapon flags"):
-                    flags_patched += 1
-        try:
-            self.refresh_weapon_rows()
-        except Exception:
-            pass
-        self._after_editor_patch(f"Cheat applied: patched {patched} known weapon XP/progress fields to {WEAPON_XP_MAX:,} and enabled {flags_patched} flag rows.", refresh=False)
 
     def _database_coverage_rows(self) -> List[List[Any]]:
         from collections import Counter
@@ -8252,336 +3745,39 @@ class MainWindow(QMainWindow):
             self._auto_fit_table(self.database_table)
 
 
-    def refresh_reference_rows(self) -> None:
-        if not hasattr(self, "reference_model"):
-            return
-        q = self.reference_filter.text().strip() if hasattr(self, "reference_filter") else ""
-        rows = [[e.category, e.topic, e.key, e.value, e.notes, e.source] for e in self.reference_db.search(q)]
-        self.reference_model.set_rows(rows)
-        if hasattr(self, "reference_table"):
-            self._auto_fit_table(self.reference_table)
-
-    def current_reference_row(self) -> Optional[List[Any]]:
-        if not hasattr(self, "reference_table"):
-            return None
-        idx = self.reference_table.currentIndex()
-        if not idx.isValid():
-            return None
-        row = idx.row()
-        if 0 <= row < len(self.reference_model.rows):
-            return self.reference_model.rows[row]
-        return None
-
-    def copy_selected_reference_value(self) -> None:
-        row = self.current_reference_row()
-        if row:
-            self.copy_text(str(row[3]))
-
-    def copy_selected_reference_notes(self) -> None:
-        row = self.current_reference_row()
-        if row:
-            self.copy_text(" | ".join(str(x) for x in row[:5] if str(x)))
-
-    def export_reference_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export reference notes", "gbfr_reference_notes.csv", "CSV (*.csv)")
-        if not path:
-            return
-        self.reference_db.save_csv(path)
-        QMessageBox.information(self, "Exported", f"Exported {len(self.reference_db.entries)} reference rows.")
-
-    def export_database_coverage_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export database coverage", "gbfr_database_coverage.csv", "CSV (*.csv)")
-        if not path:
-            return
-        rows = self._database_coverage_rows()
-        with open(path, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["Database", "Category", "Rows", "Known Values", "Notes"])
-            writer.writerows(rows)
-        QMessageBox.information(self, "Exported", f"Exported {len(rows)} coverage rows.")
-
-    def show_unknown_hash_scan(self) -> None:
-        if hasattr(self, "advanced_checkbox"):
-            self.advanced_checkbox.setChecked(True)
-        self._show_page("Hash Scan")
-        if self.save:
-            self.run_hash_scan(True)
-
-    def _hash_tool_rows(self) -> List[Dict[str, Any]]:
-        text = self.hash_input.text() if hasattr(self, "hash_input") else ""
-        parts: List[str] = []
-        for chunk in text.replace("\n", ",").split(","):
-            chunk = chunk.strip()
-            if chunk:
-                parts.append(chunk)
-        rows: List[Dict[str, Any]] = []
-        for value in parts:
-            hx = gbfr_hash_hex(value)
-            dec = gbfr_hash(value)
-            entry = self.item_db.lookup_hash(dec)
-            rows.append({
-                "input": value,
-                "hash": hx,
-                "decimal": dec,
-                "gbid": entry.item_id if entry else "",
-                "name": entry.display_name if entry else "",
-                "category": entry.category if entry else "",
-            })
-        return rows
-
-    def compute_hash_tools(self) -> None:
-        rows = self._hash_tool_rows()
-        if not rows:
-            self.hash_results.setPlainText("Enter at least one GBID/string first.")
-            return
-        lines = ["Input, Hash, Decimal, DB Match"]
-        for r in rows:
-            match = f"{r['gbid']} / {r['name']}" if r["gbid"] else ""
-            lines.append(f"{r['input']}, 0x{r['hash']}, {r['decimal']}, {match}")
-        self.hash_results.setPlainText("\n".join(lines))
-
-    def copy_hash_tool_results(self) -> None:
-        if hasattr(self, "hash_results"):
-            QApplication.clipboard().setText(self.hash_results.toPlainText())
-            self.statusBar().showMessage("Copied hash tool results", 3000)
-
-    def export_hash_tool_csv(self) -> None:
-        rows = self._hash_tool_rows()
-        if not rows:
-            QMessageBox.information(self, "No hashes", "Enter at least one GBID/string first.")
-            return
-        path, _ = QFileDialog.getSaveFileName(self, "Export hash results", "gbfr_hash_results.csv", "CSV (*.csv)")
-        if not path:
-            return
-        with open(path, "w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=["input", "hash", "decimal", "gbid", "name", "category"])
-            writer.writeheader(); writer.writerows(rows)
-        QMessageBox.information(self, "Exported", f"Exported {len(rows)} hash rows.")
-
-    def export_item_db_csv(self) -> None:
-        default = str(RESOURCE_DIR / "item_ids_merged_export.csv")
-        path, _ = QFileDialog.getSaveFileName(self, "Export merged GBID DB", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        try:
-            self.item_db.save_csv(path)
-            QMessageBox.information(self, "Exported", f"Merged GBID database written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
-
-    def current_resource_entry(self):
-        if not hasattr(self, "resource_id_table"):
-            return None
-        idx = self.resource_id_table.currentIndex()
-        if not idx.isValid():
-            return None
-        return self.resource_id_model.entry_at(idx.row())
-
-    def copy_resource_id(self) -> None:
-        entry = self.current_resource_entry()
-        if not entry:
-            return
-        QApplication.clipboard().setText(entry.id_text)
 
 
-    def decode_entity_prefix(self) -> None:
-        text = self.entity_prefix_input.text().strip() if hasattr(self, "entity_prefix_input") else ""
-        if not text:
-            QMessageBox.information(self, "Entity Prefix", "Enter an ID or path first, such as pl0000, wp2200, em1800, ph720, or st101f00.")
-            return
-        parts = []
-        for item in [x.strip() for x in text.replace(",", "\n").splitlines() if x.strip()]:
-            parts.append(describe_entity_code(item))
-        self.entity_prefix_result.setPlainText("\n\n".join(parts))
-
-    def copy_entity_prefix_result(self) -> None:
-        if hasattr(self, "entity_prefix_result"):
-            QApplication.clipboard().setText(self.entity_prefix_result.toPlainText())
-
-    def show_entity_prefix_resource_rows(self) -> None:
-        # Resource IDs lives in Advanced by default; show it and filter to the merged prefix rows.
-        if hasattr(self, "advanced_checkbox"):
-            self.advanced_checkbox.setChecked(True)
-        if hasattr(self, "resource_id_filter"):
-            self.resource_id_filter.setText("Entity Prefix")
-        idx = self.page_indexes.get("Resource IDs") if hasattr(self, "page_indexes") else None
-        if idx is not None:
-            self.stack.setCurrentIndex(idx)
 
 
-    def copy_resource_name(self) -> None:
-        entry = self.current_resource_entry()
-        if not entry:
-            return
-        QApplication.clipboard().setText(entry.name)
-
-    def export_resource_ids_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export resource IDs", "resource_ids_merged.csv", "CSV (*.csv)")
-        if not path:
-            return
-        self.resource_db.save_csv(path)
-        QMessageBox.information(self, "Exported", f"Exported {len(self.resource_db.entries)} resource ID rows.")
-
-    def download_resource_ids(self) -> None:
-        urls_path = RESOURCE_DIR / "community_resource_urls.txt"
-        urls = []
-        if urls_path.exists():
-            urls = [line.strip() for line in urls_path.read_text(encoding="utf-8").splitlines() if line.strip() and not line.strip().startswith("#")]
-        else:
-            urls = DEFAULT_RESOURCE_URLS
-        try:
-            db, errors = ResourceIdDatabase.download_many(urls, timeout=45)
-            merged = ResourceIdDatabase.load_many([RESOURCE_DIR / "resource_ids_seed.csv"])
-            merged.merge(db)
-            out = RESOURCE_DIR / "resource_ids_downloaded.csv"
-            merged.save_csv(out)
-            self.resource_db = merged
-            self.resource_id_model.set_db(self.resource_db)
-            self.unit_model.set_resource_db(self.resource_db)
-            self.refresh_model_id_catalog_rows()
-            self.refresh_all_views(keep_filter=True)
-            msg = f"Downloaded/merged {len(merged.entries)} resource ID rows.\nSaved to {out}."
-            if errors:
-                msg += "\n\nSome sources failed:\n" + "\n".join(errors[:12])
-            QMessageBox.information(self, "Resource IDs", msg)
-        except Exception as exc:
-            QMessageBox.critical(self, "Download failed", str(exc))
-
-    def audit_google_sheet_sources(self) -> None:
-        urls = source_urls_from_text(self.sources_text.toPlainText() if hasattr(self, "sources_text") else self.default_source_urls_text())
-        if not urls:
-            QMessageBox.information(self, "No sources", "No Google Sheet/source URLs are configured.")
-            return
-        fetch = QMessageBox.question(
-            self,
-            "Audit Google Sheet tabs",
-            "Download and inspect the configured sheet tabs now?\n\nChoose No to only list configured gids without using the network.",
-        ) == QMessageBox.StandardButton.Yes
-        try:
-            rows = audit_sheet_sources(urls, fetch=fetch, timeout=35, dump_dir=None)
-            text = audit_summary(rows)
-            if hasattr(self, "sources_status"):
-                self.sources_status.setPlainText(text)
-            self.statusBar().showMessage("Google Sheet source audit complete", 3500)
-        except Exception as exc:
-            QMessageBox.critical(self, "Sheet audit failed", str(exc))
-
-    def export_google_sheet_audit_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export Google Sheet Audit CSV", "google_sheet_audit.csv", "CSV Files (*.csv)")
-        if not path:
-            return
-        rows = audit_sheet_sources(source_urls_from_text(self.default_source_urls_text()), fetch=False)
-        write_audit_csv(rows, path)
-        QMessageBox.information(self, "Exported", f"Wrote {path}")
 
 
-    def download_sources_from_page(self) -> None:
-        text = self.sources_text.toPlainText() if hasattr(self, "sources_text") else self.default_source_urls_text()
-        urls = source_urls_from_text(text)
-        if not urls:
-            QMessageBox.information(self, "No sources", "Paste at least one CSV or Google Sheets URL first.")
-            return
-        try:
-            db, errors = ItemDatabase.download_many(urls, timeout=35)
-            self.merge_item_db(db, "Downloaded sheet/URL sources")
-            out = RESOURCE_DIR / "item_ids_sheet_merged.csv"
-            self.item_db.save_csv(out)
-            msg = f"Downloaded/merged {len(db)} source rows. Total DB rows: {len(self.item_db)}\nCached to: {out}"
-            if errors:
-                msg += "\n\nSome sources failed:\n" + "\n".join(errors[:12])
-            QMessageBox.information(self, "Sources merged", msg)
-        except Exception as exc:
-            QMessageBox.critical(self, "Download failed", str(exc))
 
 
-    def _add_browser_tab_scope(self, tab: Optional[str] = None) -> str:
-        tab = tab or getattr(self, "_add_browser_tab", "Safe Add")
-        return {
-            "Safe Add": "Safe For Loaded Save",
-            "Items": "Items / Materials",
-            "Sigils": "Sigils",
-            "Weapons": "Weapons",
-            "Wallet": "Wallet / Profile",
-            "Lookup": "All Database Rows",
-        }.get(tab, "Safe For Loaded Save")
 
-    def _effective_add_browser_category(self) -> str:
-        manual = self.add_browser_category.currentText() if hasattr(self, "add_browser_category") else "Auto"
-        if manual and manual != "Auto":
-            return manual
-        return self._add_browser_tab_scope()
 
-    def _refresh_add_browser_tab_buttons(self) -> None:
-        current = getattr(self, "_add_browser_tab", "Safe Add")
-        for btn in getattr(self, "_add_browser_tab_buttons", []):
-            btn.blockSignals(True)
-            btn.setChecked(btn.text() == current)
-            btn.blockSignals(False)
 
-    def _set_add_browser_tab(self, tab: str) -> None:
-        self._add_browser_tab = tab
-        self._refresh_add_browser_tab_buttons()
-        if hasattr(self, "add_browser_category"):
-            self.add_browser_category.blockSignals(True)
-            self.add_browser_category.setCurrentText("Auto")
-            self.add_browser_category.blockSignals(False)
-        self._update_add_browser_subtype_filter()
-        self.schedule_add_browser_refresh()
 
-    def _update_add_browser_subtype_filter(self) -> None:
-        if not hasattr(self, "add_browser_subtype_filter"):
-            return
-        current = self.add_browser_subtype_filter.currentText()
-        tab = getattr(self, "_add_browser_tab", "Safe Add")
-        if tab in {"Safe Add", "Items", "Wallet"}:
-            opts = ["All subtypes", "Missing Safe", "Already Owned", "Materials", "Consumables", "Wrightstones", "Glitterstones", "Tickets / Badges", "Wallet", "Relics / Curios"]
-        elif tab == "Sigils":
-            opts = ["All subtypes", "Damage / Power", "Defense / HP", "Cooldown / Utility", "Resistance", "Character / Warpath", "Special / Unique", "V+ / Endgame", "Unknown / Dummy"]
-        elif tab == "Weapons":
-            opts = ["All subtypes", "Apocalypse / Terminus", "Ascension / Awakened", "Base Weapons", "DLC Characters", "Unknown / Empty Name"]
-        else:
-            opts = ["All subtypes", "Characters", "Traits / Skills", "Models", "Phases", "Quests", "Reference Only"]
-        self.add_browser_subtype_filter.blockSignals(True)
-        self.add_browser_subtype_filter.clear()
-        self.add_browser_subtype_filter.addItems(opts)
-        if current in opts:
-            self.add_browser_subtype_filter.setCurrentText(current)
-        self.add_browser_subtype_filter.blockSignals(False)
 
-    def _set_add_browser_quick_filter(self, query: str, tab_or_category: str, subtype: str = "All subtypes") -> None:
-        if tab_or_category in {"Safe Add", "Items", "Sigils", "Weapons", "Wallet", "Lookup"}:
-            self._add_browser_tab = tab_or_category
-            self._refresh_add_browser_tab_buttons()
-            if hasattr(self, "add_browser_category"):
-                self.add_browser_category.blockSignals(True)
-                self.add_browser_category.setCurrentText("Auto")
-                self.add_browser_category.blockSignals(False)
-        elif hasattr(self, "add_browser_category"):
-            self.add_browser_category.blockSignals(True)
-            self.add_browser_category.setCurrentText(tab_or_category)
-            self.add_browser_category.blockSignals(False)
-        self._update_add_browser_subtype_filter()
-        if hasattr(self, "add_browser_subtype_filter") and subtype:
-            idx = self.add_browser_subtype_filter.findText(subtype)
-            if idx >= 0:
-                self.add_browser_subtype_filter.blockSignals(True)
-                self.add_browser_subtype_filter.setCurrentIndex(idx)
-                self.add_browser_subtype_filter.blockSignals(False)
-        if hasattr(self, "add_browser_filter"):
-            self.add_browser_filter.blockSignals(True)
-            self.add_browser_filter.setText(query)
-            self.add_browser_filter.blockSignals(False)
-        self.refresh_add_browser_rows()
 
-    def schedule_add_browser_refresh(self) -> None:
-        if bool(getattr(self, "_save_in_progress", False)):
-            self._mark_stale_pages(["Add / Equip Browser"])
-            return
-        timer = getattr(self, "_add_browser_refresh_timer", None)
-        if timer is not None:
-            timer.start()
-        else:
-            self.refresh_add_browser_rows()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def _invalidate_add_browser_indexes(self) -> None:
         self._add_browser_index_key = None
@@ -8661,535 +3857,35 @@ class MainWindow(QMainWindow):
             or "relic" in aliases
         )
 
-    def _add_browser_use_as(self, entry) -> str:
-        cid = (getattr(entry, "item_id", "") or "").upper()
-        cat = (getattr(entry, "category", "") or "").lower()
-        if self._is_curio_relic_entry(entry):
-            return "Relic / Curio Lookup"
-        if cid.startswith("GEEN_") or "sigil" in cat or "gem" in cat:
-            return "Sigil"
-        if cid.startswith("WEP_") or cat == "weapon":
-            return "Weapon"
-        if cid.startswith("ITEM_") or any(w in cat for w in ["material", "currency", "item", "treasure", "consumable", "ticket", "wrightstone", "glitterstone", "crew"]):
-            return "Item / Material"
-        if cid.startswith("PL") or cat == "character":
-            return "Character Lookup"
-        if cid.startswith("SKILL_") or "skill" in cat or "trait" in cat:
-            return "Trait Lookup"
-        return "Reference Only"
-
-    def _add_browser_wallet_target(self, entry):
-        """Return wallet/profile routing for database rows such as Rupies/MSP.
-
-        Those values are not normal ItemManager stacks. Showing them in the
-        browser is useful, but writing them through 180x/210x inventory rows
-        either does nothing in-game or creates bad duplicate inventory data.
-        """
-        return self._wallet_field_for_item_key(getattr(entry, "display_name", ""), getattr(entry, "hash_value", None))
-
-    def _add_browser_has_active_material_stack(self, entry) -> bool:
-        if not self.save:
-            return False
-        self._ensure_add_browser_indexes()
-        try:
-            return (int(entry.hash_value) & 0xFFFFFFFF) in self._add_browser_active_material_hashes
-        except Exception:
-            return False
-
-    def _add_browser_has_safe_material_template(self, entry) -> bool:
-        if not self.save:
-            return False
-        self._ensure_add_browser_indexes()
-        try:
-            h = int(entry.hash_value) & 0xFFFFFFFF
-            return h in self._add_browser_active_material_hashes or h in self._add_browser_safe_template_hashes
-        except Exception:
-            return False
-
-    def _add_browser_status_for_entry(self, entry) -> str:
-        use_as = self._add_browser_use_as(entry)
-        name = (getattr(entry, "display_name", "") or "").lower()
-        if name.startswith("unnamed / reserved") or name.startswith("reserved /"):
-            return "Reserved/unknown row; hidden from safe mode."
-        wallet = self._add_browser_wallet_target(entry)
-        if wallet is not None:
-            field_id, label, cap = wallet
-            return f"Wallet/profile value: writes UserDataManager {field_id} ({label}), cap {cap:,}."
-        if use_as == "Relic / Curio Lookup":
-            return "Special ItemJunk/Curio data: uses 1901-1904/2001-2004, not normal 1801/1802 material quantity. Add/edit is disabled until the full curio row contract is verified."
-        if use_as == "Item / Material":
-            if not self.save:
-                return "Load a save to check whether this material already has an active 180x stack."
-            if self._is_material_bank_entry(entry.hash_value):
-                if self._add_browser_has_active_material_stack(entry):
-                    return "Safe: existing active 1801/1802 material stack found; quantity update only."
-                if self._add_browser_has_safe_material_template(entry):
-                    return "Safe add: matching inactive 1801 row found and known-good 1803-1807 template is available."
-                return "Not safe to add yet: no active stack or verified 180x template for this save."
-            return "Experimental: non-material ItemManager slot; only use on a backup."
-        if use_as == "Sigil":
-            
-            self._ensure_add_browser_indexes()
-            return f"Safe if an empty 270x sigil slot exists. Empty slots: {self._add_browser_empty_counts.get('sigils', 0) if self.save else 0}."
-        if use_as == "Weapon":
-            
-            self._ensure_add_browser_indexes()
-            return f"Safe if an empty weapon slot exists. Empty slots: {self._add_browser_empty_counts.get('weapons', 0) if self.save else 0}."
-        if use_as == "Relic / Curio Lookup":
-            return "Reference only for now: curio/relic rows are stored under ItemJunk 1901-1904/2001-2004, not normal materials."
-        if use_as == "Trait Lookup":
-            return "Reference only: traits are not inventory sigils by themselves."
-        if use_as == "Character Lookup":
-            return "Character hash reference for sigil 2706 assignment."
-        return "Reference hash; not directly addable to inventory."
-
-    def _add_browser_status_kind(self, entry) -> str:
-        use_as = self._add_browser_use_as(entry)
-        if self._add_browser_wallet_target(entry) is not None:
-            return "ready"
-        if use_as == "Relic / Curio Lookup":
-            return "reference"
-        if use_as == "Item / Material":
-            if self.save and self._is_material_bank_entry(entry.hash_value):
-                if self._add_browser_has_active_material_stack(entry):
-                    return "owned"
-                if self._add_browser_has_safe_material_template(entry):
-                    return "missing"
-                return "blocked"
-            return "blocked"
-        if use_as in {"Sigil", "Weapon"}:
-            return "ready" if self.save else "blocked"
-        if use_as in {"Character Lookup", "Trait Lookup", "Reference Only"}:
-            return "reference"
-        return "blocked"
-
-    def _add_browser_status_filter_match(self, entry) -> bool:
-        status = self.add_browser_status_filter.currentText() if hasattr(self, "add_browser_status_filter") else "All status"
-        if status == "All status":
-            return True
-        kind = self._add_browser_status_kind(entry)
-        if status == "Ready / Safe":
-            return kind in {"ready", "missing", "owned"}
-        if status == "Missing / Safe Add":
-            return kind == "missing"
-        if status == "Already Owned":
-            return kind == "owned"
-        if status == "Has Empty Slot":
-            return self._add_browser_use_as(entry) in {"Sigil", "Weapon"} and bool(self.save)
-        if status == "Blocked / Not Safe":
-            return kind == "blocked"
-        if status == "Reference Only":
-            return kind == "reference"
-        return True
-
-    def _add_browser_subtype_match(self, entry) -> bool:
-        subtype = self.add_browser_subtype_filter.currentText() if hasattr(self, "add_browser_subtype_filter") else "All subtypes"
-        if subtype in ("", "All subtypes"):
-            return True
-        cid = (getattr(entry, "item_id", "") or "").upper()
-        cat = (getattr(entry, "category", "") or "").lower()
-        name = (getattr(entry, "display_name", "") or "").lower()
-        aliases = (getattr(entry, "alias_text", "") or "").lower()
-        blob = " ".join([cid.lower(), cat, name, aliases])
-        kind = self._add_browser_status_kind(entry)
-        use_as = self._add_browser_use_as(entry)
-        if subtype == "Missing Safe":
-            return kind == "missing"
-        if subtype == "Already Owned":
-            return kind == "owned"
-        if subtype == "Materials":
-            return cid.startswith("ITEM_") and not self._is_curio_relic_entry(entry) and self._add_browser_wallet_target(entry) is None
-        if subtype == "Consumables":
-            return cid.startswith("ITEM_13") or any(x in name for x in ["potion", "ambrosia"])
-        if subtype == "Wrightstones":
-            return cid.startswith(("ITEM_25", "ITEM_26", "ITEM_27", "ITEM_28")) or "wrightstone" in name
-        if subtype == "Glitterstones":
-            return cid.startswith("ITEM_34") or "glitter" in name
-        if subtype == "Tickets / Badges":
-            return any(x in blob for x in ["ticket", "badge", "dalia", "voucher", "card"])
-        if subtype == "Wallet":
-            return self._add_browser_wallet_target(entry) is not None
-        if subtype == "Relics / Curios":
-            return self._is_curio_relic_entry(entry)
-        if subtype == "Damage / Power":
-            return any(x in name for x in ["attack", "damage", "cap", "tyranny", "stamina", "crit", "critical", "exploiter", "enmity"])
-        if subtype == "Defense / HP":
-            return any(x in name for x in ["health", "aegis", "garrison", "defense", "guard", "stout", "guts"])
-        if subtype == "Cooldown / Utility":
-            return any(x in name for x in ["cooldown", "cascade", "uplift", "potion", "nimble", "dodge", "quick"])
-        if subtype == "Resistance":
-            return "resistance" in name or "resist" in name
-        if subtype == "Character / Warpath":
-            return "warpath" in name or "awakening" in name or "'s" in name
-        if subtype == "Special / Unique":
-            return any(x in name for x in ["war elemental", "flight over fight", "glass cannon", "berserker", "alpha", "beta", "gamma", "ain", "boundary"])
-        if subtype == "V+ / Endgame":
-            return "v+" in name or cid.endswith("_24") or cid.endswith("_94")
-        if subtype == "Unknown / Dummy":
-            return not name.strip() or "dummy" in name or "unknown" in name or "reserved" in name
-        if subtype == "Apocalypse / Terminus":
-            return any(x in name for x in ["apocalypse", "bahamut", "celestial", "star", "gateway", "false"])
-        if subtype == "Ascension / Awakened":
-            return any(x in name for x in ["awaken", "ascension", "omega", "coda", "star key", "azure", "dominant", "purifier", "exalted"])
-        if subtype == "Base Weapons":
-            return use_as == "Weapon" and not any(x in name for x in ["apocalypse", "bahamut", "omega", "coda", "celestial"])
-        if subtype == "DLC Characters":
-            return any(x in cid for x in ["PL2100", "PL2200", "PL2300"])
-        if subtype == "Unknown / Empty Name":
-            return not name.strip() or name in {'""', "unknown"} or "unnamed" in name
-        if subtype == "Characters":
-            return use_as == "Character Lookup"
-        if subtype == "Traits / Skills":
-            return use_as == "Trait Lookup" or cid.startswith("SKILL_") or cid.startswith("GEEN_")
-        if subtype == "Models":
-            return "model" in cat or "model" in cid.lower()
-        if subtype == "Phases":
-            return "phase" in cat or "phase" in cid.lower()
-        if subtype == "Quests":
-            return "quest" in cat or "quest" in cid.lower()
-        if subtype == "Reference Only":
-            return use_as in {"Reference Only", "Character Lookup", "Trait Lookup", "Relic / Curio Lookup"}
-        return True
-
-    def _add_browser_category_match(self, entry, category: str) -> bool:
-        if category in ("", "All Database Rows", "All"):
-            return True
-        use_as = self._add_browser_use_as(entry)
-        cat = (getattr(entry, "category", "") or "").lower()
-        if category in ("Addable Only", "Addable Types"):
-            return use_as in {"Item / Material", "Sigil", "Weapon"}
-        if category == "Safe For Loaded Save":
-            name = (getattr(entry, "display_name", "") or "").lower()
-            if name.startswith("unnamed / reserved") or name.startswith("reserved /"):
-                return False
-            if self._add_browser_wallet_target(entry) is not None:
-                return True
-            if use_as in {"Sigil", "Weapon"}:
-                return True
-            if use_as == "Item / Material":
-                return bool(self.save and self._add_browser_has_safe_material_template(entry))
-            return False
-        if category == "Wallet / Profile":
-            return self._add_browser_wallet_target(entry) is not None
-        if category == "Relics / Curios":
-            return use_as == "Relic / Curio Lookup"
-        if category == "Sigils":
-            return use_as == "Sigil"
-        if category == "Items / Materials":
-            return use_as == "Item / Material"
-        if category == "Weapons":
-            return use_as == "Weapon"
-        if category == "Characters":
-            return use_as == "Character Lookup"
-        if category == "Traits / Skills":
-            return use_as == "Trait Lookup"
-        if category == "Reference / Models":
-            return use_as == "Reference Only" or any(w in cat for w in ["model", "phase", "enemy", "object"])
-        return True
-
-    def refresh_add_browser_rows(self) -> None:
-        if not hasattr(self, "add_browser_model"):
-            return
-        query = (self.add_browser_filter.text() if hasattr(self, "add_browser_filter") else "").strip()
-        category = self._effective_add_browser_category()
-        self._ensure_add_browser_indexes()
-
-        # Large all-database views are search-first so opening the tab is instant.
-        if not query and category in {"All Database Rows", "Reference / Models", "Traits / Skills"}:
-            self.add_browser_model.set_rows([[
-                "Search first",
-                "Type a name, GBID, or hash to load this large database view",
-                "—",
-                "—",
-                category,
-                "The merged Community database is large; this view is intentionally lazy for speed.",
-            ]])
-            self.refresh_add_browser_character_combo()
-            self.update_add_browser_detail()
-            return
-
-        # Keep the table responsive. Users can narrow with search/filters.
-        hard_limit = 750 if query else 500
-        search_limit = 5000 if query else 2500
-        entries = self.item_db.search(query, limit=search_limit)
-        rows = []
-        skipped = 0
-        for entry in entries:
-            if not self._add_browser_category_match(entry, category):
-                continue
-            if not self._add_browser_status_filter_match(entry):
-                continue
-            if not self._add_browser_subtype_match(entry):
-                continue
-            rows.append([
-                self._add_browser_use_as(entry),
-                entry.display_name,
-                entry.item_id,
-                entry.hash_hex,
-                entry.category,
-                self._add_browser_status_for_entry(entry),
-            ])
-            if len(rows) >= hard_limit:
-                break
-        # If the search returned more than we are displaying, show a clear hint.
-        if len(rows) >= hard_limit:
-            rows.append([
-                "More results hidden",
-                "Narrow the search to show more exact matches",
-                "—",
-                "—",
-                category,
-                f"Showing first {hard_limit} matching rows for speed.",
-            ])
-        self.add_browser_model.set_rows(rows)
-        if hasattr(self, "add_browser_table"):
-            self._set_table_widths(self.add_browser_table, {0: 120, 1: 300, 2: 170, 3: 120, 4: 150, 5: 360})
-        self.refresh_add_browser_character_combo()
-        self.update_add_browser_detail()
-        if hasattr(self, "statusBar"):
-            tab = getattr(self, "_add_browser_tab", "Safe Add")
-            self.statusBar().showMessage(f"Add / Equip Browser: {tab} · {category} · showing {len(rows):,} rows", 1800)
-
-    def refresh_add_browser_character_combo(self) -> None:
-        if not hasattr(self, "add_browser_equip_combo"):
-            return
-        # Character list does not change per browser filter; build it once.
-        choices = getattr(self, "_add_browser_character_choices", None)
-        if choices is None:
-            choices = []
-            for entry in self.item_db.search("character", limit=1000):
-                cid = (entry.item_id or "").upper()
-                if cid.startswith("PL") or entry.category.lower() == "character":
-                    choices.append((f"{entry.display_name} ({entry.item_id})", entry.hash_value & 0xFFFFFFFF))
-            self._add_browser_character_choices = choices
-        current = self.add_browser_equip_combo.currentData()
-        self.add_browser_equip_combo.blockSignals(True)
-        self.add_browser_equip_combo.clear()
-        self.add_browser_equip_combo.addItem("None / Unassigned", EMPTY_HASH)
-        for label, value in choices:
-            self.add_browser_equip_combo.addItem(label, value)
-        idx = self.add_browser_equip_combo.findData(current)
-        if idx >= 0:
-            self.add_browser_equip_combo.setCurrentIndex(idx)
-        self.add_browser_equip_combo.setEnabled(True)
-        self.add_browser_equip_combo.blockSignals(False)
-
-    def selected_add_browser_entry(self):
-        if not hasattr(self, "add_browser_table"):
-            return None
-        idx = self.add_browser_table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(self.add_browser_model.rows):
-            return None
-        row = self.add_browser_model.rows[idx.row()]
-        return self.item_db.by_id.get(str(row[2]).upper()) or self._entry_from_hash_text(row[3])
-
-    def _entry_from_hash_text(self, text: Any):
-        try:
-            return self.item_db.lookup_hash(int(str(text).replace("0x", ""), 16))
-        except Exception:
-            return None
-
-    def update_add_browser_detail(self) -> None:
-        if not hasattr(self, "add_browser_detail_label"):
-            return
-        entry = self.selected_add_browser_entry()
-        if not entry:
-            empty = ""
-            if self.save:
-                self._ensure_add_browser_indexes()
-                counts = self._add_browser_empty_counts
-                empty = f"<br><br><b>Empty reusable slots</b><br>Items/materials: {counts.get('items', 0)}<br>Sigils/gems: {counts.get('sigils', 0)}<br>Weapons: {counts.get('weapons', 0)}"
-            self.add_browser_detail_label.setText("Select a row to see whether it can be added to the save." + empty)
-            return
-        use_as = self._add_browser_use_as(entry)
-        status = self._add_browser_status_for_entry(entry)
-        aliases = entry.alias_text or "—"
-        self._ensure_add_browser_indexes()
-        counts = self._add_browser_empty_counts
-        self.add_browser_detail_label.setText(
-            f"<b>{entry.display_name}</b><br>"
-            f"Use as: <b>{use_as}</b><br>"
-            f"GBID: {entry.item_id}<br>"
-            f"Database category: {entry.category}<br>"
-            f"Hash: 0x{entry.hash_hex}<br>"
-            f"Aliases/source notes: {aliases}<br><br>"
-            f"{status}<br><br>"
-            f"<b>Empty reusable slots</b><br>"
-            f"Items/materials: {counts.get('items', 0) if self.save else 0}<br>"
-            f"Sigils/gems: {counts.get('sigils', 0) if self.save else 0}<br>"
-            f"Weapons: {counts.get('weapons', 0) if self.save else 0}"
-        )
-
-    def add_browser_selected_default(self) -> None:
-        entry = self.selected_add_browser_entry()
-        if not entry:
-            return
-        use_as = self._add_browser_use_as(entry)
-        if use_as == "Sigil":
-            self.add_browser_selected_as_sigil()
-        elif use_as == "Weapon":
-            self.add_browser_selected_as_weapon()
-        elif use_as == "Item / Material":
-            self.add_browser_selected_as_item()
-        else:
-            QMessageBox.information(self, "Reference-only row", f"{entry.display_name} is a {use_as} row. It is useful for lookup, but it is not an inventory item/sigil/weapon that can be added directly.")
-
-    def add_browser_selected_as_item(self) -> None:
-        entry = self.selected_add_browser_entry()
-        if not entry:
-            QMessageBox.information(self, "No entry selected", "Select a database entry first.")
-            return
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save before applying browser actions.")
-            return
-
-        # Wallet/profile values such as Rupies/MSP are direct UserDataManager
-        # fields, not inventory stacks. Route them explicitly.
-        wallet = self._add_browser_wallet_target(entry)
-        if wallet is not None:
-            field_id, label, cap = wallet
-            qty = min(int(self.add_browser_qty_spin.value()), int(cap))
-            rec = self.save.find_first("int", int(field_id), 0) if self.save else None
-            if rec is None:
-                QMessageBox.information(self, "Wallet field missing", f"Could not find UserDataManager field {field_id} for {label} in this save.")
-                return
-            if self._set_record_first_value(rec, qty, f"{label} wallet value"):
-                self._after_editor_patch(f"Set {label} -> {qty:,}.")
-                QMessageBox.information(self, "Wallet updated", f"Set {label} to {qty:,} in memory. Use Save As and verify in-game.")
-            else:
-                QMessageBox.information(self, "No change", f"{label} already matched {qty:,}.")
-            return
-
-        if self._is_curio_relic_entry(entry):
-            QMessageBox.warning(
-                self,
-                "Relic/curio add blocked",
-                f"{entry.display_name} appears to be a relic/curio ItemJunk row.\n\n"
-                "Curios/relics are not normal 1801/1802 material stacks. They use ItemManager/ItemJunk fields 1901-1904 and 2001-2004, so this editor blocks writing them through the item/material path for now."
-            )
-            return
-
-        if self._add_browser_use_as(entry) != "Item / Material":
-            QMessageBox.information(self, "Wrong add type", f"{entry.display_name} is marked as {self._add_browser_use_as(entry)}, not an item/material or wallet value.")
-            return
-
-        if self._is_material_bank_entry(entry.hash_value) and not self._add_browser_has_safe_material_template(entry):
-            QMessageBox.warning(
-                self,
-                "Unsafe material add blocked",
-                f"{entry.display_name} does not have an active 180x material stack or verified template in this save.\n\n"
-                "The old Add All path crashed the game by force-filling inactive material catalog rows. "
-                "This build only updates active stacks or activates matching inactive 1801 rows when a known-good 1803-1807 template exists."
-            )
-            return
-
-        result = self._add_item_hash_qty_to_empty_slot(entry.hash_value, self.add_browser_qty_spin.value(), 1)
-        if result:
-            self._after_editor_patch(f"Browser item action: {result} in memory.")
-            QMessageBox.information(self, "Item/material updated", f"Updated in memory:\n{result}\n\nUse Save As first and verify in-game.")
-        else:
-            QMessageBox.information(self, "No safe target", "Could not find a safe active material stack or reusable item slot for this entry.")
-
-    def add_browser_selected_as_sigil(self) -> None:
-        entry = self.selected_add_browser_entry()
-        if not entry:
-            QMessageBox.information(self, "No entry selected", "Select a database entry first.")
-            return
-        if self._add_browser_use_as(entry) != "Sigil":
-            QMessageBox.information(self, "Wrong add type", f"{entry.display_name} is marked as {self._add_browser_use_as(entry)}, not a sigil. GEEN_* rows are addable sigils; SKILL_/trait rows are lookup-only.")
-            return
-        owner_hash = self.add_browser_equip_combo.currentData() if hasattr(self, "add_browser_equip_combo") else EMPTY_HASH
-        locked = bool(self.add_browser_locked_check.isChecked()) if hasattr(self, "add_browser_locked_check") else True
-        result = self._add_sigil_hash_level_to_empty_slot(
-            entry.hash_value,
-            self.add_browser_level_spin.value(),
-            locked,
-            owner_hash=owner_hash,
-        )
-        if not result:
-            QMessageBox.information(self, "No empty sigil slot", "Could not find an empty sigil slot to reuse.")
-            return
-        self._after_editor_patch(f"Added {result} in memory.")
-
-    def _last_added_sigil_unit_from_result(self, result: str) -> Optional[int]:
-        import re
-        m = re.search(r"unit\s+(\d+)", result or "")
-        return int(m.group(1)) if m else None
-
-    def _find_last_matching_sigil_slot(self, sigil_hash: int) -> Optional[Dict[str, Any]]:
-        if not self.save:
-            return None
-        grouped = self.save.group_by_unit([2703, 2706])
-        found = None
-        for unit_id, fields in sorted(grouped.items()):
-            h = fields.get(2703)
-            if h and self._record_first_value(h, 0) == (sigil_hash & 0xFFFFFFFF):
-                found = {"unit_id": unit_id, "hash_rec": h, "worn_rec": fields.get(2706)}
-        return found
-
-    def add_browser_selected_as_weapon(self) -> None:
-        entry = self.selected_add_browser_entry()
-        if not entry:
-            QMessageBox.information(self, "No entry selected", "Select a database entry first.")
-            return
-        if self._add_browser_use_as(entry) != "Weapon":
-            QMessageBox.information(self, "Wrong add type", f"{entry.display_name} is marked as {self._add_browser_use_as(entry)}, not a weapon.")
-            return
-        result = self._add_weapon_hash_xp_to_empty_slot(entry.hash_value, self.add_browser_xp_spin.value(), None)
-        if result:
-            self._after_editor_patch(f"Added {result} in memory.")
-            QMessageBox.information(self, "Weapon added", f"Added in memory:\n{result}\n\nUse Save As first and verify in-game.")
-        else:
-            QMessageBox.information(self, "No empty weapon slot", "Could not find an empty weapon slot to reuse.")
-
-    def copy_add_browser_selected_hash(self) -> None:
-        entry = self.selected_add_browser_entry()
-        if entry:
-            self.copy_text(f"0x{entry.hash_hex}")
-
-    def selected_gbid_entry(self):
-        idx = self.gbid_table.currentIndex()
-        if not idx.isValid():
-            return None
-        return self.gbid_model.entry_at(idx.row())
-
-    def copy_selected_gbid_hash(self) -> None:
-        entry = self.selected_gbid_entry()
-        if entry:
-            self.copy_text(entry.hash_hex)
-
-    def copy_selected_gbid_decimal(self) -> None:
-        entry = self.selected_gbid_entry()
-        if entry:
-            self.copy_text(str(entry.hash_value))
-
-    def copy_selected_gbid_id(self) -> None:
-        entry = self.selected_gbid_entry()
-        if entry:
-            self.copy_text(entry.item_id)
 
 
 
-    def add_selected_gbid_as_item(self) -> None:
-        entry = self.selected_gbid_entry()
-        if not entry:
-            QMessageBox.information(self, "No GBID selected", "Select a GBID row first.")
-            return
-        self._add_item_hash_to_empty_slot(entry.hash_value, entry.display_name, entry.item_id)
 
-    def add_selected_gbid_as_sigil(self) -> None:
-        entry = self.selected_gbid_entry()
-        if not entry:
-            QMessageBox.information(self, "No GBID selected", "Select a GBID row first.")
-            return
-        self._add_sigil_hash_to_empty_slot(entry.hash_value, entry.display_name, entry.item_id)
 
-    def add_selected_gbid_as_weapon(self) -> None:
-        entry = self.selected_gbid_entry()
-        if not entry:
-            QMessageBox.information(self, "No GBID selected", "Select a GBID row first.")
-            return
-        self._add_weapon_hash_to_empty_slot(entry.hash_value, entry.display_name, entry.item_id)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def find_unit_row(self, kind: str, id_type: int, unit_id: int) -> Optional[int]:
         for i, rec in enumerate(self.unit_model.filtered):
@@ -9214,25 +3910,6 @@ class MainWindow(QMainWindow):
             self.unit_selected()
             self.copy_selected_values_to_editor()
 
-    def jump_to_item_unit(self) -> None:
-        if not self.save:
-            return
-        idx = self.item_table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(self.item_model.rows):
-            return
-        slot_value = self.item_model.rows[idx.row()][0]
-        if isinstance(slot_value, str) and slot_value.startswith("wallet:"):
-            field_id = int(slot_value.split(":", 1)[1])
-            recs = self.save.find(id_type=field_id, unit_id=0)
-            if recs:
-                self.jump_to_record(recs[0].kind, recs[0].id_type, recs[0].unit_id)
-                return
-        unit_id = int(slot_value)
-        for id_type in [1801, 1802, 2102, 1901, 2002, 2103, 2105]:
-            recs = self.save.find(id_type=id_type, unit_id=unit_id)
-            if recs:
-                self.jump_to_record(recs[0].kind, recs[0].id_type, recs[0].unit_id)
-                return
 
     def jump_to_sigil_unit(self) -> None:
         if not self.save:
@@ -9245,28 +3922,7 @@ class MainWindow(QMainWindow):
         if recs:
             self.jump_to_record(recs[0].kind, recs[0].id_type, recs[0].unit_id)
 
-    def jump_to_weapon_unit(self) -> None:
-        if not self.save:
-            return
-        idx = self.weapon_table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(self.weapon_model.rows):
-            return
-        unit_id = int(self.weapon_model.rows[idx.row()][0])
-        recs = self.save.find(id_type=2803, unit_id=unit_id) or self.save.find(id_type=2804, unit_id=unit_id)
-        if recs:
-            self.jump_to_record(recs[0].kind, recs[0].id_type, recs[0].unit_id)
 
-    def jump_to_candidate_unit(self) -> None:
-        if not self.save:
-            return
-        idx = self.candidate_table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(self.candidate_model.rows):
-            return
-        row = self.candidate_model.rows[idx.row()]
-        kind = str(row[2])
-        id_type = int(row[3])
-        unit_id = int(row[5])
-        self.jump_to_record(kind, id_type, unit_id)
 
     def refresh_unit_map_rows(self) -> None:
         if not self.save:
@@ -9280,137 +3936,18 @@ class MainWindow(QMainWindow):
         if hasattr(self, "unit_map_table"):
             self._auto_fit_table(self.unit_map_table)
 
-    def jump_to_unit_map_unit(self) -> None:
-        if not self.save:
-            return
-        idx = self.unit_map_table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(self.unit_map_model.rows):
-            return
-        row = self.unit_map_model.rows[idx.row()]
-        group = str(row[0]).lower()
-        unit_id = int(row[1])
-        preferred = {
-            "weapon": [2803, 2804, 2815],
-            "sigil": [2703, 2704, 2707],
-            "item": [2102, 1901, 2002, 2105],
-            "character": [1301, 1302, 1315],
-            "ability": [3903, 3904],
-            "quest": [2570, 2571, 2574, 2501],
-            "scenario": [4202, 4201],
-            "party": [2201, 2202, 2301],
-        }.get(group, [])
-        for id_type in preferred:
-            recs = self.save.find(id_type=id_type, unit_id=unit_id)
-            if recs:
-                self.jump_to_record(recs[0].kind, recs[0].id_type, recs[0].unit_id)
-                return
-        for rec in self.save.records:
-            if rec.unit_id == unit_id:
-                self.jump_to_record(rec.kind, rec.id_type, rec.unit_id)
-                return
-
-    def copy_selected_unit_label(self) -> None:
-        idx = self.unit_map_table.currentIndex()
-        if idx.isValid() and idx.row() < len(self.unit_map_model.rows):
-            self.copy_text(str(self.unit_map_model.rows[idx.row()][2]))
-
-    def export_unit_map_csv(self) -> None:
-        default = str((self.save.container.path if self.save else Path("unit_map")).with_suffix(".unit_map.csv"))
-        self.export_rows_csv(self.unit_map_model, default)
-
-    def search_loaded_values(self) -> None:
-        if not self.save:
-            return
-        query = self.value_search_edit.text().strip()
-        self.value_search_results = search_values(self.save, query, exact=True, limit=1000)
-        self.research_text.setPlainText(format_search_text(self.value_search_results, max_rows=120))
-
-    def export_value_search_csv(self) -> None:
-        if not self.value_search_results:
-            QMessageBox.information(self, "Value search", "Run a value search first.")
-            return
-        default = str((self.save.container.path if self.save else Path("value_search")).with_suffix(".value_search.csv"))
-        path, _ = QFileDialog.getSaveFileName(self, "Export value search CSV", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        try:
-            write_search_csv(self.value_search_results, path)
-            QMessageBox.information(self, "Exported", f"Value search written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
 
 
 
-    def resolve_unknown_hash_patterns(self) -> None:
-        if not self.save:
-            return
-        self.hash_candidate_rows = resolve_unknown_hashes(self.save, self.item_db, limit=5000)
-        self.hash_scan_text.setPlainText(format_hash_candidates(self.hash_candidate_rows))
 
-    def export_hash_candidate_csv(self) -> None:
-        if not self.save:
-            return
-        rows = getattr(self, "hash_candidate_rows", [])
-        if not rows:
-            rows = resolve_unknown_hashes(self.save, self.item_db, limit=5000)
-            self.hash_candidate_rows = rows
-        if not rows:
-            QMessageBox.information(self, "No candidate IDs", "No generated ID-pattern matches were found for the remaining unknown hash fields.")
-            return
-        default = str((self.save.container.path if self.save else Path("hash_candidates")).with_suffix(".hash_candidates.csv"))
-        path, _ = QFileDialog.getSaveFileName(self, "Export generated hash candidates", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        try:
-            write_hash_candidates_csv(rows, path)
-            QMessageBox.information(self, "Exported", f"Generated hash candidates written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
-    def run_hash_scan(self, include_unknown: bool = False) -> None:
-        if not self.save:
-            return
-        self.hash_scan_rows = scan_known_hashes(self.save, self.item_db, include_unknown=include_unknown, limit=12000)
-        table_rows = []
-        for row in self.hash_scan_rows:
-            table_rows.append([
-                row.get("category", ""),
-                row.get("name", ""),
-                row.get("gbid", ""),
-                row.get("hash", ""),
-                row.get("kind", ""),
-                row.get("id_type", ""),
-                row.get("unit_id", ""),
-                row.get("value_index", ""),
-                "yes" if row.get("known") else "no",
-                row.get("aliases", ""),
-            ])
-        self.hash_scan_model.set_rows(table_rows)
-        self.hash_scan_text.setPlainText(format_hash_scan_text(self.hash_scan_rows, max_rows=80))
 
-    def export_hash_scan_csv(self) -> None:
-        if not self.hash_scan_rows:
-            QMessageBox.information(self, "Hash scan", "Run a hash scan first.")
-            return
-        default = str((self.save.container.path if self.save else Path("hash_scan")).with_suffix(".hash_scan.csv"))
-        path, _ = QFileDialog.getSaveFileName(self, "Export hash scan CSV", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        try:
-            write_hash_scan_csv(self.hash_scan_rows, path)
-            QMessageBox.information(self, "Exported", f"Hash scan written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
-    def jump_to_hash_scan_unit(self) -> None:
-        if not self.save:
-            return
-        idx = self.hash_scan_table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(self.hash_scan_rows):
-            return
-        row = self.hash_scan_rows[idx.row()]
-        self.jump_to_record(str(row["kind"]), int(row["id_type"]), int(row["unit_id"]))
+
+
+
+
 
     def export_rows_csv(self, model: SimpleRowsModel, default_name: str) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Export CSV", default_name, "CSV (*.csv);;All files (*)")
@@ -9425,9 +3962,6 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.critical(self, "Export failed", str(exc))
 
-    def export_items_csv(self) -> None:
-        default = str((self.save.container.path if self.save else Path("items")).with_suffix(".items.csv"))
-        self.export_rows_csv(self.item_model, default)
 
     def export_sigils_csv(self) -> None:
         default = str((self.save.container.path if self.save else Path("sigils")).with_suffix(".sigils.csv"))
@@ -9499,15 +4033,7 @@ class MainWindow(QMainWindow):
             "Those hashes are what we use to add names safely without touching your save data."
         )
 
-    def copy_selected_item_hash(self) -> None:
-        idx = self.item_table.currentIndex()
-        if idx.isValid() and idx.row() < len(self.item_model.rows):
-            self.copy_text(str(self.item_model.rows[idx.row()][3]).removeprefix("0x"))
 
-    def copy_selected_item_gbid(self) -> None:
-        idx = self.item_table.currentIndex()
-        if idx.isValid() and idx.row() < len(self.item_model.rows):
-            self.copy_text(str(self.item_model.rows[idx.row()][2]))
 
     def copy_selected_sigil_hash(self) -> None:
         idx = self.sigil_table.currentIndex()
@@ -9519,38 +4045,9 @@ class MainWindow(QMainWindow):
         if idx.isValid() and idx.row() < len(self.sigil_model.rows):
             self.copy_text(str(self.sigil_model.rows[idx.row()][3]))
 
-    def export_weapons_csv(self) -> None:
-        default = str((self.save.container.path if self.save else Path("weapons")).with_suffix(".weapons.csv"))
-        self.export_rows_csv(self.weapon_model, default)
 
-    def export_unknown_weapon_hashes_csv(self) -> None:
-        if not self.save:
-            return
-        rows = [r for r in self.weapon_model.rows if str(r[1]).startswith("Unknown 0x") or str(r[10]).startswith("0x")]
-        if not rows:
-            QMessageBox.information(self, "Unknown weapons", "No unknown weapon/stone hashes are visible on the Weapons page.")
-            return
-        path, _ = QFileDialog.getSaveFileName(self, "Export unknown weapon hashes", str(self.save.container.path.with_suffix(".unknown_weapon_hashes.csv")), "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        try:
-            with open(path, "w", encoding="utf-8", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(self.weapon_model.headers)
-                writer.writerows(rows)
-            QMessageBox.information(self, "Exported", f"Unknown weapon hashes written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
-    def copy_selected_weapon_hash(self) -> None:
-        idx = self.weapon_table.currentIndex()
-        if idx.isValid() and idx.row() < len(self.weapon_model.rows):
-            self.copy_text(str(self.weapon_model.rows[idx.row()][3]).removeprefix("0x"))
 
-    def copy_selected_weapon_gbid(self) -> None:
-        idx = self.weapon_table.currentIndex()
-        if idx.isValid() and idx.row() < len(self.weapon_model.rows):
-            self.copy_text(str(self.weapon_model.rows[idx.row()][2]))
 
 
     def _selected_row(self, table: QTableView, model: SimpleRowsModel) -> Optional[List[Any]]:
@@ -9613,54 +4110,8 @@ class MainWindow(QMainWindow):
         finally:
             spin.blockSignals(False)
 
-    def set_selected_item_quantity_from_spin(self, *_args, auto: bool = False) -> None:
-        if not self.save or not hasattr(self, "item_table") or not hasattr(self, "item_selected_qty_spin"):
-            return
-        idx = self.item_table.currentIndex()
-        meta = self._selected_item_meta()
-        if not idx.isValid() or not meta:
-            if not auto:
-                self.statusBar().showMessage("Select an item first.", 2500)
-            return
-        if not (meta.get("wallet_value") or self._item_meta_has_real_quantity(meta)):
-            if not auto:
-                self.statusBar().showMessage("Selected row is technical/reference data, not a quantity field.", 4000)
-            return
-        value = int(self.item_selected_qty_spin.value())
-        if self.apply_item_table_cell_edit(idx.row(), 6, value):
-            self.update_item_detail()
-            if auto:
-                self.statusBar().showMessage("Auto-applied selected item quantity in memory. Save when ready.", 3500)
 
-    def _schedule_item_selected_quantity_auto_apply(self) -> None:
-        if getattr(self, "_item_qty_auto_apply_in_progress", False):
-            return
-        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
-            return
-        if not getattr(self, "save", None) or not hasattr(self, "item_table"):
-            return
-        idx = self.item_table.currentIndex()
-        if not idx.isValid():
-            return
-        meta = self._selected_item_meta()
-        if not meta or not (meta.get("wallet_value") or self._item_meta_has_real_quantity(meta)):
-            return
-        timer = getattr(self, "_item_qty_auto_apply_timer", None)
-        if timer is None:
-            timer = QTimer(self)
-            timer.setSingleShot(True)
-            timer.timeout.connect(self._run_item_selected_quantity_auto_apply)
-            self._item_qty_auto_apply_timer = timer
-        timer.start(180)
 
-    def _run_item_selected_quantity_auto_apply(self) -> None:
-        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
-            return
-        self._item_qty_auto_apply_in_progress = True
-        try:
-            self.set_selected_item_quantity_from_spin(auto=True)
-        finally:
-            self._item_qty_auto_apply_in_progress = False
 
     def _set_item_inline_fields(self, row: Optional[List[Any]]) -> None:
         """Keep the selected item editor synchronized without firing save edits."""
@@ -9711,7 +4162,19 @@ class MainWindow(QMainWindow):
             return maximum
         return ivalue
 
-    def _set_i32_line_edit_validator(self, editor: Optional[QLineEdit], *, minimum: int = I32_MIN, maximum: int = I32_MAX, tooltip: str = "") -> None:
+
+    def _install_common_numeric_validators(self) -> None:
+        """Apply signed 32-bit/safe-range validators to direct-edit boxes that accept numbers."""
+        specs = [
+            ("sigil_level_edit", 0, SIGIL_LEVEL_MAX, "Sigil level: 0 to signed 32-bit max."),
+            ("sigil_flags_edit", I32_MIN, I32_MAX, "Sigil flags: signed 32-bit range."),
+            ("mastery_state_edit", 0, MASTERY_1607_SAFE_MAX, "Mastery state/value: 0 to signed 32-bit max."),
+            ("mastery_overmastery_value_edit", -1, MASTERY_1607_SAFE_MAX, "Overmastery value: -1 for FFFFFFFF/80%, otherwise 0 to signed 32-bit max."),
+        ]
+        for name, minimum, maximum, tip in specs:
+            self._set_i32_line_edit_validator(getattr(self, name, None), minimum=minimum, maximum=maximum, tooltip=tip)
+
+    def _set_i32_line_edit_validator(self, editor, *, minimum=I32_MIN, maximum=I32_MAX, tooltip="") -> None:
         if editor is None:
             return
         minimum = max(I32_MIN, int(minimum))
@@ -9722,32 +4185,6 @@ class MainWindow(QMainWindow):
         else:
             editor.setToolTip(f"Whole number only. Safe range: {minimum:,} to {maximum:,}.")
 
-    def _install_common_numeric_validators(self) -> None:
-        """Apply signed 32-bit/safe-range validators to direct-edit boxes that accept numbers."""
-        specs = [
-            ("item_quantity_edit", 0, 99_999_999, "Item quantity/value: 0 to 99,999,999."),
-            ("item_index_edit", I32_MIN, I32_MAX, "Item index/serial: signed 32-bit range."),
-            ("item_flag_edit", I32_MIN, I32_MAX, "Item flag/state: signed 32-bit range."),
-            ("sigil_level_edit", 0, SIGIL_LEVEL_MAX, "Sigil level: 0 to signed 32-bit max."),
-            ("sigil_flags_edit", I32_MIN, I32_MAX, "Sigil flags: signed 32-bit range."),
-            ("weapon_xp_edit", 0, WEAPON_XP_MAX, f"Weapon XP/progress: 0 to {WEAPON_XP_MAX:,}."),
-            ("weapon_flags_edit", I32_MIN, I32_MAX, "Weapon flags: signed 32-bit range."),
-            ("mastery_state_edit", 0, MASTERY_1607_SAFE_MAX, "Mastery state/value: 0 to signed 32-bit max."),
-            ("mastery_overmastery_value_edit", -1, MASTERY_1607_SAFE_MAX, "Overmastery value: -1 for FFFFFFFF/80%, otherwise 0 to signed 32-bit max."),
-        ]
-        for name, minimum, maximum, tip in specs:
-            self._set_i32_line_edit_validator(getattr(self, name, None), minimum=minimum, maximum=maximum, tooltip=tip)
-
-    def _parse_editor_int(self, text: Any, label: str, minimum: int = I32_MIN, maximum: int = I32_MAX) -> Optional[int]:
-        raw = str(text or "").strip().replace(",", "")
-        if not raw:
-            QMessageBox.warning(self, "Missing value", f"Enter a {label} value first.")
-            return None
-        value = self._clamp_i32_value(raw, minimum=minimum, maximum=maximum, label=label)
-        if value is None:
-            QMessageBox.warning(self, "Invalid value", f"{label} must be a whole number. You can use decimal or 0xHEX.")
-            return None
-        return value
 
     def _selected_item_meta(self) -> Optional[Dict[str, Any]]:
         return self._selected_meta(self.item_table, self.item_rows_meta) if hasattr(self, "item_table") else None
@@ -9774,71 +4211,8 @@ class MainWindow(QMainWindow):
             return f"{unit} · {name} · cap {cap} · trait +{bonus}"
         return f"{unit} · {hash_hex or 'Unknown weapon'} · cap {cap} · trait +{bonus}"
 
-    def _weapon_row_index_for_unit(self, unit_id: Any) -> int:
-        try:
-            target = int(unit_id)
-        except Exception:
-            return -1
-        for row_index, meta in enumerate(getattr(self, "weapon_rows_meta", []) or []):
-            try:
-                if int(meta.get("unit_id", -1)) == target:
-                    return row_index
-            except Exception:
-                continue
-        return -1
 
-    def _weapon_stone_display_from_value(self, stone_value: Any) -> str:
-        try:
-            ivalue = int(stone_value or 0) & 0xFFFFFFFF
-        except Exception:
-            return str(stone_value or "")
-        if ivalue in (0, EMPTY_HASH):
-            return ""
-        stone_name, stone_gbid, stone_hash = self.hash_entry_parts(ivalue)
-        return stone_name if stone_gbid else stone_hash
 
-    def _refresh_weapon_visible_row_from_meta(self, meta: Optional[Dict[str, Any]], *, update_detail: bool = True) -> None:
-        """Refresh the visible selected weapon row without rebuilding the whole tab."""
-        if not meta or not hasattr(self, "weapon_model"):
-            return
-        row_index = self._weapon_row_index_for_unit(meta.get("unit_id"))
-        if row_index < 0 or row_index >= len(getattr(self.weapon_model, "rows", [])):
-            return
-        row = self.weapon_model.rows[row_index]
-        weapon_hash = self._record_first_value(meta.get("hash_rec"), 0)
-        is_empty = weapon_hash in ("", 0, EMPTY_HASH)
-        if is_empty:
-            row[1], row[2], row[3] = "<Empty weapon slot>", "", ""
-            meta["is_empty"] = True
-            meta["is_known"] = False
-        else:
-            name, gbid, hx = self.hash_entry_parts(weapon_hash)
-            row[1], row[2], row[3] = name, gbid, hx
-            meta["is_empty"] = False
-            meta["is_known"] = bool(gbid)
-        row[4] = self._record_first_value(meta.get("xp_rec"), row[4] if len(row) > 4 else "")
-        row[5] = self._record_first_value(meta.get("cap_rec") or meta.get("unk_2805_rec"), row[5] if len(row) > 5 else "")
-        row[6] = self._record_first_value(meta.get("unk_2806_rec"), row[6] if len(row) > 6 else "")
-        row[7] = self._record_first_value(meta.get("unk_2807_rec"), row[7] if len(row) > 7 else "")
-        row[8] = self._record_first_value(meta.get("unk_2814_rec"), row[8] if len(row) > 8 else "")
-        row[9] = self._record_first_value(meta.get("flags_rec"), row[9] if len(row) > 9 else "")
-        row[10] = self._weapon_stone_display_from_value(self._record_first_value(meta.get("stone_rec"), EMPTY_HASH))
-        self._emit_model_row_changed(self.weapon_model, row_index)
-
-        combo = getattr(self, "weapon_cap_trait_weapon_combo", None)
-        if combo is not None:
-            try:
-                target = int(meta.get("unit_id", -1))
-                for i in range(combo.count()):
-                    if int(combo.itemData(i)) == target:
-                        combo.setItemText(i, self._weapon_meta_display_label(meta))
-                        break
-            except Exception:
-                pass
-        if update_detail:
-            self.update_weapon_detail()
-        else:
-            self.update_weapon_cap_trait_controls()
 
     def _sync_weapon_cap_trait_weapon_combo(self) -> None:
         combo = getattr(self, "weapon_cap_trait_weapon_combo", None)
@@ -9886,141 +4260,11 @@ class MainWindow(QMainWindow):
             except Exception:
                 continue
 
-    def _select_weapon_row_by_unit(self, unit_id: int) -> None:
-        table = getattr(self, "weapon_table", None)
-        if table is None:
-            return
-        for row_index, meta in enumerate(getattr(self, "weapon_rows_meta", []) or []):
-            try:
-                if int(meta.get("unit_id", -1)) == int(unit_id):
-                    model_index = table.model().index(row_index, 0) if table.model() is not None else QModelIndex()
-                    table.selectRow(row_index)
-                    if model_index.isValid():
-                        table.setCurrentIndex(model_index)
-                        table.scrollTo(model_index)
-                    return
-            except Exception:
-                continue
 
-    def on_weapon_cap_trait_weapon_combo_changed(self) -> None:
-        combo = getattr(self, "weapon_cap_trait_weapon_combo", None)
-        if combo is None:
-            return
-        try:
-            unit_id = combo.currentData()
-            if unit_id is not None:
-                self._select_weapon_row_by_unit(int(unit_id))
-        except Exception:
-            pass
-        self.update_weapon_cap_trait_controls()
 
-    def _selected_character_meta(self) -> Optional[Dict[str, Any]]:
-        return self._selected_meta(self.character_table, self.character_rows_meta) if hasattr(self, "character_table") else None
 
-    def _apply_item_text_to_field(self, meta: Dict[str, Any], column: int, value: Any) -> bool:
-        """Patch one editable inventory/wallet field from table/direct-editor text."""
-        if not self.save:
-            return False
-        text = str(value or "").strip()
-        if meta.get("wallet_value"):
-            if column != 6:
-                QMessageBox.information(self, "Wallet field", "This row is a direct UserDataManager wallet value. Edit the Quantity column only.")
-                return False
-            parsed = self._parse_editor_int(text, "wallet quantity", 0, 99_999_999)
-            return parsed is not None and self._set_record_first_value(meta.get("qty_rec"), parsed, "wallet quantity")
-        if meta.get("is_empty") and column not in (1, 2, 3):
-            QMessageBox.information(self, "Set item first", "Empty slots need an item GBID/name/hash before quantity, index, or flag edits are applied.")
-            return False
-        if column in (1, 2, 3):
-            if not text:
-                QMessageBox.warning(self, "Missing item", "Enter a GBID, item name, decimal hash, or 0xHASH.")
-                return False
-            resolved = self._resolve_hash_from_text(text)
-            if resolved is None:
-                QMessageBox.warning(self, "Hash not found", "Could not resolve that item. Paste a GBID, item name, decimal hash, or 8-digit hex hash.")
-                return False
-            return self._set_record_first_value(meta.get("hash_rec"), resolved, "item hash")
-        if column == 4:
-            parsed = self._parse_editor_int(text, "index/serial")
-            return parsed is not None and self._set_record_first_value(meta.get("index_rec"), parsed, "item index/serial")
-        if column == 5:
-            parsed = self._parse_editor_int(text, "flag/state")
-            return parsed is not None and self._set_record_first_value(meta.get("flag_rec"), parsed, "item flag/state")
-        if column == 6:
-            if not self._item_meta_has_real_quantity(meta):
-                QMessageBox.information(self, "Not a quantity field", "This row does not expose a real stack quantity. Regular materials/currency use the 1802 Quantity field; wrightstone/item-slot rows use this column as type/state data and are left unchanged.")
-                return False
-            parsed = self._parse_editor_int(text, "quantity", 0, 99_999_999)
-            return parsed is not None and self._set_record_first_value(meta.get("qty_rec"), parsed, "item quantity")
-        return False
 
-    def apply_item_table_cell_edit(self, row: int, column: int, value: Any) -> bool:
-        if row < 0 or row >= len(self.item_rows_meta):
-            return False
-        meta = self.item_rows_meta[row]
-        if self._apply_item_text_to_field(meta, column, value):
-            try:
-                if column in (1, 2, 3):
-                    h = self._record_first_value(meta.get("hash_rec"), 0)
-                    self._patch_visible_hash_row(self.item_model, row, 1, 2, 3, int(h or 0))
-                    meta["is_empty"] = h in (0, EMPTY_HASH)
-                    meta["is_known"] = bool(self.item_db.lookup_hash(int(h or 0)))
-                elif column == 4:
-                    self.item_model.rows[row][4] = self._record_first_value(meta.get("index_rec"), "")
-                elif column == 5:
-                    self.item_model.rows[row][5] = self._record_first_value(meta.get("flag_rec"), "")
-                elif column == 6:
-                    self.item_model.rows[row][6] = self._record_first_value(meta.get("qty_rec"), "")
-                self._emit_model_row_changed(self.item_model, row)
-            except Exception:
-                pass
-            self._after_editor_patch("Item cell updated in memory. Save when ready.")
-            return True
-        return False
 
-    def apply_item_inline_edits(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        meta = self._selected_item_meta()
-        if not meta:
-            return
-        changes = 0
-        current = self._selected_row(self.item_table, self.item_model) if hasattr(self, "item_table") else None
-        if meta.get("wallet_value"):
-            requested = [(6, self.item_quantity_edit.text() if hasattr(self, "item_quantity_edit") else "")]
-        else:
-            requested = [
-                (1, self.item_identity_edit.text() if hasattr(self, "item_identity_edit") else ""),
-                (6, self.item_quantity_edit.text() if hasattr(self, "item_quantity_edit") else ""),
-                (4, self.item_index_edit.text() if hasattr(self, "item_index_edit") else ""),
-                (5, self.item_flag_edit.text() if hasattr(self, "item_flag_edit") else ""),
-            ]
-        if meta.get("is_empty") and not str(requested[0][1] or "").strip():
-            self.item_identity_edit.setFocus()
-            self.statusBar().showMessage("Empty slots need an item GBID/name/hash before quantity or flag changes are applied.", 4000)
-            return
-        # Only patch fields that differ from what is currently shown. This lets users edit one field
-        # without accidentally rewriting the rest of the row.
-        current_by_col = {1: "", 4: "", 5: "", 6: ""}
-        if current:
-            def cell_text(v: Any) -> str:
-                return "" if v is None or v == "" else str(v)
-            current_by_col = {1: str(current[2] or current[3] or current[1] or ""), 4: cell_text(current[4]), 5: cell_text(current[5]), 6: cell_text(current[6])}
-        for column, text in requested:
-            text = str(text or "").strip()
-            if column == 1 and not text and meta.get("is_empty"):
-                continue
-            if text == current_by_col.get(column, ""):
-                continue
-            if self._apply_item_text_to_field(meta, column, text):
-                changes += 1
-            else:
-                return
-        if changes:
-            self._after_editor_patch(f"Applied {changes} item field change{'s' if changes != 1 else ''} in memory. Save when ready.")
-        else:
-            self.statusBar().showMessage("No item field changes to apply.", 3000)
 
     def _text_for_raw_value(self, value: Any) -> str:
         if value in (None, "", _FORMAT_EMPTY):
@@ -10141,37 +4385,7 @@ class MainWindow(QMainWindow):
         timer.timeout.connect(lambda col=int(column), vf=value_func, lab=label: self._apply_selected_sigil_column_now(col, vf(), lab))
         timer.start(max(25, int(delay_ms)))
 
-    def _schedule_sigil_inline_auto_apply(self) -> None:
-        if getattr(self, "_updating_sigil_detail", False):
-            return
-        if getattr(self, "_sigil_auto_apply_in_progress", False):
-            return
-        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
-            return
-        if not getattr(self, "save", None):
-            return
-        table = getattr(self, "sigil_table", None)
-        if table is None:
-            return
-        idx = table.currentIndex()
-        if not idx.isValid():
-            return
-        timer = getattr(self, "_sigil_auto_apply_timer", None)
-        if timer is None:
-            timer = QTimer(self)
-            timer.setSingleShot(True)
-            timer.timeout.connect(self._run_sigil_inline_auto_apply)
-            self._sigil_auto_apply_timer = timer
-        timer.start(120)
 
-    def _run_sigil_inline_auto_apply(self) -> None:
-        if getattr(self, "_updating_sigil_detail", False):
-            return
-        if getattr(self, "_sigil_auto_apply_in_progress", False):
-            return
-        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
-            return
-        self.apply_sigil_inline_edits(auto=True, show_no_change=False)
 
     def apply_sigil_inline_edits(self, *_args, auto: bool = False, show_no_change: bool = True) -> int:
         if getattr(self, "_updating_sigil_detail", False) and auto:
@@ -10230,101 +4444,10 @@ class MainWindow(QMainWindow):
         finally:
             self._sigil_auto_apply_in_progress = False
 
-    def apply_weapon_inline_edits(self, *_args, show_no_change: bool = True) -> int:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return 0
-        row = self._selected_row(self.weapon_table, self.weapon_model) if hasattr(self, "weapon_table") else None
-        if not row:
-            return 0
-        changes = 0
-        requests = [
-            (1, self.weapon_identity_edit.text() if hasattr(self, "weapon_identity_edit") else "", str(row[2] or row[3] or row[1] or "")),
-            (4, self.weapon_xp_edit.text() if hasattr(self, "weapon_xp_edit") else "", str(row[4] or "")),
-            (10, self.weapon_stone_edit.text() if hasattr(self, "weapon_stone_edit") else "", str(row[10] or "")),
-            (9, self.weapon_flags_edit.text() if hasattr(self, "weapon_flags_edit") else "", str(row[9] or "")),
-        ]
-        current_row = self.weapon_table.currentIndex().row()
-        for column, text, current in requests:
-            text = str(text or "").strip()
-            if text == str(current or "").strip():
-                continue
-            if self.apply_weapon_table_cell_edit(current_row, column, text):
-                changes += 1
-            else:
-                return changes
-        if changes:
-            self.statusBar().showMessage(f"Applied {changes} weapon field change{'s' if changes != 1 else ''} in memory. Save when ready.", 5000)
-        elif show_no_change and not getattr(self, "_weapon_inline_recent_auto_sync", False):
-            self.statusBar().showMessage("No weapon field changes to apply.", 3000)
-        return changes
 
-    def sync_weapon_detail_controls(self) -> None:
-        """Auto-apply the selected weapon form when a field is committed."""
-        if getattr(self, "_updating_weapon_detail", False):
-            return
-        if not getattr(self, "save", None) or not hasattr(self, "weapon_table"):
-            return
-        idx = self.weapon_table.currentIndex()
-        if not idx.isValid() or idx.row() < 0:
-            return
-        changed = self.apply_weapon_inline_edits(show_no_change=False)
-        if changed:
-            self._weapon_inline_recent_auto_sync = True
-            try:
-                QTimer.singleShot(250, lambda: setattr(self, "_weapon_inline_recent_auto_sync", False))
-            except Exception:
-                self._weapon_inline_recent_auto_sync = False
 
-    def _weapon_inline_auto_values_ready(self) -> bool:
-        row = self._selected_row(self.weapon_table, self.weapon_model) if hasattr(self, "weapon_table") else None
-        if not row:
-            return False
-        checks = [
-            (1, self.weapon_identity_edit.text() if hasattr(self, "weapon_identity_edit") else "", str(row[2] or row[3] or row[1] or "")),
-            (4, self.weapon_xp_edit.text() if hasattr(self, "weapon_xp_edit") else "", str(row[4] or "")),
-            (10, self.weapon_stone_edit.text() if hasattr(self, "weapon_stone_edit") else "", str(row[10] or "")),
-            (9, self.weapon_flags_edit.text() if hasattr(self, "weapon_flags_edit") else "", str(row[9] or "")),
-        ]
-        for column, text, current in checks:
-            text = str(text or "").strip()
-            if text == str(current or "").strip():
-                continue
-            if column in (4, 9):
-                if text == "" or _parse_intish(text) is None:
-                    return False
-            elif column in (1, 10):
-                if column == 10 and text.lower() in {"", "none", "clear", "empty", "0", "—", "-"}:
-                    continue
-                if column == 1 and text.lower() in {"", "none", "clear", "empty", "0", "—", "-"}:
-                    continue
-                if self._resolve_hash_from_text(text) is None:
-                    return False
-        return True
 
-    def _schedule_weapon_inline_auto_apply(self) -> None:
-        if getattr(self, "_updating_weapon_detail", False):
-            return
-        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
-            return
-        if not getattr(self, "save", None) or not hasattr(self, "weapon_table"):
-            return
-        idx = self.weapon_table.currentIndex()
-        if not idx.isValid() or idx.row() < 0:
-            return
-        if not self._weapon_inline_auto_values_ready():
-            return
-        timer = getattr(self, "_weapon_inline_auto_apply_timer", None)
-        if timer is None:
-            timer = QTimer(self)
-            timer.setSingleShot(True)
-            timer.timeout.connect(self.sync_weapon_detail_controls)
-            self._weapon_inline_auto_apply_timer = timer
-        timer.start(220)
 
-    def apply_character_inline_edits(self) -> None:
-        """Compatibility hook for older buttons/hotkeys; current character controls sync live."""
-        self.sync_character_detail_controls()
 
     def _set_character_spin_safely(self, name: str, value: Any) -> None:
         spin = getattr(self, name, None)
@@ -10341,79 +4464,8 @@ class MainWindow(QMainWindow):
         finally:
             spin.blockSignals(old_block)
 
-    def _clamp_character_value(self, value: Any, *, minimum: int = 0) -> int:
-        try:
-            ivalue = int(str(value).replace(",", "").strip())
-        except Exception:
-            ivalue = minimum
-        return max(int(minimum), min(CHARACTER_VALUE_MAX, ivalue))
 
-    def _set_character_max_bundle(self, meta_or_target: Dict[str, Any]) -> int:
-        """Set every known editable numeric character field to the editor max."""
-        patched = 0
-        for key, label in [
-            ("level_rec", "character level"),
-            ("xp_rec", "character EXP/progress"),
-            ("msp_rec", "character MSP/progression"),
-            ("unlock_rec", "character unlock/active"),
-            ("state_rec", "character state/flags"),
-        ]:
-            rec = meta_or_target.get(key)
-            if rec is not None and self._set_record_first_value(rec, CHARACTER_VALUE_MAX, label):
-                patched += 1
-        return patched
 
-    def sync_character_detail_controls(self) -> None:
-        """Patch selected character fields as soon as the selected card controls change."""
-        if getattr(self, "_updating_character_detail", False):
-            return
-        if not self.save or not hasattr(self, "character_table"):
-            return
-        current_row = self.character_table.currentIndex().row()
-        if current_row < 0 or current_row >= len(getattr(self, "character_rows_meta", [])):
-            return
-        meta = self.character_rows_meta[current_row]
-        if meta.get("is_empty"):
-            return
-        changed = 0
-        try:
-            level = int(self.character_level_spin.value()) if hasattr(self, "character_level_spin") else None
-            exp = int(self.character_exp_spin.value()) if hasattr(self, "character_exp_spin") else None
-            unlock = int(self.character_unlock_spin.value()) if hasattr(self, "character_unlock_spin") else None
-            state = int(self.character_state_spin.value()) if hasattr(self, "character_state_spin") else None
-        except Exception:
-            return
-        if level is not None:
-            level = self._clamp_character_value(level, minimum=0)
-        if exp is not None:
-            exp = self._clamp_character_value(exp, minimum=0)
-        if unlock is not None:
-            unlock = self._clamp_character_value(unlock, minimum=0)
-        if state is not None:
-            state = self._clamp_character_value(state, minimum=0)
-        if level is not None and level != self._record_first_value(meta.get("level_rec"), level):
-            if self._set_record_first_value(meta.get("level_rec"), level, "character level"):
-                changed += 1
-        if exp is not None and exp != self._record_first_value(meta.get("xp_rec"), exp):
-            if self._set_record_first_value(meta.get("xp_rec"), exp, "character EXP/progress"):
-                changed += 1
-        if unlock is not None and unlock != self._record_first_value(meta.get("unlock_rec"), unlock):
-            if self._set_record_first_value(meta.get("unlock_rec"), unlock, "character unlock/active candidate"):
-                changed += 1
-        if state is not None and state != self._record_first_value(meta.get("state_rec"), state):
-            if self._set_record_first_value(meta.get("state_rec"), state, "character state/flags"):
-                changed += 1
-        if not changed:
-            return
-        try:
-            row = self.character_model.rows[current_row]
-            row[4] = self._record_first_value(meta.get("level_rec"), row[4])
-            row[5] = self._record_first_value(meta.get("xp_rec"), row[5])
-            row[7] = self._record_first_value(meta.get("unlock_rec"), row[7])
-            self._emit_model_row_changed(self.character_model, current_row)
-        except Exception:
-            pass
-        self._after_editor_patch(f"Synced {changed} selected character field{'s' if changed != 1 else ''} in memory.")
 
     def update_sigil_detail(self) -> None:
         if not hasattr(self, "sigil_detail_label"):
@@ -10610,32 +4662,7 @@ class MainWindow(QMainWindow):
         self.save_health_text.setPlainText("\n".join(lines))
 
 
-    def set_progression_group_filter(self, prefix: str) -> None:
-        prefix = str(prefix or "")
-        if hasattr(self, "progression_quest_group_combo"):
-            for i in range(self.progression_quest_group_combo.count()):
-                if str(self.progression_quest_group_combo.itemData(i) or "") == prefix:
-                    if self.progression_quest_group_combo.currentIndex() != i:
-                        self.progression_quest_group_combo.blockSignals(True)
-                        self.progression_quest_group_combo.setCurrentIndex(i)
-                        self.progression_quest_group_combo.blockSignals(False)
-                    break
-        if hasattr(self, "progression_group_tabs"):
-            for i in range(self.progression_group_tabs.count()):
-                if str(self.progression_group_tabs.tabData(i) or "") == prefix:
-                    if self.progression_group_tabs.currentIndex() != i:
-                        self.progression_group_tabs.blockSignals(True)
-                        self.progression_group_tabs.setCurrentIndex(i)
-                        self.progression_group_tabs.blockSignals(False)
-                    break
-        self.refresh_progression_editor_rows()
 
-    def _quest_progression_fields(self) -> Dict[str, List[int]]:
-        return {
-            "status": [2511, 2512, 2551, 2561, 2571, 2581],
-            "rank": [2574],
-            "complete": [2520, 2554, 2555, 2575, 2576, 2577],
-        }
 
     def _progression_vector_plan_for_prefix(self, prefix: str) -> Dict[str, List[int]]:
         """Best-known vector mapping for the clean progression editor.
@@ -10658,16 +4685,6 @@ class MainWindow(QMainWindow):
             return {"keys": [2580], "status": [2581], "rank": [], "complete": []}
         return {"keys": [], "status": [], "rank": [], "complete": []}
 
-    def schedule_progression_editor_refresh(self) -> None:
-        """Debounce expensive catalog filtering while the user types."""
-        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
-            self._mark_stale_pages(["Progression"])
-            return
-        timer = getattr(self, "_progression_edit_refresh_timer", None)
-        if timer is not None:
-            timer.start()
-        else:
-            self.refresh_progression_editor_rows()
 
     def _invalidate_progression_caches(self, *, catalog: bool = False, vectors: bool = True) -> None:
         if catalog:
@@ -10810,34 +4827,6 @@ class MainWindow(QMainWindow):
                 return vals[index]
         return default
 
-    def _set_progression_value_at(self, fields: List[int], index: int, value: Any, *, only_raise: bool = False) -> int:
-        if not self.save or index is None or index < 0:
-            return 0
-        changed = 0
-        for fid in fields:
-            rec = self._progression_record_for_field(fid)
-            if not rec:
-                continue
-            vals = list(self._progression_values_for_field(fid))
-            if index >= len(vals):
-                continue
-            old = vals[index]
-            new = value
-            if only_raise:
-                try:
-                    if isinstance(old, bool):
-                        new = bool(old) or bool(value)
-                    else:
-                        new = max(int(old), int(value))
-                except Exception:
-                    new = value
-            if old != new:
-                vals[index] = new
-                self.save.set_values(rec, vals)
-                if hasattr(self, "_progression_vector_values_cache"):
-                    self._progression_vector_values_cache[int(fid)] = vals
-                changed += 1
-        return changed
 
     def _progression_display_values_for_meta(self, meta: Dict[str, Any]) -> Dict[str, Any]:
         index = int(meta.get("progression_index", -1))
@@ -10952,18 +4941,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, "progression_raw_group") and self.progression_raw_group.isChecked():
             self.refresh_progression_raw_rows()
 
-    def _progression_group_name_for_unit(self, unit_id: int) -> str:
-        text = str(unit_id)
-        names = {
-            "1": "Main Quest",
-            "2": "Challenge / Side Quest",
-            "3": "Fate Episode",
-            "4": "Multiplayer / Quest Counter",
-            "5": "Town / Lobby",
-            "6": "Dummy / Practice",
-            "7": "Short Story / Misc",
-        }
-        return names.get(text[:1], "Quest / Progression")
 
     def update_progression_edit_controls(self) -> None:
         if not hasattr(self, "progression_edit_table") or not hasattr(self, "progression_edit_rows_meta"):
@@ -11003,134 +4980,12 @@ class MainWindow(QMainWindow):
                 f"{meta.get('name')} · ID {meta.get('quest_id')} · index {meta.get('progression_index')} · {source}"
             )
 
-    def _progression_bool_from_text(self, value: Any) -> bool:
-        text = str(value).strip().lower()
-        if text in {"1", "true", "yes", "y", "done", "complete", "completed", "viewed", "checked"}:
-            return True
-        if text in {"0", "false", "no", "n", "none", "incomplete", "not done", "unchecked", ""}:
-            return False
-        return bool(_parse_intish(value))
 
-    def _mark_progression_dirty_light(self, message: str) -> None:
-        self.dirty = True
-        self.update_status_text_light()
-        self._mark_all_pages_stale()
-        self._stale_page_labels.discard("Progression")
-        self.statusBar().showMessage(message, 3500)
 
-    def _refresh_progression_model_row(self, row: int) -> None:
-        if not hasattr(self, "progression_edit_model") or not hasattr(self, "progression_edit_rows_meta"):
-            return
-        if row < 0 or row >= len(self.progression_edit_rows_meta) or row >= len(self.progression_edit_model.rows):
-            return
-        meta = self.progression_edit_rows_meta[row]
-        vals = self._progression_display_values_for_meta(meta)
-        self.progression_edit_model.rows[row] = [
-            meta.get("quest_id", ""),
-            meta.get("name", ""),
-            vals.get("status", _FORMAT_EMPTY),
-            vals.get("rank", _FORMAT_EMPTY),
-            "Yes" if bool(vals.get("done")) else "No",
-            "Mapped" if bool(vals.get("writable")) else "Catalog only",
-        ]
-        try:
-            left = self.progression_edit_model.index(row, 0)
-            right = self.progression_edit_model.index(row, self.progression_edit_model.columnCount() - 1)
-            self.progression_edit_model.dataChanged.emit(left, right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
-        except Exception:
-            pass
 
-    def apply_progression_table_cell_edit(self, row: int, column: int, value: Any) -> bool:
-        if not self.save or not hasattr(self, "progression_edit_rows_meta"):
-            return False
-        if row < 0 or row >= len(self.progression_edit_rows_meta):
-            return False
-        meta = self.progression_edit_rows_meta[row]
-        vals = self._progression_display_values_for_meta(meta)
-        if not vals.get("writable"):
-            self.statusBar().showMessage("That progression row is catalog-only until its save vector is mapped.", 3500)
-            return False
-        index = int(meta.get("progression_index", -1))
-        plan = self._progression_vector_plan_for_prefix(str(meta.get("prefix", "")))
-        changed = 0
-        if column == 2:
-            parsed = self._clamp_i32_value(value, minimum=0, maximum=999, label="progression status")
-            if parsed is None:
-                return False
-            changed = self._set_progression_value_at(plan.get("status", []), index, int(parsed), only_raise=False)
-        elif column == 3:
-            parsed = self._clamp_i32_value(value, minimum=0, maximum=9, label="progression rank")
-            if parsed is None:
-                return False
-            changed = self._set_progression_value_at(plan.get("rank", []), index, int(parsed), only_raise=False)
-        elif column == 4:
-            changed = self._set_progression_value_at(plan.get("complete", []), index, bool(self._progression_bool_from_text(value)), only_raise=False)
-        else:
-            return False
-        if changed:
-            self._refresh_progression_model_row(row)
-            self._mark_progression_dirty_light(f"Updated {meta.get('quest_id')} instantly. Save when ready.")
-            # Keep the selected-row controls in sync with direct table edits.
-            if hasattr(self, "progression_edit_table") and self.progression_edit_table.currentIndex().row() == row:
-                self.update_progression_edit_controls()
-        return bool(changed)
 
-    def apply_progression_realtime_from_controls(self) -> None:
-        if getattr(self, "_progression_controls_loading", False) or not self.save:
-            return
-        if not hasattr(self, "progression_edit_table") or not hasattr(self, "progression_edit_rows_meta"):
-            return
-        idx = self.progression_edit_table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(self.progression_edit_rows_meta):
-            return
-        row = idx.row()
-        meta = self.progression_edit_rows_meta[row]
-        if not self._progression_display_values_for_meta(meta).get("writable"):
-            return
-        changed = self._set_progression_meta_values(
-            meta,
-            status_value=int(self.progression_status_spin.value()),
-            rank_value=int(self.progression_rank_spin.value()),
-            completed=bool(self.progression_completed_check.isChecked()),
-            only_raise=False,
-        )
-        if changed:
-            self._refresh_progression_model_row(row)
-            self._mark_progression_dirty_light(f"Updated {meta.get('quest_id')} instantly. Save when ready.")
 
-    def _set_progression_meta_values(self, meta: Dict[str, Any], *, status_value: int = 1, rank_value: int = 7, completed: bool = True, only_raise: bool = True) -> int:
-        if not self.save:
-            return 0
-        index = int(meta.get("progression_index", -1))
-        plan = self._progression_vector_plan_for_prefix(str(meta.get("prefix", "")))
-        changed = 0
-        status_value = max(0, min(999, int(status_value)))
-        rank_value = max(0, min(9, int(rank_value)))
-        changed += self._set_progression_value_at(plan.get("status", []), index, status_value, only_raise=only_raise)
-        changed += self._set_progression_value_at(plan.get("rank", []), index, rank_value, only_raise=only_raise)
-        changed += self._set_progression_value_at(plan.get("complete", []), index, bool(completed), only_raise=only_raise)
-        return changed
 
-    def _progression_mapped_metas_for_prefix(self, prefix: str = "") -> List[Dict[str, Any]]:
-        """Return save-editable quest/stage catalog metas for a prefix.
-
-        This is the shared backend for both the Progression editor and the
-        mapped cheats. It intentionally uses the real key vectors such as
-        2550/2551 for side quests instead of assuming catalog row order.
-        """
-        if not self.save:
-            return []
-        pfx = str(prefix or "")[:1]
-        metas: List[Dict[str, Any]] = []
-        for entry in self._quest_catalog_entries():
-            if pfx and str(entry.get("prefix", "")) != pfx:
-                continue
-            meta = dict(entry)
-            meta["progression_index"] = self._progression_index_for_catalog_entry(entry)
-            vals = self._progression_display_values_for_meta(meta)
-            if vals.get("writable"):
-                metas.append(meta)
-        return metas
 
     def _progression_group_label_for_prefix(self, prefix: str = "") -> str:
         labels = {
@@ -11145,167 +5000,10 @@ class MainWindow(QMainWindow):
         }
         return labels.get(str(prefix or "")[:1], f"{prefix}00000-series progression")
 
-    def cheat_complete_progression_group(self, prefix: str = "", label: str = "") -> None:
-        """Complete mapped progression rows by quest ID group.
 
-        This replaces the old broad QuestSystem cheat. It uses the same mapping
-        as the Progression tab, so a row is patched only when its catalog quest
-        key is found inside the save's packed mission key vector. For example,
-        side quests use 2550 as the key vector and 2551/2554/2555 as status/
-        completion vectors.
-        """
-        if not self.save:
-            QMessageBox.information(self, "No save", "Open a save first.")
-            return
-        self._invalidate_progression_caches(catalog=False, vectors=True)
-        pfx = str(prefix or "")[:1]
-        group_label = label or self._progression_group_label_for_prefix(pfx)
-        metas = self._progression_mapped_metas_for_prefix(pfx)
-        if not metas:
-            QMessageBox.information(
-                self,
-                "No mapped progression rows",
-                f"No editable mapped rows were found for {self._progression_group_label_for_prefix(pfx)} in this save. "
-                "Catalog-only rows are skipped to avoid writing the wrong mission index.",
-            )
-            return
-        preview = "\n".join(f"- {m.get('quest_id')} · {m.get('name')}" for m in metas[:18])
-        if len(metas) > 18:
-            preview += f"\n...and {len(metas) - 18} more"
-        msg = (
-            f"Complete {len(metas):,} mapped row(s) for {self._progression_group_label_for_prefix(pfx)}?\n\n"
-            f"{preview}\n\n"
-            "This uses the same mission-key mapping as the Progression tab and skips catalog-only rows. "
-            "Use Save As and test the edited copy in-game."
-        )
-        if QMessageBox.question(self, "Confirm progression cheat", msg) != QMessageBox.StandardButton.Yes:
-            return
-        changed_values = 0
-        changed_rows = 0
-        for meta in metas:
-            changed = self._set_progression_meta_values(meta, status_value=1, rank_value=7, completed=True, only_raise=True)
-            if changed:
-                changed_values += changed
-                changed_rows += 1
-        if changed_values:
-            self._after_editor_patch(
-                f"{group_label}: completed {changed_rows:,} mapped row(s), changed {changed_values:,} value(s).",
-                refresh=False,
-            )
-            if hasattr(self, "progression_edit_model"):
-                self.refresh_progression_editor_rows()
-        else:
-            QMessageBox.information(self, "Already complete", f"{self._progression_group_label_for_prefix(pfx)} already looked complete for all mapped rows.")
 
-    def _set_progression_unit_values(self, unit_id: int, *, status_value: int = 1, rank_value: int = 7, completed: bool = True, only_raise: bool = True) -> int:
-        """Legacy unit-id editor kept for older quick actions.
 
-        Current quest UI uses packed-vector metadata and calls _set_progression_meta_values.
-        """
-        if not self.save:
-            return 0
-        changed = 0
-        fields = self._quest_progression_fields()
-        targets = []
-        for fid in fields["status"]:
-            targets.extend((rec, status_value) for rec in self.save.find(id_type=fid, unit_id=unit_id))
-        for fid in fields["rank"]:
-            targets.extend((rec, rank_value) for rec in self.save.find(id_type=fid, unit_id=unit_id))
-        for fid in fields["complete"]:
-            targets.extend((rec, completed) for rec in self.save.find(id_type=fid, unit_id=unit_id))
-        for rec, value in targets:
-            vals = self.save.get_values(rec)
-            new_vals = []
-            rec_changed = False
-            for old in vals:
-                new = value
-                if only_raise:
-                    try:
-                        if isinstance(old, bool):
-                            new = bool(old) or bool(value)
-                        else:
-                            new = max(int(old), int(value))
-                    except Exception:
-                        new = value
-                if old != new:
-                    rec_changed = True
-                new_vals.append(new)
-            if rec_changed:
-                self.save.set_values(rec, new_vals)
-                changed += 1
-        return changed
 
-    def apply_progression_selected_edit(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save", "Open a save first.")
-            return
-        if not hasattr(self, "progression_edit_table") or not hasattr(self, "progression_edit_rows_meta"):
-            return
-        idx = self.progression_edit_table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(self.progression_edit_rows_meta):
-            QMessageBox.information(self, "No row selected", "Select a progression row first.")
-            return
-        meta = self.progression_edit_rows_meta[idx.row()]
-        if not self._progression_display_values_for_meta(meta).get("writable"):
-            QMessageBox.information(self, "Catalog only", "This catalog row is visible for reference, but its save vector is not mapped yet.")
-            return
-        changed = self._set_progression_meta_values(
-            meta,
-            status_value=int(self.progression_status_spin.value()),
-            rank_value=int(self.progression_rank_spin.value()),
-            completed=bool(self.progression_completed_check.isChecked()),
-            only_raise=False,
-        )
-        if changed:
-            self._refresh_progression_model_row(idx.row())
-            self._mark_progression_dirty_light(f"Progression row {meta.get('quest_id')} updated across {changed} value(s). Save when ready.")
-        self.update_progression_edit_controls()
-
-    def complete_progression_selected_row(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save", "Open a save first.")
-            return
-        if not hasattr(self, "progression_edit_table") or not hasattr(self, "progression_edit_rows_meta"):
-            return
-        idx = self.progression_edit_table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(self.progression_edit_rows_meta):
-            QMessageBox.information(self, "No row selected", "Select a progression row first.")
-            return
-        meta = self.progression_edit_rows_meta[idx.row()]
-        if not self._progression_display_values_for_meta(meta).get("writable"):
-            QMessageBox.information(self, "Catalog only", "This catalog row is not mapped to a known save vector yet.")
-            return
-        changed = self._set_progression_meta_values(meta, status_value=1, rank_value=7, completed=True, only_raise=True)
-        if changed:
-            self._refresh_progression_model_row(idx.row())
-            self._mark_progression_dirty_light(f"Completed {meta.get('quest_id')} across {changed} value(s). Save when ready.")
-            self.update_progression_edit_controls()
-        else:
-            self.statusBar().showMessage("Selected progression row was already complete or had no matching values.", 4000)
-
-    def complete_progression_visible_group(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save", "Open a save first.")
-            return
-        label = self.progression_quest_group_combo.currentText() if hasattr(self, "progression_quest_group_combo") else "current group"
-        visible_meta = [m for m in (getattr(self, "progression_edit_rows_meta", []) or []) if self._progression_display_values_for_meta(m).get("writable")]
-        if not visible_meta:
-            QMessageBox.information(self, "No mapped rows", "No visible rows in this group are mapped to known save vectors yet.")
-            return
-        if QMessageBox.question(
-            self,
-            "Complete current progression group",
-            f"Patch {len(visible_meta):,} currently visible mapped row(s) in {label}?\n\nUse Save As and test in-game after this experimental edit.",
-        ) != QMessageBox.StandardButton.Yes:
-            return
-        changed = 0
-        for meta in visible_meta:
-            changed += self._set_progression_meta_values(meta, status_value=1, rank_value=7, completed=True, only_raise=True)
-        if changed:
-            self._after_editor_patch(f"Completed {label}: changed {changed:,} value(s) in memory. Save when ready.")
-        else:
-            QMessageBox.information(self, "No changes", "No progression values needed to change.")
-        self.refresh_progression_editor_rows()
 
     def _progression_sections(self) -> Dict[str, Dict[str, Any]]:
         return {
@@ -11591,50 +5289,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, "progression_rows_table"):
             self._set_table_widths(self.progression_rows_table, {0: 220, 1: 82, 2: 190, 3: 100, 4: 210, 5: 90, 6: 70, 7: 82, 8: 420})
 
-    def clear_progression_filters(self) -> None:
-        if hasattr(self, "progression_row_filter_edit"):
-            self.progression_row_filter_edit.clear()
-        if hasattr(self, "progression_unit_filter_edit"):
-            self.progression_unit_filter_edit.clear()
-        if hasattr(self, "progression_field_filter_combo"):
-            self.progression_field_filter_combo.setCurrentText("All fields")
-        if hasattr(self, "progression_value_mode_combo"):
-            self.progression_value_mode_combo.setCurrentText("Any values")
-        if hasattr(self, "progression_nonzero_only_check"):
-            self.progression_nonzero_only_check.setChecked(True)
-        if hasattr(self, "progression_expand_values_check"):
-            self.progression_expand_values_check.setChecked(False)
-        if hasattr(self, "progression_max_rows_combo"):
-            self.progression_max_rows_combo.setCurrentText("250 rows")
-        if hasattr(self, "progression_quest_group_combo"):
-            self.progression_quest_group_combo.setCurrentIndex(0)
-        self.refresh_progression_raw_rows()
 
-    def copy_progression_rows(self) -> None:
-        if not hasattr(self, "progression_rows_model"):
-            return
-        headers = self.progression_rows_model.headers
-        rows = self.progression_rows_model.rows
-        lines = ["	".join(headers)]
-        for row in rows:
-            lines.append("	".join(str(x) for x in row))
-        QApplication.clipboard().setText("\n".join(lines))
-        QMessageBox.information(self, "Copied", f"Copied {len(rows)} progression rows to the clipboard.")
 
-    def export_progression_rows_csv(self) -> None:
-        if not hasattr(self, "progression_rows_model"):
-            return
-        path, _ = QFileDialog.getSaveFileName(self, "Export progression rows CSV", "progression_rows.csv", "CSV files (*.csv);;All files (*.*)")
-        if not path:
-            return
-        try:
-            with open(path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(self.progression_rows_model.headers)
-                writer.writerows(self.progression_rows_model.rows)
-            QMessageBox.information(self, "Exported", f"Exported {len(self.progression_rows_model.rows)} rows to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
     def _progression_field_summary(self, field_ids: List[int]) -> Dict[str, Any]:
         summary = {"records": 0, "values": 0, "nonzero": 0, "samples": []}
@@ -11750,30 +5406,7 @@ class MainWindow(QMainWindow):
         self.refresh_progression_editor_rows()
         self.refresh_progression_detail()
 
-    def cheat_complete_quest_tables(self) -> None:
-        """Compatibility wrapper for the old all-quest cheat button.
 
-        Older builds called a broad raw-array patch that raised every known
-        QuestSystem status/rank field by field ID. That could touch values that
-        were not currently visible/mapped by the quest catalog. The cheat now
-        reuses the same key-vector mapping as the Progression editor so group
-        cheats such as All Side Quests Complete patch the correct vector index.
-        """
-        self.cheat_complete_progression_group("", "Complete All Mapped Progression")
-
-    def cheat_unlock_title_archive_candidates(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save", "Open a save first.")
-            return
-        if QMessageBox.question(
-            self,
-            "Experimental title/archive unlock",
-            "This will raise title/archive/book/list candidate state fields to at least 1. Exact title challenge mapping is still being verified. Continue?",
-        ) != QMessageBox.StandardButton.Yes:
-            return
-        results = unlock_title_archive_candidates(self.save)
-        self.dirty = True
-        self._after_editor_patch(patch_summary(results))
 
     def update_edit_hub_summary(self) -> None:
         if not hasattr(self, "edit_hub_summary"):
@@ -11954,11 +5587,6 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-    def refresh_current_page(self) -> None:
-        if not self.save:
-            return
-        self._refresh_page_by_label(self._current_page_label(), force=True)
-        self.statusBar().showMessage("Current page refreshed.", 3000)
 
     def _connect_debounced_text_changed(self, edit: QLineEdit, key: str, callback, delay_ms: int = 220) -> None:
         timer = QTimer(self)
@@ -12007,10 +5635,24 @@ class MainWindow(QMainWindow):
                 return int(q, 10) & 0xFFFFFFFF
         except Exception:
             pass
-        matches = self.item_db.search(q, limit=10)
-        # Prefer exact name/category-id match, then the first search hit.
+        matches = self.item_db.search(q, limit=20)
+        # Prefer exact name match, then prefix match (handles "Name [GBID]" format)
+        q_lower = q.lower()
         for entry in matches:
-            if q.lower() in {entry.name.lower(), entry.display_name.lower(), entry.item_id.lower()}:
+            name = entry.name.lower()
+            # Exact match
+            if q_lower == name:
+                return entry.hash_value & 0xFFFFFFFF
+        for entry in matches:
+            name = entry.name.lower()
+            # Prefix match: "Damage Cap V+" matches "damage cap v+ [geen_xxx]"
+            if name.startswith(q_lower) or name.startswith(q_lower.replace("+", "")):
+                if " iv+" not in name and " iv " not in name.split("[")[0].strip():
+                    # Prefer V+ over IV+
+                    return entry.hash_value & 0xFFFFFFFF
+        for entry in matches:
+            name = entry.name.lower()
+            if name.startswith(q_lower):
                 return entry.hash_value & 0xFFFFFFFF
         if matches:
             return matches[0].hash_value & 0xFFFFFFFF
@@ -12019,6 +5661,29 @@ class MainWindow(QMainWindow):
         # database has a named row for them.
         if q.upper() == q and any(ch == "_" for ch in q) and all(ch.isalnum() or ch == "_" for ch in q):
             return gbfr_hash(q) & 0xFFFFFFFF
+        return None
+
+    def _resolve_trait_hash(self, text: str) -> Optional[int]:
+        """Resolve trait name preferring SKILL/trait DB entries over sigil (GEEN) entries."""
+        q = (text or "").strip()
+        if not q:
+            return None
+        q_lower = q.lower()
+        trait_entries = []
+        for entry in self.item_db.by_hash.values():
+            gbid = str(getattr(entry, "item_id", "") or "").upper()
+            cat = str(getattr(entry, "category", "") or "").lower()
+            if gbid.startswith("SKILL") or "trait" in cat or "skill" in cat:
+                trait_entries.append(entry)
+        for e in trait_entries:
+            if e.name.lower() == q_lower:
+                return e.hash_value & 0xFFFFFFFF
+        for e in trait_entries:
+            if e.name.lower().startswith(q_lower):
+                return e.hash_value & 0xFFFFFFFF
+        for e in trait_entries:
+            if q_lower in e.name.lower():
+                return e.hash_value & 0xFFFFFFFF
         return None
 
     def _prompt_hash(self, title: str, current: int = 0) -> Optional[int]:
@@ -12038,57 +5703,10 @@ class MainWindow(QMainWindow):
             return None
         return resolved
 
-    def _find_empty_material_bank_slot(self) -> Optional[Dict[str, Any]]:
-        # Disabled intentionally. GBFR's 180x material bank appears to include
-        # locked/unobtained catalog rows, not generic append slots. Reusing them
-        # caused inventory crashes in test saves. We can still update existing
-        # active stacks safely, but inserting new material stacks needs a fuller
-        # 1803/1804 state-map first.
-        return None
 
-    def _item_slot_counter_record(self) -> Optional[UnitRecord]:
-        """Return the global 2101/FF3508 item-slot last-count row, if present."""
-        if not self.save:
-            return None
-        rows = [rec for rec in self.save.find(id_type=2101) if getattr(rec, "value_count", 0) >= 1]
-        if not rows:
-            return None
-        # In examples this is often unit 4; prefer low/unit-zero style rows,
-        # then fall back to first file-order record.
-        rows = sorted(rows, key=lambda rec: (0 if int(getattr(rec, "unit_id", 0)) in (0, 4) else 1, int(getattr(rec, "value_data_offset", 0))))
-        return rows[0]
 
-    def _current_item_slot_counter(self) -> int:
-        return self._record_first_value(self._item_slot_counter_record(), 0)
 
-    def _next_item_slot_serial(self) -> int:
-        """Return the next 2103/FF3708 slot id for wrightstone/item-slot rows."""
-        if not self.save:
-            return 1
-        max_serial = 0
-        grouped = self.save.group_by_unit([2103])
-        for fields in grouped.values():
-            rec = fields.get(2103)
-            if not rec:
-                continue
-            try:
-                value = int(self._record_first_value(rec, 0)) & 0xFFFFFFFF
-            except Exception:
-                continue
-            if value not in (0, EMPTY_HASH):
-                max_serial = max(max_serial, value)
-        return max(max_serial, self._current_item_slot_counter()) + 1
 
-    def _set_item_slot_serial(self, slot_meta: Dict[str, Any], serial: Optional[int] = None) -> int:
-        """Patch 2103 and advance 2101 for slot-style items such as wrightstones."""
-        serial = int(serial if serial is not None else self._next_item_slot_serial()) & 0xFFFFFFFF
-        if serial <= 0:
-            serial = 1
-        self._set_record_first_value(slot_meta.get("index_rec"), serial, "item/wrightstone slot id 2103 / FF3708")
-        counter = self._item_slot_counter_record()
-        if counter is not None and serial > self._record_first_value(counter, 0):
-            self._set_record_first_value(counter, serial, "item/wrightstone last count 2101 / FF3508")
-        return serial
 
     def _is_wrightstone_hash(self, item_hash: int) -> bool:
         """True only for real Wrightstone database entries."""
@@ -12113,57 +5731,6 @@ class MainWindow(QMainWindow):
             or gbid.startswith(("ITEM_25_", "ITEM_26_", "ITEM_27_", "ITEM_28_", "ITEM_29_"))
         )
 
-    def _find_empty_item_slot(self) -> Optional[Dict[str, Any]]:
-        if not self.save:
-            return None
-        grouped = self.save.group_by_unit([2102, 2103, 2104, 2105, 1901, 1902, 1903, 1904, 2002, 2003, 2004])
-        # Item-slot rows are mostly wrightstones/slot-style entries. Materials/currency live in 1801/1802.
-        # 210x wrightstone examples use 2102=ID, 2103=slot id/count and 2101=last count.
-        # Do not require/write 2105 for those rows; it is not the game-read quantity for stones.
-        families = [
-            ("210x Wrightstone/item slot", "210x", 2102, 2103, 2104, 2105),
-            ("190x ItemManager bucket slot", "190x", 1901, 1902, 1904, 1903),
-            ("200x ItemManager bucket slot", "200x", 2002, 2003, None, 2004),
-        ]
-        for label, slot_family, hash_id, index_id, flag_id, qty_id in families:
-            for unit_id, fields in sorted(grouped.items()):
-                hash_rec = fields.get(hash_id)
-                index_rec = fields.get(index_id) if index_id else None
-                qty_rec = fields.get(qty_id) if qty_id else None
-                if not hash_rec:
-                    continue
-                cur_hash = self._record_first_value(hash_rec, 0)
-                if slot_family == "210x":
-                    if not index_rec:
-                        continue
-                    cur_index = self._record_first_value(index_rec, 0)
-                    if (cur_hash in (0, EMPTY_HASH)) and cur_index in (0, EMPTY_HASH):
-                        return {
-                            "unit_id": unit_id,
-                            "label": label,
-                            "slot_family": slot_family,
-                            "hash_rec": hash_rec,
-                            "index_rec": index_rec,
-                            "flag_rec": fields.get(flag_id) if flag_id else None,
-                            "qty_rec": qty_rec,
-                            "quantity_is_real": False,
-                        }
-                    continue
-                if not qty_rec:
-                    continue
-                cur_qty = self._record_first_value(qty_rec, 0)
-                if (cur_hash in (0, EMPTY_HASH)) and cur_qty == 0:
-                    return {
-                        "unit_id": unit_id,
-                        "label": label,
-                        "slot_family": slot_family,
-                        "hash_rec": hash_rec,
-                        "index_rec": index_rec,
-                        "flag_rec": fields.get(flag_id) if flag_id else None,
-                        "qty_rec": qty_rec,
-                        "quantity_is_real": False,
-                    }
-        return None
 
     def count_empty_item_slots(self) -> int:
         if not self.save:
@@ -12187,199 +5754,14 @@ class MainWindow(QMainWindow):
                     break
         return count
 
-    def _add_item_hash_to_empty_slot(self, item_hash: int, name: str = "", gbid: str = "") -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        slot = self._find_empty_material_bank_slot() if self._is_material_bank_entry(item_hash) else self._find_empty_item_slot()
-        if not slot:
-            QMessageBox.information(self, "No empty slot found", "I could not find an empty reusable slot for that item type. Materials/currency need an empty 180x bank slot; wrightstone/item-style rows need an empty ItemManager slot. This build does not insert new FlatBuffer records yet.")
-            return
-        entry = self.item_db.lookup_hash(item_hash)
-        display = f"{entry.display_name} ({entry.item_id})" if entry else (f"{name} ({gbid})" if name or gbid else f"0x{item_hash:08X}")
-        qty, ok = QInputDialog.getInt(self, "Add Item Quantity", f"Quantity for {display}:", 1, 1, 99_999_999)
-        if not ok:
-            return
-        msg = (
-            f"Patch empty {slot['label']} unit {slot['unit_id']} with:\n\n"
-            f"Item: {display}\nQuantity: {qty}\n\n"
-            "This reuses an existing empty slot and updates the active save hash when you save. Continue?"
-        )
-        if QMessageBox.question(self, "Confirm Add Item", msg) != QMessageBox.StandardButton.Yes:
-            return
-        ok_hash = self._set_record_first_value(slot.get("hash_rec"), item_hash, "item hash")
-        ok_qty = self._set_record_first_value(slot.get("qty_rec"), qty, "item quantity")
-        flag_rec = slot.get("flag_rec")
-        if flag_rec is not None and self._record_first_value(flag_rec, 0) == 0:
-            self._set_record_first_value(flag_rec, 1, "item flag")
-        if ok_hash and ok_qty:
-            self._after_editor_patch(f"Added {display} x{qty} to unit {slot['unit_id']} in memory.")
-            QMessageBox.information(self, "Item added in memory", "Item was written to an empty existing slot. Use Save As first for testing, then verify in-game.")
-
-    def add_item_to_empty_slot(self) -> None:
-        item_hash = self._prompt_hash("Add Item to Empty Slot", 0)
-        if item_hash is None:
-            return
-        self._add_item_hash_to_empty_slot(item_hash)
-
-    def add_item_from_inline_editor(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        if not hasattr(self, "item_identity_edit"):
-            self.add_item_to_empty_slot()
-            return
-        text = self.item_identity_edit.text().strip()
-        if not text:
-            self.item_identity_edit.setFocus()
-            self.statusBar().showMessage("Enter a GBID, name, decimal hash, or 0xHASH, then click Add From Fields.", 4000)
-            return
-        item_hash = self._resolve_hash_from_text(text)
-        if item_hash is None:
-            QMessageBox.warning(self, "Hash not found", "Could not resolve that item. Paste a GBID, item name, decimal hash, or 8-digit hex hash.")
-            return
-        qty_text = self.item_quantity_edit.text().strip() if hasattr(self, "item_quantity_edit") else ""
-        flag_text = self.item_flag_edit.text().strip() if hasattr(self, "item_flag_edit") else ""
-        qty = self._parse_editor_int(qty_text or "1", "quantity", 1, 99_999_999)
-        if qty is None:
-            return
-        flag = None
-        if flag_text:
-            flag = self._parse_editor_int(flag_text, "flag/state")
-            if flag is None:
-                return
-        result = self._add_item_hash_qty_to_empty_slot(item_hash, qty, flag if flag is not None else 1)
-        if result:
-            self._after_editor_patch(f"Added {result}.")
-        else:
-            QMessageBox.information(self, "No empty slot", "No empty ItemManager slot was found. Enable Show empty addable slots to inspect reusable slots.")
 
 
 
-    def _add_item_hash_qty_to_empty_slot(self, item_hash: int, qty: int, flag: Optional[int] = 1) -> Optional[str]:
-        if not self.save:
-            return None
-        item_hash = int(item_hash) & 0xFFFFFFFF
-
-        # Stackable materials/currency/consumables must be written through the
-        # documented ItemManager 180x bank: 1801=item hash, 1802=quantity.
-        # Older builds could fall through to 210x rows, which changed metadata
-        # but not the quantity the game reads.
-        if self._is_material_bank_entry(item_hash):
-            return self._upsert_material_bank_quantity(item_hash, int(qty), flag)
-
-        # Non-material inventory rows are still reused in-place. 2105/1903/2004
-        # are treated as type/state/count candidates, not real material count.
-        slot = self._find_empty_item_slot()
-        if not slot:
-            return None
-        entry = self.item_db.lookup_hash(item_hash)
-        display = f"{entry.display_name} ({entry.item_id})" if entry else f"0x{item_hash:08X}"
-        changed = 0
-        if self._set_record_first_value(slot.get("hash_rec"), item_hash, "ItemManager item/wrightstone hash"):
-            changed += 1
-        if slot.get("slot_family") == "210x":
-            before_serial = self._record_first_value(slot.get("index_rec"), 0)
-            serial = self._set_item_slot_serial(slot)
-            if before_serial != serial:
-                changed += 1
-            flag_rec = slot.get("flag_rec")
-            if flag_rec is not None:
-                # 2104 is usually bool/active.  Set it to active when present,
-                # but do not write 2105 as a fake quantity for wrightstones.
-                if self._set_record_first_value(flag_rec, True if getattr(flag_rec, "kind", "") == "bool" else 1, "ItemManager item/wrightstone active flag 2104"):
-                    changed += 1
-            return f"Added {display} -> {slot['label']} unit {slot['unit_id']} / serial {serial} ({changed} fields)" if changed else f"No change for {display}; slot already matched"
-        if self._set_record_first_value(slot.get("qty_rec"), int(qty), "ItemManager type/state/count candidate"):
-            changed += 1
-        flag_rec = slot.get("flag_rec")
-        if flag_rec is not None:
-            new_flag = flag if flag is not None else 1
-            if self._record_first_value(flag_rec, 0) == 0 or flag is not None:
-                if self._set_record_first_value(flag_rec, int(new_flag), "ItemManager flag/state"):
-                    changed += 1
-        if changed:
-            return f"Added {display} value {int(qty):,} -> {slot['label']} unit {slot['unit_id']} ({changed} fields)"
-        return f"No change for {display}; slot already matched"
 
 
-    def _parse_batch_item_lines(self, text: str) -> tuple[List[tuple[str, int]], List[str]]:
-        rows: List[tuple[str, int]] = []
-        errors: List[str] = []
-        for line_no, raw in enumerate(text.splitlines(), 1):
-            line = raw.strip()
-            if not line or line.startswith("#"):
-                continue
-            line = line.replace("	", ",")
-            # Accept: GBID, qty | GBID x99 | GBID = 99. Names with spaces work if the quantity is after comma/x/=.
-            m = None
-            for pat in [r"^(.+?)\s*[,=]\s*(-?\d+)\s*$", r"^(.+?)\s+[xX]\s*(-?\d+)\s*$", r"^(.+?)\s+x(-?\d+)\s*$"]:
-                m = __import__('re').match(pat, line)
-                if m:
-                    break
-            if m:
-                key = m.group(1).strip()
-                qty = int(m.group(2))
-            else:
-                key, qty = line, 1
-            if qty < 0:
-                errors.append(f"Line {line_no}: quantity cannot be negative")
-                continue
-            rows.append((key, qty))
-        return rows, errors
 
-    def batch_add_items_to_empty_slots(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        template = "Rupie, 999999\nStandard Refinium, 99\nFortitude Crystal (L), 99"
-        text, ok = QInputDialog.getMultiLineText(
-            self,
-            "Batch Add Items",
-            "Enter one item per line as: GBID/name/hash, quantity\nThis reuses existing empty ItemManager slots only.",
-            template,
-        )
-        if not ok:
-            return
-        rows, errors = self._parse_batch_item_lines(text)
-        if not rows and errors:
-            QMessageBox.warning(self, "Nothing to add", "\n".join(errors[:12]))
-            return
-        resolved: List[tuple[int, int, str]] = []
-        for key, qty in rows:
-            h = self._resolve_hash_from_text(key)
-            if h is None:
-                errors.append(f"Could not resolve: {key}")
-                continue
-            resolved.append((h, qty, key))
-        empty_count = self.count_empty_item_slots()
-        if not resolved:
-            QMessageBox.warning(self, "No valid items", "No valid items were resolved.\n" + "\n".join(errors[:12]))
-            return
-        if len(resolved) > empty_count:
-            QMessageBox.warning(self, "Not enough empty slots", f"Resolved {len(resolved)} items, but only {empty_count} empty item slots are available. Add fewer items or show empty slots to inspect them.")
-            return
-        preview_lines = []
-        for h, qty, key in resolved[:25]:
-            entry = self.item_db.lookup_hash(h)
-            name = f"{entry.display_name} ({entry.item_id})" if entry else f"{key} -> 0x{h:08X}"
-            preview_lines.append(f"- {name} x{qty}")
-        msg = "Add these items into empty existing slots?\n\n" + "\n".join(preview_lines)
-        if len(resolved) > 25:
-            msg += f"\n...and {len(resolved)-25} more"
-        if errors:
-            msg += "\n\nSkipped lines:\n" + "\n".join(errors[:8])
-        if QMessageBox.question(self, "Confirm Batch Add", msg) != QMessageBox.StandardButton.Yes:
-            return
-        added: List[str] = []
-        for h, qty, _key in resolved:
-            result = self._add_item_hash_qty_to_empty_slot(h, qty, flag=1)
-            if result:
-                added.append(result)
-            else:
-                break
-        self._after_editor_patch(f"Batch added {len(added)} item rows in memory.")
-        QMessageBox.information(self, "Batch add complete", f"Added {len(added)} item rows in memory. Use Save As first and verify in-game.")
+
+
 
 
     def _records_for_id_type_sorted(self, id_type: int) -> List[UnitRecord]:
@@ -12606,6 +5988,30 @@ class MainWindow(QMainWindow):
             new_flags = self._safe_sigil_flags(cur, locked=locked, assigned=assigned)
             self._set_record_first_value(slot_meta.get("flags_rec"), new_flags, "sigil flags 2707")
         return bool(ok_hash or ok_level or serial)
+
+    def _assign_existing_sigil_to_character(self, slot_meta: Dict[str, Any], owner_hash: int, locked: bool = True) -> bool:
+        """Assign an already-active sigil to a character with proper flags + serial + owner."""
+        if not self.save or not slot_meta:
+            return False
+        owner = self._safe_sigil_owner_hash(owner_hash)
+        if owner in (0, EMPTY_HASH):
+            return False
+        changed = False
+        # Set owner 2706
+        if slot_meta.get("worn_rec") is not None:
+            if self._set_record_first_value(slot_meta["worn_rec"], owner, "sigil owner 2706"):
+                changed = True
+        # Normalize flags 2707: assigned + locked = 3
+        if slot_meta.get("flags_rec") is not None:
+            cur = self._record_first_value(slot_meta["flags_rec"], 0)
+            new_flags = self._safe_sigil_flags(cur, locked=locked, assigned=True)
+            if self._set_record_first_value(slot_meta["flags_rec"], new_flags, "sigil flags 2707"):
+                changed = True
+        # Ensure serial 2702 exists
+        serial = self._set_sigil_serial(slot_meta)
+        if serial:
+            changed = True
+        return changed
 
     def repair_added_sigil_slots(self, silent: bool = False) -> int:
         """Repair/sanitize sigil inventory rows that can crash the game.
@@ -12883,26 +6289,432 @@ class MainWindow(QMainWindow):
         self._after_editor_patch(f"Batch added {len(added)} sigil rows in memory.")
         QMessageBox.information(self, "Batch add complete", f"Added {len(added)} sigil rows in memory. Use Save As first and verify in-game.")
 
-    def _find_empty_weapon_slot(self) -> Optional[Dict[str, Any]]:
-        if not self.save:
-            return None
-        grouped = self.save.group_by_unit([2803, 2804, 2805, 2806, 2807, 2814, 2815, 2816])
-        for unit_id, fields in sorted(grouped.items()):
-            hash_rec = fields.get(2803)
-            xp_rec = fields.get(2804)
-            if not hash_rec or not xp_rec:
-                continue
-            cur_hash = self._record_first_value(hash_rec, 0)
-            cur_xp = self._record_first_value(xp_rec, 0)
-            if cur_hash in (0, EMPTY_HASH) and cur_xp == 0:
-                return {
-                    "unit_id": unit_id,
-                    "hash_rec": hash_rec,
-                    "xp_rec": xp_rec,
-                    "flags_rec": fields.get(2815),
-                    "stone_rec": fields.get(2816),
-                }
+    BEST_SIGIL_TEMPLATES: Dict[str, List[tuple]] = {
+        "Gran / Djeeta (Captain)": [
+            ("Captain's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Cooldown V+", 15), ("Combo Booster V+", 15),
+        ],
+        "Katalina": [
+            ("Guardian's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Stout Heart V+", 15), ("Combo Booster V+", 15),
+        ],
+        "Rackam": [
+            ("Helmsman's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Concentrated Fire V+", 15), ("Concentrated Fire V+", 15),
+        ],
+        "Io": [
+            ("Mage's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Charge V+", 15), ("Quick Charge V+", 15),
+        ],
+        "Eugen": [
+            ("Veteran's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Concentrated Fire V+", 15), ("Concentrated Fire V+", 15),
+        ],
+        "Rosetta": [
+            ("Rose's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Cooldown V+", 15), ("Cascade V+", 15),
+        ],
+        "Lancelot": [
+            ("White Wing's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Flight over Fight V+", 15), ("Combo Booster V+", 15),
+        ],
+        "Vane": [
+            ("Hero's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Drain V+", 15), ("Steel Nerve V+", 15),
+        ],
+        "Percival": [
+            ("Lord's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Charge V+", 15), ("Quick Charge V+", 15),
+        ],
+        "Siegfried": [
+            ("Dragonslayer's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Stout Heart V+", 15), ("Combo Booster V+", 15),
+        ],
+        "Charlotta": [
+            ("Holy Knight's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Combo Booster V+", 15), ("Quick Cooldown V+", 15),
+        ],
+        "Yodarha": [
+            ("Swordmaster's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Flight over Fight V+", 15), ("Quick Cooldown V+", 15),
+        ],
+        "Narmaya": [
+            ("Butterfly's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Charge V+", 15), ("Quick Charge V+", 15),
+        ],
+        "Zeta": [
+            ("Crimson's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Combo Booster V+", 15), ("Quick Cooldown V+", 15),
+        ],
+        "Vaseraga": [
+            ("Undying's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Charge V+", 15), ("Quick Charge V+", 15),
+        ],
+        "Ferry": [
+            ("Phantasm's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Cooldown V+", 15), ("Cascade V+", 15),
+        ],
+        "Ghandagoza": [
+            ("Eternal's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Charge V+", 15), ("Quick Charge V+", 15),
+        ],
+        "Cagliostro": [
+            ("Founder's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Cooldown V+", 15), ("Cascade V+", 15),
+        ],
+        "Seofon (Siete)": [
+            ("Sword Sovereign's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Cooldown V+", 15), ("Combo Booster V+", 15),
+        ],
+        "Tweyen (Song)": [
+            ("Radiant Archer's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Concentrated Fire V+", 15), ("Concentrated Fire V+", 15),
+        ],
+        "Sandalphon": [
+            ("Supreme Archangel's Awakening+", 15), ("Damage Cap V+", 15), ("Damage Cap V+", 15),
+            ("Damage Cap V+", 15), ("Damage Cap V+", 15), ("War Elemental+", 15),
+            ("Supplementary Damage V+", 15), ("Supplementary Damage V+", 15),
+            ("Supplementary Damage V+", 15), ("Berserker Echo+", 15),
+            ("Quick Cooldown V+", 15), ("Cascade V+", 15),
+        ],
+    }
+
+    CHARACTER_NAME_ALIASES: Dict[str, str] = {
+        "Gran": "Gran", "Djeeta": "Djeeta", "Captain": "Gran",
+        "Katalina": "Katalina", "Rackam": "Rackam", "Io": "Io",
+        "Eugen": "Eugen", "Rosetta": "Rosetta", "Lancelot": "Lancelot",
+        "Vane": "Vane", "Percival": "Percival", "Siegfried": "Siegfried",
+        "Charlotta": "Charlotta", "Yodarha": "Yodarha", "Narmaya": "Narmaya",
+        "Zeta": "Zeta", "Vaseraga": "Vaseraga", "Ferry": "Ferry",
+        "Ghandagoza": "Ghandagoza", "Cagliostro": "Cagliostro",
+        "Seofon": "Seofon", "Siete": "Seofon", "Tweyen": "Tweyen", "Song": "Tweyen",
+        "Sandalphon": "Sandalphon",
+    }
+
+    # Maps sigil name -> (trait1_name, trait2_name) for V+ sigils
+    SIGIL_TRAIT_MAP: Dict[str, tuple] = {
+        "Captain's Awakening+": ("Captain's Awakening", "Guts"),
+        "Guardian's Awakening+": ("Guardian's Awakening", "Guts"),
+        "Helmsman's Awakening+": ("Helmsman's Awakening", "Guts"),
+        "Mage's Awakening+": ("Mage's Awakening", "Guts"),
+        "Veteran's Awakening+": ("Veteran's Awakening", "Guts"),
+        "Rose's Awakening+": ("Rose's Awakening", "Guts"),
+        "White Wing's Awakening+": ("White Wing's Awakening", "Guts"),
+        "Hero's Awakening+": ("Hero's Awakening", "Guts"),
+        "Lord's Awakening+": ("Lord's Awakening", "Guts"),
+        "Dragonslayer's Awakening+": ("Dragonslayer's Awakening", "Guts"),
+        "Holy Knight's Awakening+": ("Holy Knight's Awakening", "Guts"),
+        "Swordmaster's Awakening+": ("Swordmaster's Awakening", "Guts"),
+        "Butterfly's Awakening+": ("Butterfly's Awakening", "Guts"),
+        "Crimson's Awakening+": ("Crimson's Awakening", "Guts"),
+        "Undying's Awakening+": ("Undying's Awakening", "Guts"),
+        "Phantasm's Awakening+": ("Phantasm's Awakening", "Guts"),
+        "Eternal's Awakening+": ("Eternal's Awakening", "Guts"),
+        "Founder's Awakening+": ("Founder's Awakening", "Guts"),
+        "Sword Sovereign's Awakening+": ("Sword Sovereign's Awakening", "Guts"),
+        "Radiant Archer's Awakening+": ("Radiant Archer's Awakening", "Guts"),
+        "Supreme Archangel's Awakening+": ("Supreme Archangel's Awakening", "Guts"),
+        "Damage Cap V+": ("Damage Cap", "Supplementary Damage"),
+        "War Elemental+": ("War Elemental", "Critical Hit Rate"),
+        "Supplementary Damage V+": ("Supplementary Damage", "Potion Hoarder"),
+        "Berserker Echo+": ("Berserker Echo", "Attack Power"),
+        "Quick Cooldown V+": ("Quick Cooldown", "Cascade"),
+        "Combo Booster V+": ("Combo Booster", "Improved Dodge"),
+        "Stout Heart V+": ("Stout Heart", "Steel Nerve"),
+        "Concentrated Fire V+": ("Concentrated Fire", "Critical Hit Rate"),
+        "Quick Charge V+": ("Quick Charge", "Concentrated Fire"),
+        "Cascade V+": ("Cascade", "Improved Dodge"),
+        "Flight over Fight V+": ("Flight over Fight", "Nimble Onslaught"),
+        "Drain V+": ("Drain", "Stout Heart"),
+        "Steel Nerve V+": ("Steel Nerve", "Quick Cooldown"),
+    }
+
+    # Sigils always present in save (story/DLC) - auto-assign to character if unowned
+    ALWAYS_OWNED_SIGILS: Dict[str, str] = {
+        "Fearless Heart": "Gran", "Fearless Soul+": "Gran", "Ain+": "Gran", "Versalis Heart": "Gran",
+        "Guardian's Warpath": "Katalina", "Guardian's Awakening+": "Katalina",
+        "Helmsman's Warpath": "Rackam", "Helmsman's Awakening+": "Rackam",
+        "Mage's Warpath": "Io", "Mage's Awakening+": "Io",
+        "Veteran's Warpath": "Eugen", "Veteran's Awakening+": "Eugen",
+        "Rose's Warpath": "Rosetta", "Rose's Awakening+": "Rosetta",
+        "Holy Knight's Warpath": "Charlotta", "Holy Knight's Awakening+": "Charlotta",
+        "Eternal Rage's Warpath": "Ghandagoza", "Eternal Rage's Awakening+": "Ghandagoza",
+        "Phantasm's Warpath": "Ferry", "Phantasm's Awakening+": "Ferry",
+        "Butterfly's Warpath": "Narmaya", "Butterfly's Awakening+": "Narmaya",
+        "White Dragon's Warpath": "Lancelot", "White Dragon's Awakening+": "Lancelot",
+        "Hero's Warpath": "Vane", "Hero's Awakening+": "Vane",
+        "Lord's Warpath": "Percival", "Lord's Awakening+": "Percival",
+        "Dragonslayer's Warpath": "Siegfried", "Dragonslayer's Awakening+": "Siegfried",
+        "Founder's Warpath": "Cagliostro", "Founder's Awakening+": "Cagliostro",
+        "Swordmaster's Warpath": "Yodarha", "Swordmaster's Awakening+": "Yodarha",
+        "Crimson's Warpath": "Zeta", "Crimson's Awakening+": "Zeta",
+        "Ebony's Warpath": "Vaseraga", "Ebony's Awakening+": "Vaseraga",
+        "Spirit Edge's Rally": "Seofon", "Spirit Edge's Fury": "Seofon",
+        "Spirit Edge's Warpath": "Seofon", "Seven-Star Boundary+": "Seofon",
+        "Spirit Edge's Awakening+": "Seofon",
+        "Dark Huntress's Volley": "Tweyen", "Dark Huntress's Surge": "Tweyen",
+        "Dark Huntress's Warpath": "Tweyen", "Two-Crown Boundary+": "Tweyen",
+        "Dark Huntress's Awakening+": "Tweyen",
+        "Supreme Primarch's Awe": "Sandalphon", "Supreme Primarch's Nimbus": "Sandalphon",
+        "Supreme Primarch's Warpath": "Sandalphon", "Supreme Primarch's Awakening+": "Sandalphon",
+    }
+
+    def _find_character_hash(self, name: str) -> Optional[int]:
+        alias = self.CHARACTER_NAME_ALIASES.get(name, name)
+        for choice in getattr(self, "character_owner_choices", []):
+            choice_name = str(choice.get("name", ""))
+            if alias.lower() in choice_name.lower() or choice_name.lower() in alias.lower():
+                return int(choice.get("hash", EMPTY_HASH)) & 0xFFFFFFFF
         return None
+
+    def import_sigil_templates(self) -> None:
+        if not self.save:
+            QMessageBox.information(self, "No save loaded", "Open a save first.")
+            return
+        import json
+        json_path = RESOURCE_DIR / "sigil_templates.json"
+        if not json_path.exists():
+            QMessageBox.warning(self, "Missing", f"Template not found: {json_path}"); return
+        try:
+            templates_data = json.loads(json_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            QMessageBox.warning(self, "JSON Error", str(e)); return
+        char_list = [c["nhan_vat"] for c in templates_data]
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Import Best Sigil Templates")
+        dialog.setMinimumWidth(400)
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel("Select characters to apply best builds:"))
+        checks = {}
+        for name in char_list:
+            cb = QCheckBox(name); cb.setChecked(False); layout.addWidget(cb); checks[name] = cb
+        select_all_btn = QPushButton("Select All")
+        select_all_btn.clicked.connect(lambda: [cb.setChecked(True) for cb in checks.values()])
+        layout.addWidget(select_all_btn)
+        btn_layout = QHBoxLayout()
+        ok_btn = QPushButton("Apply Templates"); cancel_btn = QPushButton("Cancel")
+        btn_layout.addWidget(ok_btn); btn_layout.addWidget(cancel_btn); layout.addLayout(btn_layout)
+        def apply():
+            sel = [n for n, cb in checks.items() if cb.isChecked()]
+            if not sel: QMessageBox.information(dialog, "None selected", "Select at least one character."); return
+            dialog.accept()
+        ok_btn.clicked.connect(apply); cancel_btn.clicked.connect(dialog.reject)
+        if dialog.exec() != QDialog.DialogCode.Accepted: return
+        selected = [n for n, cb in checks.items() if cb.isChecked()]
+        if not selected: return
+
+        # Build existing sigil map and find unassigned always-owned sigils
+        existing: Dict[int, set] = {}
+        unassigned_always: Dict[str, List[Dict]] = {}  # char_alias -> [slot_meta]
+        if self.save:
+            grouped = self.save.group_by_unit([2702, 2703, 2704, 2706, 2707])
+            for unit_id, fields in grouped.items():
+                owner_rec = fields.get(2706)
+                hash_rec = fields.get(2703)
+                if owner_rec and hash_rec:
+                    try:
+                        owner = int(self._record_first_value(owner_rec, EMPTY_HASH)) & 0xFFFFFFFF
+                        sighash = int(self._record_first_value(hash_rec, 0)) & 0xFFFFFFFF
+                    except Exception:
+                        continue
+                    if owner not in (0, EMPTY_HASH) and sighash not in (0, EMPTY_HASH):
+                        existing.setdefault(owner, set()).add(sighash)
+                    # Find unassigned always-owned sigils
+                    if owner in (0, EMPTY_HASH) and sighash not in (0, EMPTY_HASH):
+                        entry = self.item_db.lookup_hash(sighash)
+                        if entry:
+                            sigil_name = str(getattr(entry, "display_name", "") or "")
+                            for always_name, char_alias in self.ALWAYS_OWNED_SIGILS.items():
+                                if always_name.lower() in sigil_name.lower():
+                                    meta = {
+                                        "unit_id": int(unit_id),
+                                        "hash_rec": hash_rec,
+                                        "worn_rec": owner_rec,
+                                        "flags_rec": fields.get(2707),
+                                        "slot_rec": fields.get(2702),
+                                        "level_rec": fields.get(2704),
+                                    }
+                                    unassigned_always.setdefault(char_alias, []).append(meta)
+                                    break
+
+        results = []
+        for char_data in templates_data:
+            char_name = char_data["nhan_vat"]
+            if char_name not in selected: continue
+            sigils = char_data.get("sigils", [])
+            owner_hash = self._find_character_hash(char_name)
+            if owner_hash is None:
+                results.append(f"SKIP {char_name}: character not found in DB"); continue
+            owned = existing.get(owner_hash, set())
+
+            # Auto-assign unassigned always-owned sigils (proper flags + serial + owner)
+            char_alias = self.CHARACTER_NAME_ALIASES.get(char_name, char_name)
+            auto_assigned = 0
+            candidates = unassigned_always.get(char_alias, [])
+            if candidates:
+                do_assign = QMessageBox.question(
+                    self, "Auto-Assign Sigils?",
+                    f"Found {len(candidates)} unassigned always-owned sigil(s) for {char_name}.\n\nAuto-assign them to this character?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                ) == QMessageBox.StandardButton.Yes
+                if do_assign:
+                    for meta in candidates:
+                        sighash = int(self._record_first_value(meta.get("hash_rec"), 0)) & 0xFFFFFFFF
+                        if sighash not in owned:
+                            if self._assign_existing_sigil_to_character(meta, owner_hash, locked=True):
+                                owned.add(sighash)
+                                auto_assigned += 1
+            if auto_assigned:
+                results.append(f"  Auto-assigned {auto_assigned} always-owned sigils to {char_name}")
+
+            added = skipped = 0
+            for s in sigils:
+                sigil_name = s["ten_sigil"]
+                level = s.get("level_trait_1", 15)
+                trait1 = s.get("trait_1", ""); trait2 = s.get("trait_2", "")
+                t1_lv = s.get("level_trait_1", 15); t2_lv = s.get("level_trait_2", 15)
+                # Skip always-owned sigils (already in save)
+                is_always_owned = False
+                for always_name in self.ALWAYS_OWNED_SIGILS:
+                    if always_name.lower() in sigil_name.lower():
+                        is_always_owned = True; break
+                if is_always_owned:
+                    skipped += 1; continue
+
+                h = self._resolve_hash_from_text(sigil_name)
+                if h is None:
+                    # Try without +, try common variations
+                    for variant in [sigil_name.replace("+", ""), sigil_name.replace("+", " V"), sigil_name]:
+                        h = self._resolve_hash_from_text(variant)
+                        if h: break
+                if h is None: results.append(f"  MISS: {sigil_name}"); continue
+                # NOTE: Allow duplicates - same sigil can be in multiple slots
+                slot = self._find_empty_sigil_slot()
+                if not slot: results.append(f"  FAIL: {sigil_name} - no slot"); break
+                if not self._activate_sigil_slot(slot, h, level, locked=True, owner_hash=None):
+                    results.append(f"  FAIL: {sigil_name} - activate failed"); break
+                # Force-clear owner so sigil is NOT auto-equipped in-game
+                if slot.get("worn_rec") is not None:
+                    self._set_record_first_value(slot["worn_rec"], EMPTY_HASH, "clear owner 2706")
+                if slot.get("flags_rec") is not None:
+                    cur = self._record_first_value(slot["flags_rec"], 0)
+                    self._set_record_first_value(slot["flags_rec"], (cur & ~3) | 3, "flags -> unassigned locked")
+                owned.add(h & 0xFFFFFFFF)
+                # Set traits from template JSON data
+                sigil_unit_id = int(slot.get("unit_id", 0))
+                if sigil_unit_id > 0 and (trait1 or trait2):
+                    tf = self._sigil_trait_meta_records_for_unit(sigil_unit_id)
+                    for lane, tn, tl in [(0, trait1, t1_lv), (1, trait2, t2_lv)]:
+                        if not tn: continue
+                        # Resolve trait using SKILL entries only (not GEEN sigils)
+                        th = self._resolve_trait_hash(tn)
+                        if th and th not in (0, EMPTY_HASH):
+                            kr = "trait1_hash_rec" if lane == 0 else "trait2_hash_rec"
+                            lk = "trait1_level_rec" if lane == 0 else "trait2_level_rec"
+                            r = tf.get(kr)
+                            if r is not None and r.value_count >= 1:
+                                self._set_record_first_value(r, th, f"trait{lane+1}")
+                                lr = tf.get(lk)
+                                if lr is not None and lr.value_count >= 1:
+                                    self._set_record_first_value(lr, int(tl), f"trait{lane+1} lv")
+                owned.add(h & 0xFFFFFFFF)
+                added += 1
+            msg = f"OK {char_name}: {added} added"
+            if skipped: msg += f", {skipped} skipped"
+            results.append(msg)
+        self._after_editor_patch("Imported best sigil templates."); self.refresh_sigil_rows()
+        QMessageBox.information(self, "Import Complete", "\n".join(results) + "\n\nSave As to write changes.")
+
+    def _apply_sigil_traits_from_db(self, entry, slot_meta) -> None:
+        """Apply trait 1 & 2 using hardcoded trait map."""
+        sigil_unit_id = int(slot_meta.get("unit_id", 0))
+        if sigil_unit_id <= 0:
+            return
+        name = str(getattr(entry, "display_name", "") or "")
+        # Look up traits from map
+        traits = None
+        for key in self.SIGIL_TRAIT_MAP:
+            if key in name or name in key:
+                traits = self.SIGIL_TRAIT_MAP[key]
+                break
+        if not traits:
+            return
+        trait1_name, trait2_name = traits
+        trait_fields = self._sigil_trait_meta_records_for_unit(sigil_unit_id)
+        for lane, tname in [(0, trait1_name), (1, trait2_name)]:
+            if not tname:
+                continue
+            thash = self._resolve_hash_from_text(tname)
+            if thash and thash not in (0, EMPTY_HASH):
+                key_rec = "trait1_hash_rec" if lane == 0 else "trait2_hash_rec"
+                lv_rec_key = "trait1_level_rec" if lane == 0 else "trait2_level_rec"
+                rec = trait_fields.get(key_rec)
+                if rec is not None and rec.value_count >= 1:
+                    self._set_record_first_value(rec, thash, f"trait{lane+1} {tname}")
+                    lv_rec = trait_fields.get(lv_rec_key)
+                    if lv_rec is not None and lv_rec.value_count >= 1:
+                        self._set_record_first_value(lv_rec, 15, f"trait{lane+1} level")
+
 
     def count_empty_weapon_slots(self) -> int:
         if not self.save:
@@ -12916,116 +6728,10 @@ class MainWindow(QMainWindow):
                 count += 1
         return count
 
-    def _add_weapon_hash_to_empty_slot(self, weapon_hash: int, name: str = "", gbid: str = "") -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        slot = self._find_empty_weapon_slot()
-        if not slot:
-            QMessageBox.information(self, "No empty slot found", "I could not find an empty WeaponManager slot to reuse. This build does not insert new FlatBuffer records yet.")
-            return
-        entry = self.item_db.lookup_hash(weapon_hash)
-        display = f"{entry.display_name} ({entry.item_id})" if entry else (f"{name} ({gbid})" if name or gbid else f"0x{weapon_hash:08X}")
-        xp, ok = QInputDialog.getInt(self, "Add Weapon XP", f"XP/progress for {display}:", WEAPON_XP_MAX, 0, WEAPON_XP_MAX)
-        if not ok:
-            return
-        xp = self._clamp_weapon_xp_value(xp)
-        ok_hash = self._set_record_first_value(slot.get("hash_rec"), weapon_hash, "weapon hash")
-        ok_xp = self._set_record_first_value(slot.get("xp_rec"), xp, "weapon XP")
-        if slot.get("flags_rec") is not None and self._record_first_value(slot.get("flags_rec"), 0) == 0:
-            self._set_record_first_value(slot.get("flags_rec"), 1, "weapon flags")
-        if slot.get("stone_rec") is not None and self._record_first_value(slot.get("stone_rec"), 0) == 0:
-            self._set_record_first_value(slot.get("stone_rec"), EMPTY_HASH, "weapon stone hash")
-        if ok_hash and ok_xp:
-            self._after_editor_patch(f"Added {display} to weapon unit {slot['unit_id']} with XP {xp:,}.")
 
-    def add_weapon_to_empty_slot(self) -> None:
-        weapon_hash = self._prompt_hash("Add Weapon to Empty Slot", 0)
-        if weapon_hash is None:
-            return
-        self._add_weapon_hash_to_empty_slot(weapon_hash)
 
-    def _add_weapon_hash_xp_to_empty_slot(self, weapon_hash: int, xp: int = 0, flags: Optional[int] = None) -> Optional[str]:
-        if not self.save:
-            return None
-        xp = self._clamp_weapon_xp_value(xp)
-        slot = self._find_empty_weapon_slot()
-        if not slot:
-            return None
-        ok_hash = self._set_record_first_value(slot.get("hash_rec"), weapon_hash, "weapon hash")
-        ok_xp = self._set_record_first_value(slot.get("xp_rec"), xp, "weapon XP")
-        if slot.get("flags_rec") is not None:
-            cur = self._record_first_value(slot.get("flags_rec"), 0)
-            self._set_record_first_value(slot.get("flags_rec"), 1 if flags is None and cur == 0 else (flags if flags is not None else cur), "weapon flags")
-        if slot.get("stone_rec") is not None and self._record_first_value(slot.get("stone_rec"), 0) == 0:
-            self._set_record_first_value(slot.get("stone_rec"), EMPTY_HASH, "weapon stone hash")
-        if ok_hash and ok_xp:
-            entry = self.item_db.lookup_hash(weapon_hash)
-            return f"{entry.display_name if entry else f'0x{weapon_hash:08X}'} XP {xp} -> unit {slot['unit_id']}"
-        return None
 
-    def _parse_batch_weapon_lines(self, text: str) -> tuple[List[tuple[str, int]], List[str]]:
-        import re
-        rows: List[tuple[str, int]] = []
-        errors: List[str] = []
-        for line_no, raw in enumerate(text.splitlines(), 1):
-            line = raw.strip()
-            if not line or line.startswith("#"):
-                continue
-            xp = 0
-            m = re.search(r"(?i)\b(?:xp|level|lv)\s*(\d+)\b", line)
-            if m:
-                xp = int(m.group(1))
-                line = (line[:m.start()] + line[m.end():]).strip(" ,")
-            else:
-                m = re.match(r"^(.+?)\s*[,=]\s*(\d+)\s*$", line)
-                if m:
-                    line = m.group(1).strip()
-                    xp = int(m.group(2))
-            if not line:
-                errors.append(f"Line {line_no}: missing weapon name/GBID")
-                continue
-            if xp < 0:
-                errors.append(f"Line {line_no}: XP cannot be negative")
-                continue
-            xp = self._clamp_weapon_xp_value(xp)
-            rows.append((line, xp))
-        return rows, errors
 
-    def batch_add_weapons_to_empty_slots(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        text, ok = QInputDialog.getMultiLineText(
-            self,
-            "Batch Add Weapons",
-            "One weapon per line. Examples:\nRukalsa, 999999999\nWEP_PL0200_01 xp999999999\nSword of Eos, 999999999",
-            "Rukalsa, 999999999\nSword of Eos, 999999999",
-        )
-        if not ok:
-            return
-        rows, errors = self._parse_batch_weapon_lines(text)
-        if not rows:
-            QMessageBox.information(self, "No rows", "No weapon rows were parsed." + ("\n" + "\n".join(errors[:8]) if errors else ""))
-            return
-        resolved: List[tuple[int, int, str]] = []
-        for key, xp in rows:
-            h = self._resolve_hash_from_text(key)
-            if h is None:
-                errors.append(f"Could not resolve weapon: {key}")
-            else:
-                resolved.append((h, xp, key))
-        if not resolved:
-            QMessageBox.warning(self, "Nothing resolved", "No weapon hashes resolved.\n" + "\n".join(errors[:12]))
-            return
-        added: List[str] = []
-        for h, xp, _key in resolved:
-            result = self._add_weapon_hash_xp_to_empty_slot(h, xp)
-            if result:
-                added.append(result)
-            else:
-                break
-        self._after_editor_patch(f"Batch added {len(added)} weapon rows in memory.")
 
     def _matches_editor_filter(self, row: List[Any], q: str) -> bool:
         """Tokenized AND filter for editor tables."""
@@ -13089,59 +6795,9 @@ class MainWindow(QMainWindow):
     SIGIL_SLOT_FIELDS = [("hash_rec", "sigil hash"), ("level_rec", "level"), ("trait1_hash_rec", "trait 1"), ("trait1_level_rec", "trait 1 level"), ("trait2_hash_rec", "trait 2"), ("trait2_level_rec", "trait 2 level"), ("worn_rec", "assigned character"), ("flags_rec", "flags")]
     WEAPON_SLOT_FIELDS = [("hash_rec", "weapon hash"), ("xp_rec", "XP"), ("flags_rec", "flags"), ("stone_rec", "stone")]
 
-    def copy_selected_item_slot(self) -> None:
-        meta = self._selected_meta(self.item_table, self.item_rows_meta)
-        if not meta:
-            return
-        keys = [k for k, _ in self.ITEM_SLOT_FIELDS]
-        self.item_slot_clipboard = {"unit_id": meta.get("unit_id"), "values": self._meta_values(meta, keys)}
-        self.statusBar().showMessage(f"Copied item slot {meta.get('unit_id')}.", 4000)
 
-    def paste_item_slot_to_selected(self) -> None:
-        meta = self._selected_meta(self.item_table, self.item_rows_meta)
-        if not meta or not self.item_slot_clipboard:
-            QMessageBox.information(self, "No copied item", "Copy an item slot first.")
-            return
-        if not self._confirm_slot_action("Paste Item Slot", f"Paste copied item data into unit {meta.get('unit_id')}? This overwrites the selected slot in memory."):
-            return
-        patched = self._patch_meta_values(meta, self.item_slot_clipboard["values"], self.ITEM_SLOT_FIELDS)
-        self._after_editor_patch(f"Pasted copied item slot into unit {meta.get('unit_id')} ({patched} fields).")
 
-    def swap_selected_item_with_copied(self) -> None:
-        meta = self._selected_meta(self.item_table, self.item_rows_meta)
-        if not meta or not self.item_slot_clipboard:
-            QMessageBox.information(self, "No copied item", "Copy an item slot first.")
-            return
-        other = self._meta_by_unit(self.item_rows_meta, self.item_slot_clipboard.get("unit_id"))
-        if not other:
-            QMessageBox.information(self, "Copied slot hidden", "The copied item slot is not currently visible. Clear filters or show empty slots, then try again.")
-            return
-        if other is meta:
-            QMessageBox.information(self, "Same slot", "Pick a different selected item slot to swap with.")
-            return
-        if not self._confirm_slot_action("Swap Item Slots", f"Swap item data between units {other.get('unit_id')} and {meta.get('unit_id')}?"):
-            return
-        keys = [k for k, _ in self.ITEM_SLOT_FIELDS]
-        a = self._meta_values(other, keys)
-        b = self._meta_values(meta, keys)
-        self._patch_meta_values(other, b, self.ITEM_SLOT_FIELDS)
-        self._patch_meta_values(meta, a, self.ITEM_SLOT_FIELDS)
-        self.item_slot_clipboard = None
-        self._after_editor_patch("Swapped item slots in memory.")
 
-    def duplicate_selected_item_to_empty_slot(self) -> None:
-        meta = self._selected_meta(self.item_table, self.item_rows_meta)
-        if not meta:
-            return
-        slot = self._find_empty_item_slot()
-        if not slot:
-            QMessageBox.information(self, "No empty item slot", "No reusable empty item slot was found.")
-            return
-        if not self._confirm_slot_action("Duplicate Item", f"Duplicate selected item into empty unit {slot.get('unit_id')}?"):
-            return
-        values = self._meta_values(meta, [k for k, _ in self.ITEM_SLOT_FIELDS])
-        self._patch_meta_values(slot, values, self.ITEM_SLOT_FIELDS)
-        self._after_editor_patch(f"Duplicated item into empty unit {slot.get('unit_id')}.")
 
     def copy_selected_sigil_slot(self) -> None:
         meta = self._selected_meta(self.sigil_table, self.sigil_rows_meta)
@@ -13204,95 +6860,12 @@ class MainWindow(QMainWindow):
         serial = self._set_sigil_serial(slot)
         self._after_editor_patch(f"Duplicated sigil into empty unit {slot.get('unit_id')} / serial {serial}.")
 
-    def copy_selected_weapon_slot(self) -> None:
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta:
-            return
-        keys = [k for k, _ in self.WEAPON_SLOT_FIELDS]
-        self.weapon_slot_clipboard = {"unit_id": meta.get("unit_id"), "values": self._meta_values(meta, keys)}
-        self.statusBar().showMessage(f"Copied weapon slot {meta.get('unit_id')}.", 4000)
 
-    def paste_weapon_slot_to_selected(self) -> None:
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta or not self.weapon_slot_clipboard:
-            QMessageBox.information(self, "No copied weapon", "Copy a weapon slot first.")
-            return
-        if not self._confirm_slot_action("Paste Weapon Slot", f"Paste copied weapon data into unit {meta.get('unit_id')}? This overwrites the selected slot in memory."):
-            return
-        patched = self._patch_meta_values(meta, self.weapon_slot_clipboard["values"], self.WEAPON_SLOT_FIELDS)
-        self._after_editor_patch(f"Pasted copied weapon slot into unit {meta.get('unit_id')} ({patched} fields).")
 
-    def swap_selected_weapon_with_copied(self) -> None:
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta or not self.weapon_slot_clipboard:
-            QMessageBox.information(self, "No copied weapon", "Copy a weapon slot first.")
-            return
-        other = self._meta_by_unit(self.weapon_rows_meta, self.weapon_slot_clipboard.get("unit_id"))
-        if not other:
-            QMessageBox.information(self, "Copied slot hidden", "The copied weapon slot is not currently visible. Clear filters or show empty slots, then try again.")
-            return
-        if other is meta:
-            QMessageBox.information(self, "Same slot", "Pick a different selected weapon slot to swap with.")
-            return
-        if not self._confirm_slot_action("Swap Weapon Slots", f"Swap weapon data between units {other.get('unit_id')} and {meta.get('unit_id')}?"):
-            return
-        keys = [k for k, _ in self.WEAPON_SLOT_FIELDS]
-        a = self._meta_values(other, keys)
-        b = self._meta_values(meta, keys)
-        self._patch_meta_values(other, b, self.WEAPON_SLOT_FIELDS)
-        self._patch_meta_values(meta, a, self.WEAPON_SLOT_FIELDS)
-        self.weapon_slot_clipboard = None
-        self._after_editor_patch("Swapped weapon slots in memory.")
 
-    def duplicate_selected_weapon_to_empty_slot(self) -> None:
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta:
-            return
-        slot = self._find_empty_weapon_slot()
-        if not slot:
-            QMessageBox.information(self, "No empty weapon slot", "No reusable empty weapon slot was found.")
-            return
-        if not self._confirm_slot_action("Duplicate Weapon", f"Duplicate selected weapon into empty unit {slot.get('unit_id')}?"):
-            return
-        values = self._meta_values(meta, [k for k, _ in self.WEAPON_SLOT_FIELDS])
-        self._patch_meta_values(slot, values, self.WEAPON_SLOT_FIELDS)
-        self._after_editor_patch(f"Duplicated weapon into empty unit {slot.get('unit_id')}.")
 
-    def _selected_item_cap(self, meta: Dict[str, Any]) -> int:
-        h = self._record_first_value(meta.get("hash_rec"), 0)
-        entry = self.item_db.lookup_hash(h)
-        if not entry:
-            return 999
-        return self._material_cheat_quantity(entry.display_name)
 
-    def max_selected_item_quantity(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.item_table, self.item_rows_meta)
-        if not meta:
-            return
-        cap = self._selected_item_cap(meta)
-        if not self._item_meta_has_real_quantity(meta):
-            QMessageBox.information(self, "Not a material quantity", "This selected row does not expose a real material/currency stack quantity.")
-            return
-        if not self._item_meta_is_safe_bulk_quantity_target(meta):
-            QMessageBox.warning(self, "Unsafe material row", "This row is not an active material stack and does not have a verified safe-add template, so the editor will not max it automatically.")
-            return
-        if self._set_item_meta_quantity_safely(meta, cap):
-            self._after_editor_patch(f"Selected item quantity set to {cap:,}.")
 
-    def max_visible_item_quantities(self) -> None:
-        if not self.save:
-            return
-        targets = [m for m in self.item_rows_meta if m.get("qty_rec") and not m.get("is_empty") and self._item_meta_is_safe_bulk_quantity_target(m)]
-        if not targets:
-            QMessageBox.information(self, "No visible items", "No visible item quantity fields are patchable.")
-            return
-        patched = 0
-        for meta in targets:
-            if self._set_item_meta_quantity_safely(meta, self._selected_item_cap(meta)):
-                patched += 1
-        self._after_editor_patch(f"Maxed {patched} visible item/material quantities.")
 
     def _update_visible_sigil_level_flag_row(self, row_index: int, level_value: Any = None, flags_value: Any = None) -> None:
         try:
@@ -13308,12 +6881,6 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-    def _refresh_sigil_auxiliary_views_light(self) -> None:
-        try:
-            if hasattr(self, "sigil_database_model"):
-                self.refresh_sigil_database_rows()
-        except Exception:
-            pass
 
     def max_selected_sigil(self) -> None:
         if not self.save:
@@ -13364,89 +6931,9 @@ class MainWindow(QMainWindow):
             refresh=False,
         )
 
-    def max_selected_weapon(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta:
-            return
-        if self._set_record_first_value(meta.get("xp_rec"), WEAPON_XP_MAX, "weapon XP"):
-            flags = meta.get("flags_rec")
-            if flags is not None:
-                cur = self._record_first_value(flags, 0)
-                self._set_record_first_value(flags, int(cur or 0) | 1, "weapon flags")
-            try:
-                row_index = self.weapon_table.currentIndex().row()
-                if 0 <= row_index < len(self.weapon_model.rows):
-                    self.weapon_model.rows[row_index][4] = WEAPON_XP_MAX
-                    self._emit_model_row_changed(self.weapon_model, row_index)
-                    self._refresh_weapon_visible_row_from_meta(meta, update_detail=False)
-            except Exception:
-                pass
-            self._after_editor_patch(f"Selected weapon XP/progress set to {WEAPON_XP_MAX:,} and flags enabled.")
 
-    def max_visible_weapons(self) -> None:
-        if not self.save:
-            return
-        targets = [m for m in self.weapon_rows_meta if m.get("xp_rec") and not m.get("is_empty")]
-        if not targets:
-            self.statusBar().showMessage("No visible weapon XP fields are patchable.", 4000)
-            return
-        for meta in targets:
-            self._set_record_first_value(meta.get("xp_rec"), WEAPON_XP_MAX, "weapon XP")
-            flags = meta.get("flags_rec")
-            if flags is not None:
-                cur = self._record_first_value(flags, 0)
-                self._set_record_first_value(flags, int(cur or 0) | 1, "weapon flags")
-        try:
-            self.refresh_weapon_rows()
-        except Exception:
-            pass
-        self._after_editor_patch(f"Maxed {len(targets)} visible weapons to {WEAPON_XP_MAX:,}.", refresh=False)
 
-    def _all_weapon_level_targets(self) -> List[Dict[str, Any]]:
-        if not self.save:
-            return []
-        grouped = self.save.group_by_unit([2803, 2804, 2815])
-        targets: List[Dict[str, Any]] = []
-        for unit_id, fields in sorted(grouped.items()):
-            weapon_hash = self.value1(fields.get(2803), 0)
-            if weapon_hash in ("", 0, EMPTY_HASH):
-                continue
-            xp_rec = fields.get(2804)
-            if xp_rec is None:
-                continue
-            targets.append({
-                "unit_id": unit_id,
-                "hash_rec": fields.get(2803),
-                "xp_rec": xp_rec,
-                "flags_rec": fields.get(2815),
-            })
-        return targets
 
-    def max_all_weapons(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        targets = self._all_weapon_level_targets()
-        if not targets:
-            self.statusBar().showMessage("No active weapon XP fields were found to max.", 4000)
-            return
-        patched = 0
-        flags_patched = 0
-        for meta in targets:
-            if self._set_record_first_value(meta.get("xp_rec"), WEAPON_XP_MAX, "weapon XP"):
-                patched += 1
-            flags = meta.get("flags_rec")
-            if flags is not None:
-                cur = self._record_first_value(flags, 0)
-                if self._set_record_first_value(flags, int(cur or 0) | 1, "weapon flags"):
-                    flags_patched += 1
-        try:
-            self.refresh_weapon_rows()
-        except Exception:
-            pass
-        self._after_editor_patch(f"Maxed all active weapons to {WEAPON_XP_MAX:,}: {patched} XP fields and {flags_patched} flag fields updated.")
 
 
     def _parse_edit_int(self, value: Any, label: str, allow_empty_hash: bool = False, *, minimum: int = I32_MIN, maximum: int = I32_MAX) -> Optional[int]:
@@ -13622,14 +7109,6 @@ class MainWindow(QMainWindow):
             return table_meta
         return None
 
-    def _weapon_cap_value_from_combo(self) -> int:
-        combo = getattr(self, "weapon_cap_combo", None)
-        if combo is not None and combo.currentData() is not None:
-            try:
-                return int(combo.currentData())
-            except Exception:
-                pass
-        return 5
 
     def _set_weapon_cap_combo_to_value(self, value: Any) -> None:
         combo = getattr(self, "weapon_cap_combo", None)
@@ -13772,41 +7251,8 @@ class MainWindow(QMainWindow):
             f"Stone/Wrightstone 2816: {stone_text}"
         )
 
-    def _apply_weapon_trait_bonus_to_meta(self, meta: Dict[str, Any], value: int) -> bool:
-        return self._set_record_first_value(meta.get("unk_2806_rec"), max(0, min(999, int(value))), "weapon trait + bonus 2806")
 
-    def apply_weapon_trait_bonus_selected(self) -> None:
-        meta = self._selected_weapon_meta()
-        if not meta:
-            self.statusBar().showMessage("Select a weapon first.", 3000)
-            return
-        value = int(getattr(self, "weapon_trait_bonus_spin").value()) if hasattr(self, "weapon_trait_bonus_spin") else 0
-        if self._apply_weapon_trait_bonus_to_meta(meta, value):
-            self._mark_stale_pages(["Weapons", "Save Health"])
-            self._refresh_weapon_visible_row_from_meta(meta)
-            self.statusBar().showMessage(f"Weapon trait + bonus set to {value}. Save As to test in-game.", 6000)
 
-    def apply_weapon_trait_bonus_visible(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        value = int(getattr(self, "weapon_trait_bonus_spin").value()) if hasattr(self, "weapon_trait_bonus_spin") else 0
-        changed = 0
-        missing = 0
-        for meta in getattr(self, "weapon_rows_meta", []) or []:
-            if meta.get("is_empty"):
-                continue
-            if meta.get("unk_2806_rec") is None:
-                missing += 1
-                continue
-            if self._apply_weapon_trait_bonus_to_meta(meta, value):
-                changed += 1
-        self._mark_stale_pages(["Weapons", "Save Health"])
-        self.refresh_weapon_rows()
-        msg = f"Visible weapon trait + bonus set to {value}: {changed} changed"
-        if missing:
-            msg += f", {missing} missing"
-        self.statusBar().showMessage(msg + ". Save As to test.", 7000)
 
     def update_weapon_cap_trait_controls(self) -> None:
         if not hasattr(self, "weapon_cap_trait_status"):
@@ -13843,384 +7289,20 @@ class MainWindow(QMainWindow):
         trait_state = "direct 1701/1702 records found" if meta.get("trait_id_rec") is not None or meta.get("trait_level_rec") is not None else "in-game ATK/HP traits are derived; no direct 1701/1702 rows on this weapon"
         self.weapon_cap_trait_status.setText(f"Selected unit {meta.get('unit_id')}: uncap 2805={cap}, trait + 2806={bonus}. {trait_state}.")
 
-    def _apply_weapon_cap_to_meta(self, meta: Dict[str, Any], cap_value: int) -> bool:
-        cap_value = max(0, min(255, int(cap_value)))
-        rec = meta.get("cap_rec") or meta.get("unk_2805_rec")
-        return self._set_record_first_value(rec, cap_value, "weapon cap 2805 / FFF50A00")
-
-    def apply_weapon_cap_preset_selected(self) -> None:
-        meta = self._selected_weapon_meta()
-        if not meta:
-            self.statusBar().showMessage("Select a weapon first.", 3000)
-            return
-        cap = self._weapon_cap_value_from_combo()
-        if self._apply_weapon_cap_to_meta(meta, cap):
-            self._mark_stale_pages(["Weapons", "Save Health"])
-            self._refresh_weapon_visible_row_from_meta(meta)
-            self.statusBar().showMessage(f"Weapon uncap set to stage {cap}. Save As to test.", 5000)
-
-    def apply_weapon_cap_custom_selected(self) -> None:
-        meta = self._selected_weapon_meta()
-        if not meta:
-            self.statusBar().showMessage("Select a weapon first.", 3000)
-            return
-        cap = int(getattr(self, "weapon_cap_custom_spin").value()) if hasattr(self, "weapon_cap_custom_spin") else 5
-        if self._apply_weapon_cap_to_meta(meta, cap):
-            self._mark_stale_pages(["Weapons", "Save Health"])
-            self._refresh_weapon_visible_row_from_meta(meta)
-            self.statusBar().showMessage(f"Weapon uncap set to custom value {cap}. Save As to test.", 5000)
-
-    def apply_weapon_cap_preset_visible(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        cap = self._weapon_cap_value_from_combo()
-        changed = 0
-        missing = 0
-        for meta in getattr(self, "weapon_rows_meta", []) or []:
-            if meta.get("is_empty"):
-                continue
-            rec = meta.get("cap_rec") or meta.get("unk_2805_rec")
-            if rec is None:
-                missing += 1
-                continue
-            if self._set_record_first_value(rec, cap, "weapon cap 2805 / FFF50A00"):
-                changed += 1
-        self._mark_stale_pages(["Weapons", "Save Health"])
-        self.refresh_weapon_rows()
-        msg = f"Visible weapon uncaps set to stage {cap}: {changed} changed"
-        if missing:
-            msg += f", {missing} missing"
-        self.statusBar().showMessage(msg + ". Save As to test.", 6000)
-
-    def open_wrightstones_for_selected_weapon(self) -> None:
-        """Route weapon-trait editing to the correct Wrightstones workflow."""
-        meta = self._selected_weapon_meta()
-        stone_value = EMPTY_HASH
-        if meta:
-            try:
-                stone_value = int(self._record_first_value(meta.get("stone_rec"), EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
-            except Exception:
-                stone_value = EMPTY_HASH
-        self._show_page("Wrightstones")
-        if hasattr(self, "wrightstone_filter_edit"):
-            try:
-                if stone_value not in (0, EMPTY_HASH):
-                    self.wrightstone_filter_edit.setText(f"{stone_value:08X}")
-                else:
-                    self.wrightstone_filter_edit.clear()
-                self.refresh_wrightstone_rows()
-            except Exception:
-                pass
-        if meta and stone_value not in (0, EMPTY_HASH):
-            self.statusBar().showMessage(
-                f"Opened Wrightstones for weapon unit {meta.get('unit_id')} / stone 0x{stone_value:08X}. Edit Trait 1/2/3 there.",
-                8000,
-            )
-        elif meta:
-            self.statusBar().showMessage(
-                f"Weapon unit {meta.get('unit_id')} has no direct trait records and no mapped stone hash yet. Edit owned Wrightstones from this page, or assign/link a stone once that relation is confirmed.",
-                9000,
-            )
-        else:
-            self.statusBar().showMessage("Opened Wrightstones. Select a weapon first to route from Weapons.", 6000)
-
-    def apply_weapon_trait_selected(self) -> None:
-        meta = self._selected_weapon_meta()
-        if not meta:
-            self.statusBar().showMessage("Select a weapon first.", 3000)
-            return
-        trait_rec = meta.get("trait_id_rec")
-        level_rec = meta.get("trait_level_rec")
-        if trait_rec is None and level_rec is None:
-            self.open_wrightstones_for_selected_weapon()
-            return
-        combo = getattr(self, "weapon_trait_combo", None)
-        trait_hash = int(combo.currentData()) & 0xFFFFFFFF if combo is not None and combo.currentData() is not None else EMPTY_HASH
-        level = int(getattr(self, "weapon_trait_level_spin").value()) if hasattr(self, "weapon_trait_level_spin") else 0
-        changed = 0
-        if trait_rec is not None and self._set_record_first_value(trait_rec, trait_hash, "weapon trait ID 1701 / FFA50600"):
-            changed += 1
-        if level_rec is not None and self._set_record_first_value(level_rec, level, "weapon trait level 1702 / FFA60600"):
-            changed += 1
-        self._mark_stale_pages(["Weapons", "Save Health"])
-        self.refresh_weapon_rows()
-        self.statusBar().showMessage(f"Weapon trait applied: {changed} field(s) changed. Save As to test.", 6000)
-
-    def clear_weapon_trait_selected(self) -> None:
-        meta = self._selected_weapon_meta()
-        if not meta:
-            self.statusBar().showMessage("Select a weapon first.", 3000)
-            return
-        trait_rec = meta.get("trait_id_rec")
-        level_rec = meta.get("trait_level_rec")
-        if trait_rec is None and level_rec is None:
-            self.open_wrightstones_for_selected_weapon()
-            return
-        changed = 0
-        if trait_rec is not None and self._set_record_first_value(trait_rec, EMPTY_HASH, "weapon trait ID 1701 / FFA50600"):
-            changed += 1
-        if level_rec is not None and self._set_record_first_value(level_rec, 0, "weapon trait level 1702 / FFA60600"):
-            changed += 1
-        self._mark_stale_pages(["Weapons", "Save Health"])
-        self.refresh_weapon_rows()
-        self.statusBar().showMessage(f"Weapon trait cleared: {changed} field(s) changed. Save As to test.", 6000)
 
 
-    def _clamp_weapon_xp_value(self, value: Any) -> int:
-        """Clamp weapon XP/progress to the editor's safe max."""
-        try:
-            ivalue = int(str(value).replace(",", "").strip())
-        except Exception:
-            ivalue = 0
-        return max(0, min(WEAPON_XP_MAX, ivalue))
 
-    def apply_weapon_table_cell_edit(self, row_index: int, column: int, value: Any) -> bool:
-        if not self.save or row_index >= len(self.weapon_rows_meta):
-            return False
-        meta = self.weapon_rows_meta[row_index]
-        field_map = {4: ("xp_rec", "weapon XP/progress 2804"), 5: ("cap_rec", "weapon uncap/max-level 2805 / FFF50A00"), 6: ("unk_2806_rec", "weapon trait + bonus 2806"), 7: ("unk_2807_rec", "weapon field 2807"), 8: ("unk_2814_rec", "weapon field 2814"), 9: ("flags_rec", "weapon owned/flags 2815")}
-        if column in (1, 2, 3):
-            resolved = self._resolve_edit_hash(value, "weapon", allow_empty=True)
-            if resolved is None:
-                return False
-            ok = self._set_record_first_value(meta.get("hash_rec"), resolved, "weapon hash")
-        elif column == 10:
-            resolved = self._resolve_edit_hash(value, "weapon stone", allow_empty=True)
-            if resolved is None:
-                return False
-            ok = self._set_record_first_value(meta.get("stone_rec"), resolved, "weapon stone hash")
-        elif column in field_map:
-            parsed = self._parse_edit_int(value, field_map[column][1])
-            if parsed is None:
-                return False
-            if column == 4:
-                parsed = self._clamp_weapon_xp_value(parsed)
-                if hasattr(self, "weapon_xp_edit"):
-                    self._set_line_edit_text_safely("weapon_xp_edit", str(parsed))
-            ok = self._set_record_first_value(meta.get(field_map[column][0]), parsed, field_map[column][1])
-        else:
-            return False
-        if ok:
-            try:
-                if column in (1, 2, 3):
-                    self._patch_visible_hash_row(self.weapon_model, row_index, 1, 2, 3, resolved)
-                    meta["is_empty"] = resolved in (0, EMPTY_HASH)
-                    meta["is_known"] = bool(self.item_db.lookup_hash(resolved))
-                elif column == 10:
-                    entry = self.item_db.lookup_hash(resolved)
-                    self.weapon_model.rows[row_index][10] = entry.display_name if entry else ("" if resolved in (0, EMPTY_HASH) else f"Unknown 0x{resolved & 0xFFFFFFFF:08X}")
-                elif column in field_map:
-                    self.weapon_model.rows[row_index][column] = parsed
-                self._emit_model_row_changed(self.weapon_model, row_index)
-                self._refresh_weapon_visible_row_from_meta(meta, update_detail=False)
-            except Exception:
-                pass
-            self._after_editor_patch("Weapon cell updated in memory.", refresh=False)
-        return bool(ok)
 
-    def apply_character_table_cell_edit(self, row_index: int, column: int, value: Any) -> bool:
-        if not self.save or row_index >= len(self.character_rows_meta):
-            return False
-        meta = self.character_rows_meta[row_index]
-        if column in (1, 2, 3):
-            resolved = self._resolve_edit_hash(value, "character", allow_empty=True)
-            if resolved is None:
-                return False
-            ok = self._set_record_first_value(meta.get("hash_rec"), resolved, "character hash")
-        elif column == 4:
-            parsed = self._parse_edit_int(value, "Character level")
-            if parsed is None:
-                return False
-            parsed = self._clamp_character_value(parsed, minimum=0)
-            ok = self._set_record_first_value(meta.get("level_rec"), parsed, "character level")
-        elif column == 5:
-            parsed = self._parse_edit_int(value, "Character EXP/progress")
-            if parsed is None:
-                return False
-            parsed = self._clamp_character_value(parsed, minimum=0)
-            ok = self._set_record_first_value(meta.get("xp_rec"), parsed, "character EXP/progress")
-        elif column == 6:
-            parsed = self._parse_edit_int(value, "Character MSP/progression candidate")
-            if parsed is None:
-                return False
-            parsed = self._clamp_character_value(parsed, minimum=0)
-            ok = self._set_record_first_value(meta.get("msp_rec"), parsed, "character MSP/progression candidate")
-        elif column == 7:
-            parsed = self._parse_edit_int(value, "Character unlock/active candidate")
-            if parsed is None:
-                return False
-            parsed = self._clamp_character_value(parsed, minimum=0)
-            ok = self._set_record_first_value(meta.get("unlock_rec"), parsed, "character unlock/active candidate")
-        else:
-            return False
-        if ok:
-            try:
-                if column in (1, 2, 3):
-                    self._patch_visible_hash_row(self.character_model, row_index, 1, 2, 3, resolved)
-                    meta["is_empty"] = resolved in (0, EMPTY_HASH)
-                    meta["is_known"] = bool(self.item_db.lookup_hash(resolved))
-                elif column == 4:
-                    self.character_model.rows[row_index][4] = parsed
-                    if meta.get("xp_rec") is not None:
-                        self.character_model.rows[row_index][5] = self._record_first_value(meta.get("xp_rec"), self.character_model.rows[row_index][5])
-                elif column in (5, 6, 7):
-                    self.character_model.rows[row_index][column] = parsed
-                self._emit_model_row_changed(self.character_model, row_index)
-            except Exception:
-                pass
-            self._after_editor_patch("Character cell updated in memory.")
-        return bool(ok)
 
-    def _character_hash_from_meta(self, meta: Dict[str, Any]) -> Optional[int]:
-        value = self._record_first_value(meta.get("hash_rec"), 0)
-        if value in (0, EMPTY_HASH):
-            return None
-        return value & 0xFFFFFFFF
 
-    def equip_visible_sigils_to_character(self) -> None:
-        """Bulk-equip every currently visible non-empty sigil to one owner.
 
-        This is intentionally scoped to visible rows so testers can combine it
-        with Known/Unknown/Invalid filters before writing a lot of owner refs.
-        Empty/addable slots are skipped.
-        """
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        choices = list(getattr(self, "character_owner_choices", []) or [])
-        if not choices:
-            QMessageBox.information(self, "No character list", "No character owner list is loaded yet.")
-            return
-        labels = [str(c.get("label") or c.get("name") or f"0x{int(c.get('hash', EMPTY_HASH)) & 0xFFFFFFFF:08X}") for c in choices]
-        current_label = "None / Unassigned"
-        try:
-            owner_hash = self._current_sigil_owner_hash()
-            current_label = self._character_owner_name_for_hash(owner_hash)
-        except Exception:
-            pass
-        default_index = labels.index(current_label) if current_label in labels else 0
-        label, ok = QInputDialog.getItem(
-            self,
-            "Batch Install Sigils",
-            "Equip every currently visible non-empty sigil to:",
-            labels,
-            default_index,
-            False,
-        )
-        if not ok or not label:
-            return
-        choice = choices[labels.index(label)]
-        try:
-            target_hash = int(choice.get("hash", EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
-        except Exception:
-            target_hash = EMPTY_HASH
-        visible_metas = [m for m in getattr(self, "sigil_rows_meta", []) if not m.get("is_empty")]
-        if not visible_metas:
-            QMessageBox.information(self, "No visible sigils", "There are no visible non-empty sigil rows to equip.")
-            return
-        if target_hash not in (0, EMPTY_HASH):
-            counts = self._sigil_owner_counts_by_hash()
-            already_target = 0
-            to_change_count = 0
-            for meta in visible_metas:
-                cur_owner = int(self._record_first_value(meta.get("worn_rec"), EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
-                if cur_owner == target_hash:
-                    already_target += 1
-                else:
-                    to_change_count += 1
-            remaining = max(0, SIGIL_MAX_EQUIPPED_PER_OWNER - counts.get(target_hash, 0))
-            if to_change_count > remaining:
-                QMessageBox.warning(
-                    self,
-                    "Bulk equip capped",
-                    f"Only {remaining} more sigil(s) can be assigned to this owner before reaching the safe cap of {SIGIL_MAX_EQUIPPED_PER_OWNER}. "
-                    "Reduce the visible rows or clear existing character assignments first."
-                )
-                return
-        preview_name = self._character_owner_name_for_hash(target_hash)
-        confirm = QMessageBox.question(
-            self,
-            "Confirm bulk equip",
-            f"Equip {len(visible_metas)} currently visible sigil row(s) to {preview_name}?\n\n"
-            "This only changes the loaded save in memory. Use Save/Save As when ready.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if confirm != QMessageBox.StandardButton.Yes:
-            return
-        changed = 0
-        skipped = 0
-        for idx, meta in enumerate(visible_metas):
-            try:
-                current = int(self._record_first_value(meta.get("worn_rec"), EMPTY_HASH) or EMPTY_HASH) & 0xFFFFFFFF
-            except Exception:
-                current = EMPTY_HASH
-            if current == target_hash:
-                continue
-            row_index = -1
-            try:
-                row_index = self.sigil_rows_meta.index(meta)
-            except Exception:
-                row_index = -1
-            if self._apply_sigil_owner_to_meta(meta, target_hash, row_index=row_index, show_message=False):
-                changed += 1
-            else:
-                skipped += 1
-        self.refresh_sigil_rows()
-        self._after_editor_patch(f"Assigned {changed} visible sigil row(s) to {preview_name} using 2706 character hash / 2707=2. Skipped {skipped}.", refresh=False)
 
-    def equip_selected_sigil_to_selected_character(self) -> None:
-        if not self.save:
-            return
-        sigil_meta = self._selected_meta(self.sigil_table, self.sigil_rows_meta)
-        if not sigil_meta:
-            return
-        char_meta = self._selected_meta(self.character_table, self.character_rows_meta) if hasattr(self, "character_table") else None
-        if not char_meta:
-            QMessageBox.information(self, "Select a character", "Select a character on the Characters page first, then return here and click Equip to Selected Character.")
-            return
-        char_hash = self._character_hash_from_meta(char_meta)
-        if char_hash is None:
-            QMessageBox.information(self, "Empty character", "The selected character slot does not have a valid character hash.")
-            return
-        row_index = self.sigil_table.currentIndex().row() if hasattr(self, "sigil_table") else -1
-        if not self._sigil_owner_assignment_allowed(row_index, char_hash, show_message=True):
-            return
-        if self._apply_sigil_owner_to_meta(sigil_meta, char_hash, row_index=row_index, show_message=True):
-            self.refresh_sigil_rows()
-            self._after_editor_patch(f"Assigned selected sigil to character slot {char_meta.get('slot')} using 2706 character hash / 2707=2.", refresh=False)
 
-    def equip_copied_sigil_to_selected_character(self) -> None:
-        if not self.save:
-            return
-        if not self.sigil_slot_clipboard:
-            QMessageBox.information(self, "No copied sigil", "Copy a sigil slot first from the Sigils page.")
-            return
-        char_meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not char_meta:
-            return
-        sigil_meta = self._meta_by_unit(self.sigil_rows_meta, self.sigil_slot_clipboard.get("unit_id"))
-        if not sigil_meta:
-            QMessageBox.information(self, "Copied sigil hidden", "The copied sigil slot is not currently visible. Clear sigil filters or copy it again.")
-            return
-        char_hash = self._character_hash_from_meta(char_meta)
-        if char_hash is None:
-            QMessageBox.information(self, "Empty character", "The selected character slot does not have a valid character hash.")
-            return
-        row_index = -1
-        try:
-            for idx, meta in enumerate(getattr(self, "sigil_rows_meta", [])):
-                if meta is sigil_meta or meta.get("unit_id") == sigil_meta.get("unit_id"):
-                    row_index = idx
-                    break
-        except Exception:
-            pass
-        if not self._sigil_owner_assignment_allowed(row_index, char_hash, show_message=True):
-            return
-        if self._apply_sigil_owner_to_meta(sigil_meta, char_hash, row_index=row_index, show_message=True):
-            self.refresh_sigil_rows()
-            self._after_editor_patch(f"Assigned copied sigil to character slot {char_meta.get('slot')} using 2706 character hash / 2707=2.", refresh=False)
+
+
+
+
+
 
     def clear_selected_sigil_worn_by(self) -> None:
         if not self.save:
@@ -14273,400 +7355,54 @@ class MainWindow(QMainWindow):
             return
         meta = self._selected_meta(self.sigil_table, self.sigil_rows_meta)
         if not meta:
+            QMessageBox.information(self, "No selection", "Select a sigil row in the table first.")
             return
         try:
             sigil_hash = int(self._record_first_value(meta.get("hash_rec"), 0) or 0) & 0xFFFFFFFF
         except Exception:
             sigil_hash = 0
-        if sigil_hash in (0, EMPTY_HASH) and bool(meta.get("is_empty")):
-            self.statusBar().showMessage("Selected sigil row is already empty.", 4000)
+        if sigil_hash in (0, EMPTY_HASH):
+            self.statusBar().showMessage("Selected row is already empty.", 4000)
             return
-        name, gbid, hx = self.hash_entry_parts(sigil_hash) if sigil_hash not in (0, EMPTY_HASH) else ("selected sigil", "", "")
+        name, gbid, hx = self.hash_entry_parts(sigil_hash)
         display = name or gbid or hx or "selected sigil"
+        unit_id = meta.get("unit_id", "?")
         if QMessageBox.question(
-            self,
-            "Remove Sigil",
-            f"Turn {display} in unit {meta.get('unit_id')} back into a reusable empty sigil slot?\n\n"
-            "This clears 2702/2703/2704/2706/2707 and both linked 120M trait lanes.",
+            self, "Remove Sigil",
+            f"Remove \"{display}\" at unit {unit_id}?\n\nThis clears this ONE slot back to empty.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         ) != QMessageBox.StandardButton.Yes:
             return
         patched = self._clear_sigil_meta_to_empty(meta)
         if patched <= 0:
-            self.statusBar().showMessage("No sigil fields changed; the row may already be empty.", 5000)
+            self.statusBar().showMessage("No fields changed; row may already be empty.", 5000)
             return
-        # Show empty rows after removal so the user can immediately see the
-        # cleared reusable slot rather than watching the row disappear.
-        try:
-            if hasattr(self, "sigil_show_empty_check"):
-                self.sigil_show_empty_check.setChecked(True)
-        except Exception:
-            pass
-        self._after_editor_patch(f"Removed {display}; unit {meta.get('unit_id')} is now a reusable empty sigil slot ({patched} field(s) cleared).")
-
-    def edit_selected_character_hash(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        value = self._prompt_hash("Change Selected Character", self._record_first_value(meta.get("hash_rec"), 0))
-        if value is not None and self._set_record_first_value(meta.get("hash_rec"), value, "character hash"):
-            self._after_editor_patch("Character hash updated in memory.")
-
-    def edit_selected_character_level(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        cur = self._record_first_value(meta.get("level_rec"), 1)
-        value, ok = QInputDialog.getInt(self, "Set Character Level", "Character level:", cur, 1, CHARACTER_VALUE_MAX)
-        if ok:
-            value = self._clamp_character_value(value, minimum=1)
-            patched = 0
-            if self._set_record_first_value(meta.get("level_rec"), value, "character level"):
-                patched += 1
-            if self._set_record_first_value(meta.get("xp_rec"), value, "character EXP/progress"):
-                patched += 1
-            if patched:
-                self._after_editor_patch("Character level and EXP/progress updated in memory.")
-
-    def max_selected_character_level(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        patched = self._set_character_max_bundle(meta)
-        if patched:
-            self._after_editor_patch(f"Selected character maxed to {CHARACTER_VALUE_MAX:,} ({patched} fields).")
-
-    def max_visible_character_levels(self) -> None:
-        if not self.save:
-            return
-        targets = [m for m in self.character_rows_meta if m.get("level_rec") and not m.get("is_empty")]
-        if not targets:
-            self.statusBar().showMessage("No visible character level fields are patchable.", 4000)
-            return
-        patched = 0
-        for meta in targets:
-            patched += self._set_character_max_bundle(meta)
-        try:
-            self.refresh_character_rows()
-        except Exception:
-            pass
-        self._after_editor_patch(f"Maxed {len(targets)} visible characters to {CHARACTER_VALUE_MAX:,} ({patched} fields).", refresh=False)
-
-    def _all_character_level_targets(self) -> List[Dict[str, Any]]:
-        if not self.save:
-            return []
-        grouped = self.save.group_by_unit(self.CHARACTER_FIELD_IDS)
-        targets: List[Dict[str, Any]] = []
-        for unit_id, fields in sorted(grouped.items()):
-            if not (10000 <= int(unit_id) <= 10039):
-                continue
-            char_hash = self.value1(fields.get(1301), 0)
-            if char_hash in ("", 0, EMPTY_HASH):
-                continue
-            level_rec = fields.get(1308)
-            if level_rec is None:
-                continue
-            targets.append({
-                "unit_id": unit_id,
-                "hash_rec": fields.get(1301),
-                "level_rec": level_rec,
-                "xp_rec": fields.get(1303),
-                "msp_rec": fields.get(1309),
-                "unlock_rec": fields.get(1302),
-                "state_rec": fields.get(1315),
-                "fields": fields,
-            })
-        return targets
-
-    def max_all_character_levels(self) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save loaded", "Open a save first.")
-            return
-        targets = self._all_character_level_targets()
-        if not targets:
-            self.statusBar().showMessage("No active character level fields were found to max.", 4000)
-            return
-        patched = 0
-        for meta in targets:
-            patched += self._set_character_max_bundle(meta)
-        try:
-            self.refresh_character_rows()
-        except Exception:
-            pass
-        self._after_editor_patch(f"Maxed all active characters to {CHARACTER_VALUE_MAX:,}: {len(targets)} character slots, {patched} numeric fields updated.")
-
-    def _character_slot_values(self, meta: Dict[str, Any]) -> Dict[int, Any]:
-        values: Dict[int, Any] = {}
-        for fid, rec in meta.get("fields", {}).items():
-            if fid not in self.CHARACTER_FIELD_IDS:
-                continue
-            if rec is not None and rec.value_count:
-                vals = self.save.get_values(rec, 1) if self.save else []
-                if vals:
-                    values[fid] = vals[0]
-        return values
-
-    def _patch_character_slot_values(self, meta: Dict[str, Any], values: Dict[int, Any]) -> int:
-        if not self.save:
-            return 0
-        patched = 0
-        fields = meta.get("fields", {})
-        for fid, value in values.items():
-            rec = fields.get(fid)
-            if rec is None:
-                continue
-            if rec.value_count < 1:
-                continue
-            try:
-                if hasattr(self.save, "set_first_value"):
-                    self.save.set_first_value(rec, value)
-                else:
-                    vals = self.save.get_values(rec)
-                    if not vals:
-                        continue
-                    vals[0] = value
-                    self.save.set_values(rec, vals)
-            except Exception:
-                continue
-            self.dirty = True
-            patched += 1
-        return patched
-
-    def copy_selected_character_slot(self) -> None:
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        self.character_slot_clipboard = {"unit_id": meta.get("unit_id"), "values": self._character_slot_values(meta)}
-        self.statusBar().showMessage(f"Copied character slot {meta.get('slot')}.", 4000)
-
-    def paste_character_slot_to_selected(self) -> None:
-        if not self.character_slot_clipboard:
-            QMessageBox.information(self, "No copied character", "Copy a character slot first.")
-            return
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        if not self._confirm_slot_action("Paste Character Slot", f"Paste copied character slot data into slot {meta.get('slot')}? This overwrites character fields only, not item/sigil/weapon data."):
-            return
-        patched = self._patch_character_slot_values(meta, self.character_slot_clipboard["values"])
-        self._after_editor_patch(f"Pasted {patched} character fields.")
-
-    def swap_selected_character_with_copied(self) -> None:
-        if not self.character_slot_clipboard:
-            QMessageBox.information(self, "No copied character", "Copy a character slot first.")
-            return
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        other = self._meta_by_unit(self.character_rows_meta, int(self.character_slot_clipboard.get("unit_id", -1)))
-        if not other:
-            QMessageBox.information(self, "Copied slot not visible", "The copied character slot is not currently visible. Clear filters or copy it again.")
-            return
-        if other is meta:
-            QMessageBox.information(self, "Same slot", "Select a different character slot to swap with.")
-            return
-        if not self._confirm_slot_action("Swap Character Slots", f"Swap character fields between slots {other.get('slot')} and {meta.get('slot')}? Save As first and verify in-game."):
-            return
-        a = self._character_slot_values(meta)
-        b = self._character_slot_values(other)
-        self._patch_character_slot_values(other, a)
-        self._patch_character_slot_values(meta, b)
-        self.character_slot_clipboard = None
-        self._after_editor_patch("Swapped character slots in memory.")
-
-    def _selected_character_overmastery_values(self) -> Optional[List[int]]:
-        if not self.save:
-            return None
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return None
-        fields = meta.get("fields", {})
-        rec = fields.get(1404)
-        if rec is None:
-            QMessageBox.information(self, "Missing overmastery field", "This character slot does not have field 1404 mapped.")
-            return None
-        values = self.save.get_values(rec)
-        if len(values) != 4:
-            QMessageBox.information(self, "Unexpected field size", f"Field 1404 has {len(values)} values; expected 4.")
-            return None
-        return [int(v) & 0xFFFFFFFF for v in values]
-
-    def copy_selected_character_overmastery(self) -> None:
-        values = self._selected_character_overmastery_values()
-        if values is None:
-            return
-        self.overmastery_clipboard = values
-        pretty = ", ".join(f"0x{v:08X}" for v in values)
-        self.statusBar().showMessage(f"Copied RNG/overmastery slots: {pretty}", 5000)
-
-    def paste_selected_character_overmastery(self) -> None:
-        if not self.save:
-            return
-        if not self.overmastery_clipboard:
-            QMessageBox.information(self, "No copied RNG stats", "Copy RNG/overmastery slots from a character first.")
-            return
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        if QMessageBox.question(self, "Paste RNG/Overmastery", "Paste the copied four RNG/overmastery hash slots into the selected character? Save As first and verify in-game.") != QMessageBox.StandardButton.Yes:
-            return
-        result = set_character_overmastery_hashes(self.save, int(meta.get("unit_id")), self.overmastery_clipboard)
-        if result.changed_values:
-            self.dirty = True
-        self._after_editor_patch(patch_summary([result]))
-
-    def edit_selected_character_overmastery(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        current = self._selected_character_overmastery_values()
-        if current is None:
-            return
-        current_text = ", ".join(f"0x{v:08X}" for v in current)
-        text, ok = QInputDialog.getText(
-            self,
-            "Set RNG/Overmastery Slots",
-            "Enter exactly 4 hashes/GBIDs/names separated by commas. This is an advanced raw field 1404 edit until bonus names are fully mapped:",
-            text=current_text,
-        )
-        if not ok:
-            return
-        parts = [x.strip() for x in text.replace("\n", ",").split(",") if x.strip()]
-        if len(parts) != 4:
-            QMessageBox.warning(self, "Need four values", "Enter exactly 4 values for the four RNG/overmastery slots.")
-            return
-        hashes: List[int] = []
-        for part in parts:
-            value = self._resolve_hash_from_text(part)
-            if value is None:
-                QMessageBox.warning(self, "Could not resolve value", f"Could not resolve: {part}")
-                return
-            hashes.append(value)
-        result = set_character_overmastery_hashes(self.save, int(meta.get("unit_id")), hashes)
-        if result.changed_values:
-            self.dirty = True
-        self._after_editor_patch(patch_summary([result]))
-
-    def clear_selected_character_overmastery(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        if QMessageBox.question(self, "Clear RNG/Overmastery", "Clear the selected character's four RNG/overmastery hash slots to empty?") != QMessageBox.StandardButton.Yes:
-            return
-        result = clear_character_overmastery_hashes(self.save, int(meta.get("unit_id")))
-        if result.changed_values:
-            self.dirty = True
-        self._after_editor_patch(patch_summary([result]))
-
-    def jump_to_character_unit(self) -> None:
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        self._show_page("Units")
-        self.filter_edit.setText(str(meta.get("unit_id")))
-        self.unit_model.set_filter(str(meta.get("unit_id")))
-
-    def export_characters_csv(self) -> None:
-        self._export_simple_rows("characters", self.character_model.headers, self.character_model.rows)
-
-    def edit_selected_item_quantity(self) -> None:
-        if not self.save or not hasattr(self, "item_table"):
-            return
-        idx = self.item_table.currentIndex()
-        meta = self._selected_item_meta()
-        if not idx.isValid() or not meta:
-            return
-        if not (meta.get("wallet_value") or self._item_meta_has_real_quantity(meta)):
-            QMessageBox.information(self, "Not a quantity field", "This selected row is technical/reference data and does not expose a safe quantity value.")
-            return
-        current = self._record_first_value(meta.get("qty_rec"), 0)
-        max_value = 99_999_999
-        value, ok = QInputDialog.getInt(self, "Edit Quantity", "Quantity / value:", int(current or 0), 0, max_value)
-        if not ok:
-            return
-        if self.apply_item_table_cell_edit(idx.row(), 6, value):
-            self.update_item_detail()
+        self.refresh_sigil_rows()
+        self.statusBar().showMessage(f"Removed \"{display}\" from unit {unit_id} ({patched} fields cleared).", 5000)
 
 
-    def bulk_set_visible_item_quantity(self) -> None:
-        if not self.save:
-            return
-        value, ok = QInputDialog.getInt(self, "Set Visible Item Quantities", "Set quantity/value on all currently visible item rows:", 999, 0, 99_999_999)
-        if not ok:
-            return
-        count = sum(1 for m in self.item_rows_meta if m.get("qty_rec") and self._item_meta_has_real_quantity(m))
-        if count == 0:
-            QMessageBox.information(self, "No quantity fields", "No visible rows have a patchable quantity/value field.")
-            return
-        reply = QMessageBox.question(self, "Bulk edit", f"Patch {count} visible item quantity fields to {value}?")
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-        patched = 0
-        for meta in self.item_rows_meta:
-            if self._item_meta_has_real_quantity(meta) and self._item_meta_is_safe_bulk_quantity_target(meta):
-                if self._set_item_meta_quantity_safely(meta, value):
-                    patched += 1
-        self._after_editor_patch(f"Patched {patched} visible item quantity fields.")
 
-    def edit_selected_item_hash(self) -> None:
-        if not self.save or not hasattr(self, "item_table"):
-            return
-        idx = self.item_table.currentIndex()
-        meta = self._selected_item_meta()
-        if not idx.isValid() or not meta:
-            return
-        current = self._record_first_value(meta.get("hash_rec"), 0)
-        item_hash = self._prompt_hash("Edit Item / GBID / Hash", int(current or 0))
-        if item_hash is None:
-            return
-        if self.apply_item_table_cell_edit(idx.row(), 1, f"0x{item_hash:08X}"):
-            self.update_item_detail()
 
-    def edit_selected_item_index(self) -> None:
-        if not self.save or not hasattr(self, "item_table"):
-            return
-        idx = self.item_table.currentIndex()
-        meta = self._selected_item_meta()
-        if not idx.isValid() or not meta:
-            return
-        rec = meta.get("index_rec")
-        if rec is None:
-            QMessageBox.information(self, "No index field", "This row does not expose an index/serial field.")
-            return
-        current = self._record_first_value(rec, 0)
-        value, ok = QInputDialog.getInt(self, "Edit Index / Serial", "Index / serial value:", int(current or 0), -2_147_483_648, 2_147_483_647)
-        if not ok:
-            return
-        if self.apply_item_table_cell_edit(idx.row(), 4, value):
-            self.update_item_detail()
 
-    def edit_selected_item_flag(self) -> None:
-        if not self.save or not hasattr(self, "item_table"):
-            return
-        idx = self.item_table.currentIndex()
-        meta = self._selected_item_meta()
-        if not idx.isValid() or not meta:
-            return
-        rec = meta.get("flag_rec")
-        if rec is None:
-            QMessageBox.information(self, "No flag field", "This row does not expose a flag/state field.")
-            return
-        current = self._record_first_value(rec, 0)
-        value, ok = QInputDialog.getInt(self, "Edit Flag / State", "Flag / state value:", int(current or 0), -2_147_483_648, 2_147_483_647)
-        if not ok:
-            return
-        if self.apply_item_table_cell_edit(idx.row(), 5, value):
-            self.update_item_detail()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def edit_selected_sigil_level(self) -> None:
         if not self.save:
@@ -14740,136 +7476,16 @@ class MainWindow(QMainWindow):
             self.refresh_sigil_rows()
             self._after_editor_patch("Sigil character assignment updated using 2706 character hash / 2707=2.", refresh=False)
 
-    def edit_selected_weapon_xp(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta:
-            return
-        rec = meta.get("xp_rec")
-        cur = self._record_first_value(rec, 0)
-        value, ok = QInputDialog.getInt(self, "Set Weapon XP", "Weapon XP/progress field:", cur, 0, WEAPON_XP_MAX)
-        if ok:
-            value = self._clamp_weapon_xp_value(value)
-            if self._set_record_first_value(rec, value, "weapon XP"):
-                self._refresh_weapon_visible_row_from_meta(meta)
-                self._after_editor_patch("Weapon XP updated in memory.", refresh=False)
 
-    def bulk_set_visible_weapon_xp(self) -> None:
-        if not self.save:
-            return
-        value, ok = QInputDialog.getInt(self, "Set Visible Weapon XP", "Set XP/progress on visible weapons:", WEAPON_XP_MAX, 0, WEAPON_XP_MAX)
-        if not ok:
-            return
-        value = self._clamp_weapon_xp_value(value)
-        targets = [m for m in self.weapon_rows_meta if m.get("xp_rec") and not m.get("is_empty")]
-        if not targets:
-            self.statusBar().showMessage("No visible weapon rows have a patchable XP field.", 4000)
-            return
-        patched = 0
-        for meta in targets:
-            if self._set_record_first_value(meta.get("xp_rec"), value, "weapon XP"):
-                patched += 1
-        try:
-            self.refresh_weapon_rows()
-        except Exception:
-            pass
-        self._after_editor_patch(f"Patched {patched} visible weapon XP fields to {value:,}.", refresh=False)
 
-    def edit_selected_weapon_hash(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta:
-            return
-        rec = meta.get("hash_rec")
-        value = self._prompt_hash("Change Selected Weapon", self._record_first_value(rec, 0))
-        if value is not None and self._set_record_first_value(rec, value, "weapon hash"):
-            self._after_editor_patch("Weapon hash updated in memory.")
 
-    def edit_selected_weapon_flags(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta:
-            return
-        rec = meta.get("flags_rec")
-        cur = self._record_first_value(rec, 0)
-        value, ok = QInputDialog.getInt(self, "Set Weapon Flags", "Weapon flags/state value:", cur, -2_147_483_648, 2_147_483_647)
-        if ok and self._set_record_first_value(rec, value, "weapon flags"):
-            self._after_editor_patch("Weapon flags updated in memory.")
 
-    def edit_selected_weapon_stone(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta:
-            return
-        rec = meta.get("stone_rec")
-        value = self._prompt_hash("Set Weapon Stone Hash", self._record_first_value(rec, 0))
-        if value is not None and self._set_record_first_value(rec, value, "weapon stone hash"):
-            self._after_editor_patch("Weapon stone hash updated in memory.")
 
-    def clear_selected_weapon_stone(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_meta(self.weapon_table, self.weapon_rows_meta)
-        if not meta:
-            return
-        rec = meta.get("stone_rec")
-        if self._set_record_first_value(rec, EMPTY_HASH, "weapon stone hash"):
-            self._refresh_weapon_visible_row_from_meta(meta)
-            self._after_editor_patch("Weapon stone hash cleared in memory.", refresh=False)
 
-    def choose_compare_path(self, before: bool) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Choose before save" if before else "Choose after save", "", "GBFR saves (*.dat GameData*);;All files (*)")
-        if not path:
-            return
-        if before:
-            self.compare_before_path = path
-        else:
-            self.compare_after_path = path
-        self.update_compare_label()
 
-    def update_compare_label(self) -> None:
-        before = self.compare_before_path or "not selected"
-        after = self.compare_after_path or "not selected"
-        self.compare_label.setText(f"Before: {before}\nAfter: {after}")
 
-    def compare_two_saves_dialog(self) -> None:
-        self.stack.setCurrentWidget(self.compare_text.parent())
-        self.choose_compare_path(True)
-        if self.compare_before_path:
-            self.choose_compare_path(False)
-        if self.compare_before_path and self.compare_after_path:
-            self.run_compare()
 
-    def run_compare(self) -> None:
-        if not self.compare_before_path or not self.compare_after_path:
-            QMessageBox.information(self, "Compare", "Choose both a before save and an after save first.")
-            return
-        try:
-            data = compare_saves(self.compare_before_path, self.compare_after_path, limit=300)
-            self.compare_text.setPlainText(format_compare_text(data, max_rows=300))
-        except Exception as exc:
-            QMessageBox.critical(self, "Compare failed", str(exc))
 
-    def export_compare(self, kind: str) -> None:
-        if not self.compare_before_path or not self.compare_after_path:
-            QMessageBox.information(self, "Compare", "Choose both a before save and an after save first.")
-            return
-        suffix = ".diff.json" if kind == "json" else ".diff.csv"
-        path, _ = QFileDialog.getSaveFileName(self, "Export diff", str(Path(self.compare_after_path).with_name(Path(self.compare_after_path).name + suffix)), "JSON (*.json);;CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        try:
-            if kind == "json":
-                write_compare_json(self.compare_before_path, self.compare_after_path, path, limit=None)
-            else:
-                write_compare_csv(self.compare_before_path, self.compare_after_path, path)
-            QMessageBox.information(self, "Exported", f"Diff written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
     def open_save(self) -> None:
         if bool(getattr(self, "_save_in_progress", False)):
@@ -14878,22 +7494,22 @@ class MainWindow(QMainWindow):
         if bool(getattr(self, "_load_in_progress", False)):
             return
         self._stop_pending_ui_timers_before_save()
-        path, _ = QFileDialog.getOpenFileName(self, "Open GBFR save", "", "All files (*)")
+        default_dir = os.path.expandvars(r"%LOCALAPPDATA%\GBFR\Saved\SaveGames")
+        if not os.path.isdir(default_dir):
+            default_dir = ""
+        path, _ = QFileDialog.getOpenFileName(self, "Open GBFR save", default_dir, "Save files (*.dat *.sav);;All files (*)")
         if not path:
             return
         self._open_save_path(path)
 
     def _open_save_path(self, path: str) -> None:
         if bool(getattr(self, "_save_in_progress", False)):
-            QMessageBox.warning(self, "Save still running", "Wait for the current save to finish before opening another save.")
             return
         if bool(getattr(self, "_load_in_progress", False)):
             return
         if not path:
             return
         self._load_in_progress = True
-        self._io_guard_depth = int(getattr(self, "_io_guard_depth", 0)) + 1
-        _debug_log(f"open_save: begin path={path!r}")
         try:
             self.statusBar().showMessage("Opening save...", 0)
         except Exception:
@@ -14905,38 +7521,73 @@ class MainWindow(QMainWindow):
         try:
             self._stop_pending_ui_timers_before_save()
             self._clear_save_bound_ui_models()
-            self._invalidate_save_bound_caches(clear_models=False)
             new_save = GBFRSaveData.open(path)
-            _debug_log(f"open_save: parsed records={len(getattr(new_save, 'records', []))} size={len(getattr(new_save, '_file_bytes', b''))}")
-
             self.save = new_save
             self.dirty = False
-            self._last_hash_ok = "not checked"
-
             self._switch_to_safe_page_without_refresh()
-            self._finish_loaded_save_ui(keep_filter=False)
+            self._finish_loaded_save_ui()
             self.statusBar().showMessage("Save loaded. Open an editor tab to refresh it.", 5000)
-            _debug_log("open_save: complete")
         except Exception as exc:
-            _debug_log("open_save: FAILED\n" + traceback.format_exc())
-            QMessageBox.critical(
-                self,
-                "Open failed",
-                f"{exc}\n\nMake sure this is the decrypted GBFR GameData/SaveData payload, not an encrypted PS4 container, cloud metadata file, or incomplete copy.\n\nDebug log:\n{_debug_log_path()}",
-            )
+            QMessageBox.critical(self, "Open failed", str(exc))
         finally:
             try:
                 QApplication.restoreOverrideCursor()
             except Exception:
                 pass
-            self._io_guard_depth = max(0, int(getattr(self, "_io_guard_depth", 1)) - 1)
             self._load_in_progress = False
+
+    def _clear_save_bound_ui_models(self) -> None:
+        """Clear visible models that contain UnitRecord references."""
+        for attr in ("sigil_model", "wrightstone_model", "mastery_slot_model",
+                     "mastery_mod_model", "mastery_mod_code_model",
+                     "mastery_mod_preset_model", "mastery_mod_value_model"):
+            model = getattr(self, attr, None)
+            if model is not None and hasattr(model, "set_rows"):
+                try:
+                    model.set_rows([])
+                except Exception:
+                    pass
+        for attr in ("sigil_rows_meta", "wrightstone_rows_meta",
+                     "mastery_slot_rows_meta", "mastery_mod_rows_meta",
+                     "mastery_mod_code_rows_meta", "mastery_mod_preset_rows_meta",
+                     "mastery_mod_value_rows_meta", "sigil_database_rows_meta"):
+            try:
+                setattr(self, attr, [])
+            except Exception:
+                pass
+        if hasattr(self, "unit_model"):
+            try:
+                self.unit_model.set_save(None)
+            except Exception:
+                pass
+
+    def _finish_loaded_save_ui(self) -> None:
+        """Post-load UI update."""
+        if not self.save:
+            return
+        # Clear filters
+        for attr in ("sigil_filter_edit",):
+            widget = getattr(self, attr, None)
+            if widget is not None and hasattr(widget, "clear"):
+                try:
+                    widget.clear()
+                except Exception:
+                    pass
+        self._mark_all_pages_stale()
+        # Set unit model with new save
+        try:
+            self.unit_model.set_save(self.save)
+            self.unit_model.set_item_db(self.item_db)
+            self.unit_model.set_resource_db(self.resource_db)
+        except Exception:
+            pass
+
 
 
     def _switch_to_safe_page_without_refresh(self) -> None:
-        """Move to Welcome during save swaps without triggering heavy refreshes."""
+        """Move to Sigils during save swaps without triggering heavy refreshes."""
         try:
-            idx = getattr(self, "page_indexes", {}).get("Welcome")
+            idx = getattr(self, "page_indexes", {}).get("Sigils")
             if idx is None or not hasattr(self, "stack"):
                 return
             old = bool(getattr(self, "_refreshing_page", False))
@@ -14945,7 +7596,7 @@ class MainWindow(QMainWindow):
                 self.stack.blockSignals(True)
                 self.stack.setCurrentIndex(idx)
                 self.stack.blockSignals(False)
-                self._update_nav_selection("Welcome")
+                self._update_nav_selection("Sigils")
             finally:
                 try:
                     self.stack.blockSignals(False)
@@ -14955,118 +7606,9 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-    def _clear_save_bound_ui_models(self) -> None:
-        """Clear visible models and metadata that contain UnitRecord references."""
-        for attr in (
-            "item_model", "sigil_model", "weapon_model", "character_model",
-            "mastery_slot_model", "mastery_mod_model", "mastery_mod_code_model",
-            "mastery_mod_preset_model", "mastery_mod_value_model",
-            "progression_model", "progression_edit_model", "progression_rows_model",
-            "save_map_model", "unit_map_model", "hash_scan_model",
-        ):
-            model = getattr(self, attr, None)
-            if model is not None and hasattr(model, "set_rows"):
-                try:
-                    model.set_rows([])
-                except Exception:
-                    pass
-        for attr in (
-            "item_rows_meta", "sigil_rows_meta", "weapon_rows_meta", "character_rows_meta",
-            "mastery_slot_rows_meta", "mastery_mod_rows_meta", "mastery_mod_code_rows_meta",
-            "mastery_mod_preset_rows_meta", "mastery_mod_value_rows_meta",
-            "items_database_rows_meta", "relic_database_rows_meta", "hash_scan_rows",
-        ):
-            try:
-                setattr(self, attr, [])
-            except Exception:
-                pass
-        for attr in ("item_slot_clipboard", "sigil_slot_clipboard", "weapon_slot_clipboard", "character_slot_clipboard", "overmastery_clipboard"):
-            try:
-                setattr(self, attr, None)
-            except Exception:
-                pass
 
-    def _invalidate_save_bound_caches(self, clear_models: bool = True) -> None:
-        self._invalidate_add_browser_indexes()
-        self._invalidate_mastery_mod_caches(clear_models=clear_models)
-        if hasattr(self, "_invalidate_progression_caches"):
-            try:
-                self._invalidate_progression_caches(catalog=False, vectors=True)
-            except Exception:
-                pass
-        try:
-            if hasattr(self, "unit_model"):
-                self.unit_model.set_save(None)
-        except Exception:
-            pass
 
-    def _finish_loaded_save_ui(self, keep_filter: bool = False) -> None:
-        """Cheap post-load UI update; avoids hash scans and heavy Mastery refreshes."""
-        if not self.save:
-            return
-        if not keep_filter:
-            for attr in ("filter_edit", "item_filter_edit", "sigil_filter_edit", "weapon_filter_edit", "character_filter_edit"):
-                widget = getattr(self, attr, None)
-                if widget is not None and hasattr(widget, "clear"):
-                    try:
-                        widget.clear()
-                    except Exception:
-                        pass
-        self._mark_all_pages_stale()
-        try:
-            self.update_edit_hub_summary_light()
-        except Exception:
-            try:
-                self.update_edit_hub_summary()
-            except Exception:
-                pass
-        try:
-            self.update_status_text_light()
-        except Exception:
-            pass
-        # Welcome is now active; mark it as current enough without forcing a
-        # summary/hash scan. Other pages remain stale and refresh on demand.
-        try:
-            self._stale_page_labels.discard("Welcome")
-        except Exception:
-            pass
 
-    def _invalidate_mastery_mod_caches(self, clear_models: bool = False) -> None:
-        """Drop Mastery caches/metadata that contain UnitRecord references.
-
-        UnitRecord objects are only valid for the currently loaded GBFRSaveData
-        instance. Keeping old Mastery row metadata after loading another
-        save can make later edits/save repairs touch the wrong bytearray.
-        """
-        self._mastery_mod_cache_key = None
-        self._mastery_mod_grouped_cache = None
-        self._mastery_mod_anchor_cache_key = None
-        self._mastery_mod_anchor_cache = None
-        self._mastery_mod_anchor_source = ""
-        self._mastery_mod_anchor_score = 0
-        self._mastery_mod_anchor_by_field = {}
-        self._mastery_mod_anchor_source_by_field = {}
-        self._mastery_mod_anchor_score_by_field = {}
-        self._mastery_mod_anchor_cache_key_by_field = {}
-        self._mastery_mod_abs1606_cache_key = None
-        self._mastery_mod_abs1606_cache = {}
-        self._mastery_mod_abs1607_cache_key = None
-        self._mastery_mod_abs1607_cache = {}
-        self.mastery_mod_rows_meta = []
-        self.mastery_mod_code_rows_meta = []
-        if clear_models:
-            for attr in (
-                "mastery_mod_model",
-                "mastery_mod_code_model",
-                "mastery_mod_preset_model",
-                "mastery_mod_value_model",
-            ):
-                model = getattr(self, attr, None)
-                if model is not None and hasattr(model, "set_rows"):
-                    try:
-                        model.set_rows([])
-                    except Exception:
-                        pass
 
     def _ui_thread_is_current(self) -> bool:
         try:
@@ -15075,357 +7617,91 @@ class MainWindow(QMainWindow):
         except Exception:
             return True
 
-    def _safe_stop_timer(self, timer: Any) -> None:
-        """Stop a QTimer only from the GUI thread.
 
-        The reported save crash prints Qt's "Timers cannot be stopped from
-        another thread" warning.  Save/Save As now drains delayed refresh timers
-        on the main thread before writing and never touches timers from a
-        non-GUI context.
-        """
-        if timer is None:
-            return
-        try:
-            if not self._ui_thread_is_current():
-                return
-            app = QApplication.instance()
-            if app is not None and hasattr(timer, "thread") and timer.thread() != app.thread():
-                return
-            if hasattr(timer, "isActive") and timer.isActive():
-                timer.stop()
-        except RuntimeError:
-            # Timer was already destroyed by Qt; ignore during shutdown/save.
-            return
-        except Exception:
-            return
-
-    def _iter_pending_ui_timers(self) -> List[Any]:
-        timers: List[Any] = []
-
-        for attr in (
-            "_add_browser_refresh_timer",
-            "_progression_edit_refresh_timer",
-            "_item_qty_auto_apply_timer",
-            "_weapon_inline_auto_apply_timer",
-            "_wrightstone_auto_apply_timer",
-            "_sigil_auto_apply_timer",
-            "_overmastery_auto_apply_timer",
-            "_general_party_auto_apply_timer",
-        ):
-            timer = getattr(self, attr, None)
-            if timer is not None:
-                timers.append(timer)
-
-        sigil_field_timers = getattr(self, "_sigil_field_auto_timers", None)
-        if isinstance(sigil_field_timers, dict):
-            timers.extend(list(sigil_field_timers.values()))
-
-        general_value_timers = getattr(self, "_general_value_timers", None)
-        if isinstance(general_value_timers, dict):
-            timers.extend(list(general_value_timers.values()))
-
-        timers_obj = getattr(self, "_filter_timers", None)
-        if isinstance(timers_obj, dict):
-            timers.extend(list(timers_obj.values()))
-        elif timers_obj is None:
-            pass
-        else:
-            try:
-                timers.extend(list(timers_obj))
-            except TypeError:
-                timers.append(timers_obj)
-
-        # Deduplicate without assuming QTimer is hashable in every wrapper state.
-        result: List[Any] = []
-        seen: set[int] = set()
-        for timer in timers:
-            ident = id(timer)
-            if ident in seen:
-                continue
-            seen.add(ident)
-            result.append(timer)
-        return result
 
     def _stop_pending_ui_timers_before_save(self) -> None:
         if not self._ui_thread_is_current():
             return
-        for timer in self._iter_pending_ui_timers():
-            self._safe_stop_timer(timer)
-
-        # Normalize after stopping so the next filter hookup cannot inherit the
-        # older list-shaped attribute that caused the save-click AttributeError.
+        # Stop known auto-apply timers
+        for attr in ("_sigil_auto_apply_timer", "_wrightstone_auto_apply_timer",
+                     "_item_qty_auto_apply_timer", "_weapon_inline_auto_apply_timer",
+                     "_general_party_auto_apply_timer"):
+            timer = getattr(self, attr, None)
+            if timer is not None:
+                try:
+                    timer.stop()
+                except Exception:
+                    pass
+        # Stop filter timers
+        for timer in getattr(self, "_filter_timers", {}).values():
+            try:
+                timer.stop()
+            except Exception:
+                pass
+        # Normalize after stopping
         if not isinstance(getattr(self, "_filter_timers", None), dict):
             self._filter_timers = {}
 
-    def _set_save_busy_ui(self, busy: bool) -> None:
-        """Prevent edits/open-load actions while a byte snapshot is being saved."""
-        enabled = not bool(busy)
-        for widget in (self.centralWidget(), self.menuBar()):
-            if widget is not None:
-                try:
-                    widget.setEnabled(enabled)
-                except Exception:
-                    pass
 
-    def _prepare_save_snapshot_for_write(self) -> tuple[bytes, str]:
-        """Apply pre-save repairs/hash on the GUI thread, then freeze bytes.
 
-        The worker thread writes this immutable bytes object only. It does not
-        call self.save.save_as() or read MainWindow/self.save from the background.
-        """
-        if not self.save:
-            raise RuntimeError("No save is loaded.")
-        clamped_mastery = self._sanitize_mastery_values_before_save()
-        self.repair_added_sigil_slots(silent=True)
-        try:
-            self.save.update_active_hash()
-        except Exception:
-            # Some raw/research files may not have the normal hash table. Keep
-            # writing possible, matching the old save_as(update_hash=True) path
-            # which tolerated a missing active hash by returning None.
-            pass
-        note = f" Clamped {clamped_mastery} unsafe 1607 value(s)." if clamped_mastery else ""
-        return bytes(getattr(self.save, "_file_bytes")), note
 
-    def _run_save_operation(self, target_path: str | Path, success_message: str, *, backup_original: bool = False) -> None:
-        """Prepare and write a save snapshot with no background Qt object access.
 
-        The QThread writer prevented UI blocking, but on the user's machine the
-        app still crashed after "Saving in background...".  This path removes the
-        thread entirely: the GUI thread freezes only long enough to write a small
-        bytearray atomically, while all delayed UI refreshes are stopped first.
-        """
-        if not self.save:
-            return
-        if bool(getattr(self, "_save_in_progress", False)) or bool(getattr(self, "_load_in_progress", False)):
-            self.statusBar().showMessage("Save/load already running. Please wait.", 5000)
-            return
 
-        target = Path(target_path)
-        backup_source = str(self.save.container.path) if backup_original else ""
-        self._save_in_progress = True
-        self._io_guard_depth = int(getattr(self, "_io_guard_depth", 0)) + 1
-        _debug_log(f"save: begin target={str(target)!r} backup={backup_original}")
-        try:
-            self._set_save_busy_ui(True)
-            self._stop_pending_ui_timers_before_save()
-            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        except Exception:
-            pass
-        try:
-            self.statusBar().showMessage("Preparing safe save snapshot...", 0)
-        except Exception:
-            pass
 
-        try:
-            data, note = self._prepare_save_snapshot_for_write()
-            _debug_log(f"save: snapshot bytes={len(data)} note={note!r}")
-            self.statusBar().showMessage("Writing save file...", 0)
-            self._write_save_snapshot_sync(target, data, backup_source=backup_source, make_backup=backup_original)
-            _debug_log("save: write complete")
-            self._finish_successful_save_ui(success_message + note)
-        except Exception as exc:
-            _debug_log("save: FAILED\n" + traceback.format_exc())
-            log_path = self._write_save_failure_log(exc, traceback.format_exc()) or str(_debug_log_path())
-            QMessageBox.critical(self, "Save failed", f"{exc}\n\nDebug log:\n{log_path}")
-        finally:
-            self._save_in_progress = False
-            self._io_guard_depth = max(0, int(getattr(self, "_io_guard_depth", 1)) - 1)
-            self._set_save_busy_ui(False)
-            try:
-                QApplication.restoreOverrideCursor()
-            except Exception:
-                pass
 
-    def _write_save_snapshot_sync(self, target: Path, data: bytes, *, backup_source: str = "", make_backup: bool = False) -> None:
-        target = Path(target)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if make_backup and backup_source:
-            src = Path(backup_source)
-            if src.exists():
-                stamp = time.strftime("%Y%m%d_%H%M%S")
-                backup_path = target.with_name(f"{target.name}.bak_{stamp}")
-                shutil.copy2(src, backup_path)
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent))
-        tmp_path = Path(tmp_name)
-        try:
-            with os.fdopen(fd, "wb") as fh:
-                fh.write(data)
-                fh.flush()
-            os.replace(tmp_path, target)
-        except Exception:
-            try:
-                tmp_path.unlink(missing_ok=True)
-            except Exception:
-                pass
-            raise
-
-    def _finish_background_save(self, exc: object, tb_text: object, success_message: str, save_id: Optional[int] = None) -> None:
-        try:
-            QApplication.restoreOverrideCursor()
-        except Exception:
-            pass
-        self._save_in_progress = False
-        self._set_save_busy_ui(False)
-        if exc is not None:
-            log_path = self._write_save_failure_log(exc, str(tb_text or ""))
-            extra = f"\n\nA crash log was written to:\n{log_path}" if log_path else ""
-            QMessageBox.critical(self, "Save failed", f"{exc}{extra}")
-            return
-        # Do not mark a newly loaded save clean if an old background save somehow
-        # finishes after the active save object changed. open_save blocks this, but
-        # the guard keeps the state correct during edge-case event ordering.
-        if save_id is not None and self.save is not None and id(self.save) != int(save_id):
-            self.statusBar().showMessage("Previous save write finished. Current loaded save was not changed.", 7000)
-            return
-        self._finish_successful_save_ui(success_message)
-
-    def _finish_successful_save_ui(self, message: str) -> None:
-        """Keep Save/Save As responsive after writing.
-
-        A full refresh can rebuild large mastery/inventory tables immediately after
-        the file write. That is unnecessary and has caused apparent save-time
-        crashes/freezes on large saves. The in-memory data is already current, so
-        only light status text is updated and the heavier pages are marked stale.
-        """
-        self.dirty = False
-        # The write path refreshes the active hash, so keep the cheap status
-        # display truthful without immediately rescanning the whole save.
-        self._last_hash_ok = True
-        self._mark_all_pages_stale()
-        try:
-            self.update_status_text_light()
-        except Exception:
-            try:
-                self.update_status_text()
-            except Exception:
-                pass
-        self.statusBar().showMessage(message, 7000)
-
-    def _write_save_failure_log(self, exc: Exception, tb_text: str = "") -> str:
-        try:
-            base = self.save.container.path.parent if self.save else Path.cwd()
-            path = base / "gbfr_editor_save_error.log"
-            text = tb_text or traceback.format_exc()
-            if not text.strip():
-                text = repr(exc)
-            path.write_text(text, encoding="utf-8")
-            return str(path)
-        except Exception:
-            return ""
-
-    def _sanitize_mastery_values_before_save(self) -> int:
-        """Clamp already-written unsafe 1607 mastery values before save.
-
-        This now reads/writes only value[0].  The earlier implementation pulled
-        the whole vector for every 1607 record; if an experimental Mastery
-        mapping hit a large vector, Save/Save As could appear to crash before the
-        file write even started.
-        """
-        if not self.save:
-            return 0
-        changed = 0
-        for rec in list(getattr(self.save, "records", [])):
-            if int(getattr(rec, "id_type", -1)) != 1607 or getattr(rec, "value_count", 0) < 1:
-                continue
-            try:
-                current = int(self.save.get_first_value(rec, 0) if hasattr(self.save, "get_first_value") else self.save.get_values(rec, 1)[0])
-            except Exception:
-                continue
-            if current > MASTERY_1607_SAFE_MAX:
-                try:
-                    if hasattr(self.save, "set_first_value"):
-                        self.save.set_first_value(rec, MASTERY_1607_SAFE_MAX)
-                    else:
-                        values = self.save.get_values(rec, 1)
-                        if not values:
-                            continue
-                        # Old fallback for compatibility; normal builds now use set_first_value.
-                        full = self.save.get_values(rec)
-                        full[0] = MASTERY_1607_SAFE_MAX
-                        self.save.set_values(rec, full)
-                    changed += 1
-                except Exception:
-                    continue
-        if changed:
-            self.dirty = True
-        return changed
 
     def save_original(self) -> None:
         if not self.save:
             return
-        self._run_save_operation(
-            self.save.container.path,
-            "Saved over original and created a timestamped .bak file.",
-            backup_original=True,
-        )
+        path = str(self.save.container.path) if hasattr(self.save, 'container') and self.save.container else ""
+        if not path:
+            QMessageBox.warning(self, "Cannot Save", "No original path. Use Save As instead.")
+            return
+        self._run_save_operation(path, "Saved and created backup.", backup_original=True)
 
-    def _get_save_as_path(self) -> str:
-        if not self.save:
-            return ""
-        default = self.save.container.path.with_name(self.save.container.path.name + ".edited")
-        try:
-            dialog = QFileDialog(self, "Save As")
-            dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
-            dialog.setFileMode(QFileDialog.FileMode.AnyFile)
-            dialog.setNameFilter("All files (*)")
-            dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
-            dialog.setDirectory(str(default.parent))
-            dialog.selectFile(default.name)
-            result = dialog.exec()
-            try:
-                accepted = int(result) == int(QDialog.DialogCode.Accepted)
-            except Exception:
-                accepted = result == QDialog.DialogCode.Accepted
-            if not accepted:
-                return ""
-            files = dialog.selectedFiles()
-            return files[0] if files else ""
-        except Exception:
-            path, _ = QFileDialog.getSaveFileName(
-                self,
-                "Save As",
-                str(default),
-                "All files (*)",
-                options=QFileDialog.Option.DontUseNativeDialog,
-            )
-            return path or ""
 
     def save_as(self) -> None:
         if not self.save:
             return
-        path = self._get_save_as_path()
+        default_dir = os.path.expandvars(r"%LOCALAPPDATA%\GBFR\Saved\SaveGames")
+        if not os.path.isdir(default_dir):
+            default_dir = ""
+        path, _ = QFileDialog.getSaveFileName(self, "Save As", default_dir, "Save files (*.dat);;All files (*)")
         if not path:
             return
-        self._run_save_operation(
-            path,
-            f"Saved to: {path}",
-            backup_original=False,
-        )
+        self._run_save_operation(path, f"Saved to: {path}")
 
-    def export_report(self) -> None:
+    def _get_save_as_path(self) -> Optional[str]:
+        default_dir = os.path.expandvars(r"%LOCALAPPDATA%\GBFR\Saved\SaveGames")
+        if not os.path.isdir(default_dir):
+            default_dir = ""
+        path, _ = QFileDialog.getSaveFileName(self, "Save As", default_dir, "Save files (*.dat);;All files (*)")
+        return path if path else None
+
+    def _run_save_operation(self, target_path: str, success_msg: str, backup_original: bool = False) -> None:
         if not self.save:
             return
-        default = str(self.save.container.path.with_suffix(self.save.container.path.suffix + ".report.json"))
-        path, _ = QFileDialog.getSaveFileName(self, "Export JSON Report", default, "JSON (*.json);;All files (*)")
-        if not path:
-            return
+        self._save_in_progress = True
         try:
-            self.save.export_report(path, limit_values=32)
-            QMessageBox.information(self, "Exported", f"Report written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
+            self.statusBar().showMessage("Saving...", 0)
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            try:
+                self._stop_pending_ui_timers_before_save()
+                target = Path(target_path)
+                if backup_original and target.exists():
+                    stamp = time.strftime("%Y%m%d_%H%M%S")
+                    backup_path = target.with_name(f"{target.name}.bak_{stamp}")
+                    shutil.copy2(target, backup_path)
+                self.save.save_as(target_path, update_hash=True)
+                self.dirty = False
+                self.statusBar().showMessage(success_msg, 5000)
+            except Exception as exc:
+                QMessageBox.critical(self, "Save failed", str(exc))
+        finally:
+            QApplication.restoreOverrideCursor()
+            self._save_in_progress = False
 
-    def import_item_csv(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Import item CSV", "", "CSV/TSV (*.csv *.tsv *.txt);;All files (*)")
-        if not path:
-            return
-        try:
-            db = ItemDatabase.load_csv(path)
-            self.merge_item_db(db, "Imported local CSV")
-            QMessageBox.information(self, "Imported", f"Imported {len(db)} source rows. Total item DB rows: {len(self.item_db)}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Import failed", str(exc))
+
 
     def refresh_item_id_catalog_rows(self) -> None:
         if not hasattr(self, "item_id_catalog_model"):
@@ -15441,42 +7717,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, "item_id_catalog_table"):
             self._auto_fit_table(self.item_id_catalog_table)
 
-    def selected_item_id_catalog_row(self):
-        if not hasattr(self, "item_id_catalog_table"):
-            return None
-        idx = self.item_id_catalog_table.currentIndex()
-        if not idx.isValid():
-            return None
-        try:
-            return self.item_id_catalog_model.rows[idx.row()]
-        except Exception:
-            return None
 
-    def copy_selected_item_id_catalog_hash(self) -> None:
-        row = self.selected_item_id_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select an Item ID row first.")
-            return
-        self.copy_text(str(row[4]))
 
-    def copy_selected_item_id_catalog_gbid(self) -> None:
-        row = self.selected_item_id_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select an Item ID row first.")
-            return
-        self.copy_text(str(row[3]))
 
-    def export_item_id_catalog_csv(self) -> None:
-        default = str(Path.home() / "gbfr_community_item_id_catalog.csv")
-        path, _ = QFileDialog.getSaveFileName(self, "Export Community Item ID Catalog", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        text = self.item_id_catalog_filter.text() if hasattr(self, "item_id_catalog_filter") else ""
-        try:
-            write_catalog_csv(self.item_db, path, text)
-            QMessageBox.information(self, "Exported", f"Item ID catalog written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
 
     def refresh_sigil_gem_catalog_rows(self) -> None:
@@ -15494,68 +7737,11 @@ class MainWindow(QMainWindow):
         if hasattr(self, "sigil_gem_catalog_table"):
             self._auto_fit_table(self.sigil_gem_catalog_table)
 
-    def toggle_sigil_gem_hide_dummy(self) -> None:
-        if hasattr(self, "sigil_gem_hide_dummy"):
-            self.sigil_gem_hide_dummy.setChecked(not self.sigil_gem_hide_dummy.isChecked())
 
-    def selected_sigil_gem_catalog_row(self):
-        if not hasattr(self, "sigil_gem_catalog_table"):
-            return None
-        idx = self.sigil_gem_catalog_table.currentIndex()
-        if not idx.isValid():
-            return None
-        try:
-            return self.sigil_gem_catalog_model.rows[idx.row()]
-        except Exception:
-            return None
 
-    def copy_selected_sigil_gem_catalog_hash(self) -> None:
-        row = self.selected_sigil_gem_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Sigil/Gem ID row first.")
-            return
-        self.copy_text(str(row[3]))
 
-    def copy_selected_sigil_gem_catalog_gbid(self) -> None:
-        row = self.selected_sigil_gem_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Sigil/Gem ID row first.")
-            return
-        self.copy_text(str(row[2]))
 
-    def add_selected_sigil_gem_catalog_to_empty_slot(self) -> None:
-        row = self.selected_sigil_gem_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Sigil/Gem ID row first.")
-            return
-        gbid = str(row[2])
-        if not gbid.upper().startswith("GEEN_"):
-            QMessageBox.warning(self, "Not a sigil", "The selected row is not a GEEN sigil row.")
-            return
-        value = self._resolve_hash_from_text(gbid)
-        if value is None:
-            QMessageBox.warning(self, "Hash not found", f"Could not resolve {gbid}.")
-            return
-        result = self._add_sigil_hash_level_to_empty_slot(value, level=SIGIL_LEVEL_MAX, locked=True)
-        if not result:
-            QMessageBox.warning(self, "No empty sigil slot", "No reusable empty sigil slot was found in this save.")
-            return
-        self.dirty = True
-        self.refresh_item_aware_views()
-        QMessageBox.information(self, "Sigil added", result)
 
-    def export_sigil_gem_catalog_csv(self) -> None:
-        default = str(Path.home() / "gbfr_community_sigil_gem_catalog.csv")
-        path, _ = QFileDialog.getSaveFileName(self, "Export Community Sigil/Gem ID Catalog", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        text = self.sigil_gem_catalog_filter.text() if hasattr(self, "sigil_gem_catalog_filter") else ""
-        hide_dummy = bool(getattr(getattr(self, "sigil_gem_hide_dummy", None), "isChecked", lambda: True)())
-        try:
-            write_sigil_catalog_csv(self.item_db, path, text, hide_dummy=hide_dummy)
-            QMessageBox.information(self, "Exported", f"Sigil/Gem catalog written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
 
     def refresh_trait_skill_catalog_rows(self) -> None:
@@ -15573,43 +7759,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, "trait_skill_catalog_table"):
             self._auto_fit_table(self.trait_skill_catalog_table)
 
-    def selected_trait_skill_catalog_row(self):
-        if not hasattr(self, "trait_skill_catalog_table"):
-            return None
-        idx = self.trait_skill_catalog_table.currentIndex()
-        if not idx.isValid():
-            return None
-        try:
-            return self.trait_skill_catalog_model.rows[idx.row()]
-        except Exception:
-            return None
 
-    def copy_selected_trait_skill_catalog_hash(self) -> None:
-        row = self.selected_trait_skill_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Trait/Skill ID row first.")
-            return
-        self.copy_text(str(row[3]))
 
-    def copy_selected_trait_skill_catalog_id(self) -> None:
-        row = self.selected_trait_skill_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Trait/Skill ID row first.")
-            return
-        self.copy_text(str(row[2]))
 
-    def export_trait_skill_catalog_csv(self) -> None:
-        default = str(Path.home() / "gbfr_community_trait_skill_catalog.csv")
-        path, _ = QFileDialog.getSaveFileName(self, "Export Community Trait/Skill ID Catalog", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        text = self.trait_skill_catalog_filter.text() if hasattr(self, "trait_skill_catalog_filter") else ""
-        hide_unused = bool(getattr(getattr(self, "trait_skill_hide_unused", None), "isChecked", lambda: True)())
-        try:
-            write_trait_skill_catalog_csv(self.item_db, path, text, hide_unused=hide_unused)
-            QMessageBox.information(self, "Exported", f"Trait/Skill catalog written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
 
     def refresh_model_id_catalog_rows(self) -> None:
@@ -15626,45 +7778,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, "model_id_catalog_table"):
             self._auto_fit_table(self.model_id_catalog_table)
 
-    def selected_model_id_catalog_row(self):
-        if not hasattr(self, "model_id_catalog_table"):
-            return None
-        idx = self.model_id_catalog_table.currentIndex()
-        if not idx.isValid():
-            return None
-        try:
-            return self.model_id_catalog_model.rows[idx.row()]
-        except Exception:
-            return None
 
-    def copy_selected_model_id_catalog_hash(self) -> None:
-        row = self.selected_model_id_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Model ID row first.")
-            return
-        if not row[4]:
-            QMessageBox.information(self, "No hash", "This row does not have a generated GBFR hash value.")
-            return
-        self.copy_text(str(row[4]))
 
-    def copy_selected_model_id_catalog_id(self) -> None:
-        row = self.selected_model_id_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Model ID row first.")
-            return
-        self.copy_text(str(row[3]))
 
-    def export_model_id_catalog_csv(self) -> None:
-        default = str(Path.home() / "gbfr_community_model_id_catalog.csv")
-        path, _ = QFileDialog.getSaveFileName(self, "Export Community Model ID Catalog", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        text = self.model_id_catalog_filter.text() if hasattr(self, "model_id_catalog_filter") else ""
-        try:
-            write_model_catalog_csv(self.resource_db, path, text)
-            QMessageBox.information(self, "Exported", f"Model ID catalog written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
     def refresh_phase_id_catalog_rows(self) -> None:
         if not hasattr(self, "phase_id_catalog_model"):
@@ -15680,52 +7796,10 @@ class MainWindow(QMainWindow):
         if hasattr(self, "phase_id_catalog_table"):
             self._auto_fit_table(self.phase_id_catalog_table)
 
-    def selected_phase_id_catalog_row(self):
-        if not hasattr(self, "phase_id_catalog_table"):
-            return None
-        idx = self.phase_id_catalog_table.currentIndex()
-        if not idx.isValid():
-            return None
-        try:
-            return self.phase_id_catalog_model.rows[idx.row()]
-        except Exception:
-            return None
 
-    def copy_selected_phase_id_catalog_hash(self) -> None:
-        row = self.selected_phase_id_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Phase ID row first.")
-            return
-        if not row[5]:
-            QMessageBox.information(self, "No hash", "This row does not have a generated phase hash value.")
-            return
-        self.copy_text(str(row[5]))
 
-    def copy_selected_phase_id_catalog_id(self) -> None:
-        row = self.selected_phase_id_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Phase ID row first.")
-            return
-        self.copy_text(str(row[3]))
 
-    def copy_selected_phase_id_catalog_entity_code(self) -> None:
-        row = self.selected_phase_id_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Phase ID row first.")
-            return
-        self.copy_text(str(row[4]))
 
-    def export_phase_id_catalog_csv(self) -> None:
-        default = str(Path.home() / "gbfr_community_phase_id_catalog.csv")
-        path, _ = QFileDialog.getSaveFileName(self, "Export Community Phase ID Catalog", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        text = self.phase_id_catalog_filter.text() if hasattr(self, "phase_id_catalog_filter") else ""
-        try:
-            write_phase_catalog_csv(self.resource_db, path, text)
-            QMessageBox.information(self, "Exported", f"Phase ID catalog written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
 
     def refresh_quest_id_catalog_rows(self) -> None:
@@ -15742,108 +7816,13 @@ class MainWindow(QMainWindow):
         if hasattr(self, "quest_id_catalog_table"):
             self._auto_fit_table(self.quest_id_catalog_table)
 
-    def selected_quest_id_catalog_row(self):
-        if not hasattr(self, "quest_id_catalog_table"):
-            return None
-        idx = self.quest_id_catalog_table.currentIndex()
-        if not idx.isValid():
-            return None
-        try:
-            return self.quest_id_catalog_model.rows[idx.row()]
-        except Exception:
-            return None
-
-    def copy_selected_quest_id_catalog_id(self) -> None:
-        row = self.selected_quest_id_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Quest ID row first.")
-            return
-        self.copy_text(str(row[3]))
-
-    def copy_selected_quest_id_catalog_numeric(self) -> None:
-        row = self.selected_quest_id_catalog_row()
-        if not row:
-            QMessageBox.information(self, "No row selected", "Select a Quest ID row first.")
-            return
-        self.copy_text(str(row[4]))
-
-    def export_quest_id_catalog_csv(self) -> None:
-        default = str(Path.home() / "gbfr_community_quest_id_catalog.csv")
-        path, _ = QFileDialog.getSaveFileName(self, "Export Community Quest ID Catalog", default, "CSV (*.csv);;All files (*)")
-        if not path:
-            return
-        text = self.quest_id_catalog_filter.text() if hasattr(self, "quest_id_catalog_filter") else ""
-        try:
-            write_quest_catalog_csv(self.resource_db, path, text)
-            QMessageBox.information(self, "Exported", f"Quest ID catalog written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
 
-    def download_all_community_databases(self) -> None:
-        """Refresh all public Community ID databases used by lookup pages.
 
-        This keeps the bundled seed data intact and writes downloaded caches beside
-        the EXE/resources folder, so offline builds still work while users can pull
-        current item, model, phase, quest, sigil, and trait/skill IDs.
-        """
-        messages = []
-        errors = []
-        try:
-            db, item_errors = ItemDatabase.download_many([DEFAULT_ITEM_URL, RAW_SIGIL_GEM_URL, TRAIT_SKILL_URL], timeout=45)
-            if len(db):
-                self.merge_item_db(db, "Downloaded Community item/sigil/trait IDs")
-                out = RESOURCE_DIR / "item_ids_downloaded.csv"
-                self.item_db.save_csv(out)
-                messages.append(f"GBID DB: {len(self.item_db):,} merged rows saved to {out.name}")
-            errors.extend(item_errors)
-        except Exception as exc:
-            errors.append(f"GBID download failed: {exc}")
 
-        try:
-            resource_db, resource_errors = ResourceIdDatabase.download_many(DEFAULT_RESOURCE_URLS, timeout=60)
-            merged = ResourceIdDatabase.load_many([RESOURCE_DIR / "resource_ids_seed.csv"])
-            merged.merge(resource_db)
-            out = RESOURCE_DIR / "resource_ids_downloaded.csv"
-            merged.save_csv(out)
-            self.resource_db = merged
-            self.resource_id_model.set_db(self.resource_db)
-            self.unit_model.set_resource_db(self.resource_db)
-            self.refresh_model_id_catalog_rows()
-            self.refresh_phase_id_catalog_rows()
-            self.refresh_quest_id_catalog_rows()
-            messages.append(f"Resource DB: {len(self.resource_db.entries):,} merged rows saved to {out.name}")
-            errors.extend(resource_errors)
-        except Exception as exc:
-            errors.append(f"Resource DB download failed: {exc}")
 
-        self.refresh_all_views(keep_filter=True)
-        msg = "Community database refresh complete."
-        if messages:
-            msg += "\n\n" + "\n".join(messages)
-        if errors:
-            msg += "\n\nSome sources failed or were skipped:\n" + "\n".join(errors[:14])
-        QMessageBox.information(self, "Community Databases", msg)
 
-    def download_item_ids(self) -> None:
-        try:
-            db, errors = ItemDatabase.download_many([DEFAULT_ITEM_URL, RAW_SIGIL_GEM_URL, TRAIT_SKILL_URL], timeout=35)
-            if errors and not len(db):
-                raise RuntimeError("; ".join(errors))
-            self.merge_item_db(db, "Downloaded Community IDs")
-            out = RESOURCE_DIR / "item_ids_downloaded.csv"
-            self.item_db.save_csv(out)
-            QMessageBox.information(self, "Downloaded", f"Downloaded {len(db)} source rows. Cached merged DB to:\n{out}" + ("\n\nSome sources failed:\n" + "\n".join(errors[:8]) if errors else ""))
-        except Exception as exc:
-            QMessageBox.critical(self, "Download failed", f"Could not download/parse item IDs.\n\n{exc}")
 
-    def update_hash_now(self) -> None:
-        if not self.save:
-            return
-        idx = self.save.update_active_hash()
-        self.dirty = True
-        self.refresh_all_views()
-        QMessageBox.information(self, "Hash", f"Updated active hash index: {idx}" if idx is not None else "No active hash seed found.")
 
     def current_record(self) -> Optional[UnitRecord]:
         if not self.save:
@@ -15871,23 +7850,6 @@ class MainWindow(QMainWindow):
         values = self.save.get_values(rec)
         self.value_edit.setPlainText(", ".join("1" if v is True else "0" if v is False else str(v) for v in values))
 
-    def apply_selected_values(self) -> None:
-        rec = self.current_record()
-        if not rec or not self.save:
-            return
-        try:
-            values = self.save.parse_user_values(rec, self.value_edit.toPlainText())
-            if rec.id_type == 1003:
-                reply = QMessageBox.question(self, "Hash seed", "This is the save hash seed record. Editing it can invalidate the active hash slot. Apply anyway?")
-                if reply != QMessageBox.StandardButton.Yes:
-                    return
-            self.save.set_values(rec, values)
-            self.dirty = True
-            self.refresh_model_id_catalog_rows()
-            self.refresh_all_views(keep_filter=True)
-            QMessageBox.information(self, "Applied", "Values updated in memory. Save when ready.")
-        except Exception as exc:
-            QMessageBox.critical(self, "Apply failed", str(exc))
 
     def refresh_all_views(self, keep_filter: bool = False) -> None:
         """Refresh UI after loading/editing.
@@ -16017,15 +7979,6 @@ class MainWindow(QMainWindow):
             if hasattr(self, "id_audit_summary"):
                 self.id_audit_summary.setPlainText(f"ID audit failed: {exc}")
 
-    def export_id_audit(self, unresolved_only: bool) -> None:
-        if not self.save:
-            return
-        path, _ = QFileDialog.getSaveFileName(self, "Export ID audit", "gbfr_id_audit.csv", "CSV Files (*.csv)")
-        if not path:
-            return
-        audit = build_id_audit(self.save, self.item_db, self.resource_db, include_empty=bool(getattr(getattr(self, "id_audit_empty_check", None), "isChecked", lambda: False)()))
-        write_id_audit_csv(audit, path, unresolved_only=unresolved_only)
-        QMessageBox.information(self, "Exported", f"Exported ID audit to {path}")
 
     def refresh_save_map_rows(self) -> None:
         if not hasattr(self, "save_map_model"):
@@ -16068,25 +8021,6 @@ class MainWindow(QMainWindow):
             if hasattr(self, "save_map_summary"):
                 self.save_map_summary.setPlainText(f"Save map failed: {exc}")
 
-    def export_save_map(self, kind: str = "csv", unknown_only: bool = False) -> None:
-        if not self.save:
-            QMessageBox.information(self, "No save", "Open a save first.")
-            return
-        suffix = ".research_targets" if unknown_only else ".save_map"
-        suffix += ".json" if kind == "json" else ".csv"
-        default = str(self.save.container.path.with_name(self.save.container.path.name + suffix))
-        filter_text = "JSON (*.json);;All files (*)" if kind == "json" else "CSV (*.csv);;All files (*)"
-        path, _ = QFileDialog.getSaveFileName(self, "Export Save Map", default, filter_text)
-        if not path:
-            return
-        try:
-            if kind == "json":
-                write_save_map_json(self.save, self.item_db, path, unknown_only=unknown_only)
-            else:
-                write_save_map_csv(self.save, self.item_db, path, unknown_only=unknown_only)
-            QMessageBox.information(self, "Exported", f"Save map written to:\n{path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
 
     def refresh_candidate_rows(self) -> None:
         if not self.save:
@@ -16104,12 +8038,6 @@ class MainWindow(QMainWindow):
             return default
         return self.save.get_values(rec, 1)[0]
 
-    def hash_text(self, value: Any) -> str:
-        try:
-            ivalue = int(value)
-        except Exception:
-            return str(value)
-        return self.item_db.lookup_text(ivalue)
 
     def hash_entry_parts(self, value: Any) -> tuple[str, str, str]:
         """Return display name, source GBID, and 8-digit hash for known GBFR hashes."""
@@ -16750,12 +8678,6 @@ class MainWindow(QMainWindow):
         except Exception:
             return "Keep current"
 
-    def _parse_mastery_mod_optional_amount(self, value: Any) -> Optional[int]:
-        text = str(value or "").strip().replace(",", "")
-        if not text or text.lower() in {"keep", "keep current", "current", "same", "none", "skip", "-", "—"}:
-            return None
-        amount = int(text, 0)
-        return max(0, min(2147483647, amount))
 
     def _mastery_mod_recommended_segments(self) -> List[Dict[str, Any]]:
         """Recommended 600-row OP spread from the testing notes.
@@ -16805,296 +8727,18 @@ class MainWindow(QMainWindow):
             else:
                 label.setText("No editable mastery rows found yet. Load a save and pick a character.")
 
-    def _mastery_mod_recommended_write_1607_enabled(self) -> bool:
-        widget = getattr(self, "mastery_mod_preset_write_1607_check", None)
-        if widget is None:
-            return True
-        try:
-            return bool(widget.isChecked())
-        except Exception:
-            return True
 
-    def _mastery_mod_recommended_1607_value(self) -> int:
-        widget = getattr(self, "mastery_mod_preset_1607_spin", None)
-        if widget is None:
-            return 1023
-        try:
-            return max(0, min(MASTERY_1607_SAFE_MAX, int(widget.value())))
-        except Exception:
-            return 1023
 
-    def _apply_mastery_mod_recommended_preset_to_unit(self, char_unit: int) -> Dict[str, int]:
-        if not self.save or int(char_unit) < 0:
-            return {"changed": 0, "changed_1606": 0, "changed_1607": 0, "checked": 0, "missing": 0}
-        # Build rows directly from cached grouped records so installing all characters
-        # does not rebuild the whole page for every character.
-        rows, metas = self._mastery_mod_build_rows_for_character(int(char_unit))
-        sorted_metas = sorted(metas, key=lambda m: (int(m.get("row_number", int(m.get("slot", 0)) + 1)), int(m.get("unit_id", 0))))
-        changed_1606 = 0
-        changed_1607 = 0
-        checked = 0
-        missing = 0
-        write_1607 = self._mastery_mod_recommended_write_1607_enabled()
-        state_value = self._mastery_mod_recommended_1607_value()
-        for seg in self._mastery_mod_recommended_segments():
-            value = int(seg["value"]) & 0xFFFFFFFF
-            for ordinal in range(int(seg["start"]), int(seg["end"]) + 1):
-                idx = ordinal - 1
-                if idx >= len(sorted_metas):
-                    missing += 1
-                    continue
-                meta = sorted_metas[idx]
-                rec = meta.get("mastery_rec")
-                if rec is None:
-                    missing += 1
-                    continue
-                checked += 1
-                _, did_change = self._set_record_first_value_quiet(rec, value)
-                changed_1606 += 1 if did_change else 0
-                if write_1607:
-                    state_rec = meta.get("state_rec")
-                    if state_rec is not None:
-                        _, did_state_change = self._set_record_first_value_quiet(state_rec, state_value)
-                        changed_1607 += 1 if did_state_change else 0
-        return {
-            "changed": changed_1606 + changed_1607,
-            "changed_1606": changed_1606,
-            "changed_1607": changed_1607,
-            "checked": checked,
-            "missing": missing,
-        }
 
-    def install_mastery_mod_recommended_preset_selected(self) -> None:
-        if not self.save:
-            return
-        char_unit = self._mastery_mod_current_character_unit()
-        stats = self._apply_mastery_mod_recommended_preset_to_unit(char_unit)
-        self._mark_stale_pages(["Mastery", "Characters", "Save Health"])
-        self.refresh_mastery_mod_rows()
-        name = self.mastery_mod_character_combo.currentText() if hasattr(self, "mastery_mod_character_combo") else f"unit {char_unit}"
-        write_note = f"1606 changed {stats.get('changed_1606', 0)}, 1607 changed {stats.get('changed_1607', 0)}" if self._mastery_mod_recommended_write_1607_enabled() else f"1606 changed {stats.get('changed_1606', stats['changed'])}; 1607 kept unchanged"
-        self.statusBar().showMessage(
-            f"Recommended pattern installed for {name}: {stats['changed']} total changed ({write_note}), {stats['checked']} checked, {stats['missing']} missing rows.",
-            8000,
-        )
 
-    def install_mastery_mod_recommended_preset_all(self) -> None:
-        if not self.save:
-            return
-        total_changed = total_changed_1606 = total_changed_1607 = total_checked = total_missing = groups = 0
-        for choice in self._mastery_character_choices():
-            try:
-                char_unit = int(choice.get("unit"))
-            except Exception:
-                continue
-            stats = self._apply_mastery_mod_recommended_preset_to_unit(char_unit)
-            if stats["checked"] or stats["changed"]:
-                groups += 1
-                total_changed += stats["changed"]
-                total_changed_1606 += stats.get("changed_1606", 0)
-                total_changed_1607 += stats.get("changed_1607", 0)
-                total_checked += stats["checked"]
-                total_missing += stats["missing"]
-        self._mark_stale_pages(["Mastery", "Characters", "Save Health"])
-        self.refresh_mastery_mod_rows()
-        write_note = f"1606 changed {total_changed_1606}, 1607 changed {total_changed_1607}" if self._mastery_mod_recommended_write_1607_enabled() else f"1606 changed {total_changed_1606}; 1607 kept unchanged"
-        self.statusBar().showMessage(
-            f"Recommended pattern installed to {groups} character/mastery groups: {total_changed} total changed ({write_note}), {total_checked} checked, {total_missing} missing rows.",
-            9000,
-        )
 
-    def _mastery_value_presets(self) -> List[Dict[str, Any]]:
-        """Known 1607 amount presets from the Save Wizard all-masteries notes.
 
-        FF470600 in the quick codes maps to SaveData field 1607. These values
-        are separate from 1606 effect/stat IDs.
-        """
-        return [
-            {
-                "name": "Normal max / 20%",
-                "value": 0x00000200,
-                "risk": "Safer",
-                "note": "Sheet value 00000200. Normal max for OP amount rows.",
-            },
-            {
-                "name": "Max / 80%",
-                "value": 0x000003FF,
-                "risk": "Recommended OP",
-                "note": "Sheet value 000003FF. Max overmastery amount; preferred over raw FFFFFFFF for normal use.",
-            },
-            {
-                "name": "Raw FFFFFFFF / 80% sentinel",
-                "value": 0xFFFFFFFF,
-                "risk": "Experimental",
-                "note": "Older Save Wizard/testing value. Writer stores it as signed -1 where the row is signed.",
-            },
-            {
-                "name": "More than normal",
-                "value": 0x05F5E0FF,
-                "risk": "Risky",
-                "note": "Save Wizard 'MORE than normal' value. May cap, glitch damage, or behave oddly.",
-            },
-        ]
 
-    def _mastery_value_records_for_unit(self, char_unit: int) -> List[UnitRecord]:
-        """Return paired 1607 amount records for one character/mastery group.
 
-        Community codes show that FF460600 (1606 effect IDs) and FF470600
-        (1607 values/amounts) are separate sections.  The reliable pairing is
-        the same Save Wizard relative offset in both sections, not necessarily
-        the same Unit ID.  Older builds collected 1607 rows by unit math, which
-        could make effect slots change while the visible level/amount stayed
-        unchanged in game.
-        """
-        if not self.save:
-            return []
-        rows: List[UnitRecord] = []
-        seen = set()
-        try:
-            _, metas = self._mastery_mod_build_rows_for_character(int(char_unit))
-        except Exception:
-            metas = []
-        for meta in metas:
-            rec = meta.get("state_rec")
-            if rec is None or rec.value_count < 1:
-                continue
-            key = (rec.kind, rec.index, rec.id_type, rec.unit_id, rec.value_data_offset)
-            if key in seen:
-                continue
-            seen.add(key)
-            rows.append(rec)
-        rows.sort(key=lambda r: int(self._mastery_mod_record_abs(r) or 0))
-        return rows
 
-    def _mastery_value_summary_for_unit(self, char_unit: int) -> str:
-        if not self.save:
-            return "No save loaded"
-        counts: Dict[int, int] = {}
-        records = self._mastery_value_records_for_unit(char_unit)
-        for rec in records:
-            try:
-                value = int(self.save.get_values(rec, 1)[0])
-            except Exception:
-                continue
-            counts[value] = counts.get(value, 0) + 1
-        if not records:
-            return "0 editable 1607 records"
-        common_parts = []
-        for value, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:4]:
-            common_parts.append(f"{value:,}: {count}")
-        common = ", ".join(common_parts)
-        return f"{len(records)} editable 1607 records. Current values: {common}"
 
-    def refresh_mastery_value_rows(self) -> None:
-        model = getattr(self, "mastery_mod_value_model", None)
-        if model is None:
-            return
-        rows: List[List[Any]] = []
-        metas: List[Dict[str, Any]] = []
-        for preset in self._mastery_value_presets():
-            value = int(preset["value"])
-            blocked = bool(preset.get("disabled"))
-            rows.append([
-                preset["name"],
-                f"{value:,}" + ("  (not written)" if blocked else ""),
-                f"0x{value:08X}",
-                preset["risk"],
-                preset["note"],
-            ])
-            metas.append(dict(preset))
-        self.mastery_mod_value_rows_meta = metas
-        model.set_rows(rows)
-        table = getattr(self, "mastery_mod_value_table", None)
-        if table is not None:
-            self._set_table_widths(table, {0: 190, 1: 150, 2: 130, 3: 120, 4: 720})
-            if rows and not table.currentIndex().isValid():
-                table.selectRow(0)
-        label = getattr(self, "mastery_mod_value_status", None)
-        if label is not None:
-            if self.save:
-                char_unit = self._mastery_mod_current_character_unit()
-                name = self.mastery_mod_character_combo.currentText() if hasattr(self, "mastery_mod_character_combo") else f"unit {char_unit}"
-                label.setText(f"{name}: {self._mastery_value_summary_for_unit(char_unit)}")
-            else:
-                label.setText("Open a save to see current 1607 value counts.")
 
-    def _selected_mastery_value_preset(self) -> Optional[Dict[str, Any]]:
-        table = getattr(self, "mastery_mod_value_table", None)
-        if table is None:
-            return None
-        idx = table.currentIndex()
-        if idx.isValid() and idx.row() < len(getattr(self, "mastery_mod_value_rows_meta", [])):
-            return self.mastery_mod_value_rows_meta[idx.row()]
-        metas = getattr(self, "mastery_mod_value_rows_meta", []) or []
-        return metas[0] if metas else None
 
-    def _apply_mastery_value_preset_to_unit(self, char_unit: int, value: int) -> Dict[str, int]:
-        if not self.save:
-            return {"changed": 0, "checked": 0, "missing": 0}
-        changed = 0
-        checked = 0
-        for rec in self._mastery_value_records_for_unit(int(char_unit)):
-            checked += 1
-            _, did_change = self._set_record_first_value_quiet(rec, int(value))
-            changed += 1 if did_change else 0
-        return {"changed": changed, "checked": checked, "missing": 0 if checked else 1}
-
-    def apply_mastery_value_preset_selected_character(self) -> None:
-        if not self.save:
-            return
-        preset = self._selected_mastery_value_preset()
-        if not preset:
-            self.statusBar().showMessage("Pick a 1607 preset first.", 3500)
-            return
-        if preset.get("disabled"):
-            self.statusBar().showMessage("WTF maybe / 0x7FFFFFFF is blocked because it can crash saving. Use More than normal instead.", 9000)
-            return
-        char_unit = self._mastery_mod_current_character_unit()
-        value = int(preset["value"])
-        stats = self._apply_mastery_value_preset_to_unit(char_unit, value)
-        self._mark_stale_pages(["Mastery", "Save Health"])
-        if hasattr(self, "mastery_mod_value_status"):
-            try:
-                self.mastery_mod_value_status.setText(self._mastery_value_summary_for_unit(char_unit))
-            except Exception:
-                pass
-        name = self.mastery_mod_character_combo.currentText() if hasattr(self, "mastery_mod_character_combo") else f"unit {char_unit}"
-        self.statusBar().showMessage(
-            f"Applied 1607 {preset['name']} ({value:,} / 0x{value:08X}) to {name}: {stats['changed']} changed, {stats['checked']} checked.",
-            7500,
-        )
-
-    def apply_mastery_value_preset_all_characters(self) -> None:
-        if not self.save:
-            return
-        preset = self._selected_mastery_value_preset()
-        if not preset:
-            self.statusBar().showMessage("Pick a 1607 preset first.", 3500)
-            return
-        if preset.get("disabled"):
-            self.statusBar().showMessage("WTF maybe / 0x7FFFFFFF is blocked because it can crash saving. Use More than normal instead.", 9000)
-            return
-        value = int(preset["value"])
-        total_changed = total_checked = groups = 0
-        for choice in self._mastery_character_choices():
-            try:
-                char_unit = int(choice.get("unit"))
-            except Exception:
-                continue
-            stats = self._apply_mastery_value_preset_to_unit(char_unit, value)
-            if stats["checked"]:
-                groups += 1
-                total_changed += stats["changed"]
-                total_checked += stats["checked"]
-        self._mark_stale_pages(["Mastery", "Save Health"])
-        if hasattr(self, "mastery_mod_value_status"):
-            self.mastery_mod_value_status.setText(
-                f"Applied to {groups} groups. Current page marked stale; use Refresh Current Page when needed."
-            )
-        self.statusBar().showMessage(
-            f"Applied 1607 {preset['name']} ({value:,} / 0x{value:08X}) to {groups} groups: {total_changed} changed, {total_checked} checked.",
-            9000,
-        )
 
     def refresh_mastery_mod_reference_rows(self) -> None:
         model = getattr(self, "mastery_mod_reference_model", None)
@@ -17179,76 +8823,9 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.critical(self, "Mastery DB download failed", str(exc))
 
-    def _selected_mastery_mod_reference_meta(self) -> Optional[Dict[str, Any]]:
-        table = getattr(self, "mastery_mod_reference_table", None)
-        if table is None:
-            return None
-        idx = table.currentIndex()
-        if idx.isValid() and idx.row() < len(getattr(self, "mastery_mod_reference_rows_meta", [])):
-            return self.mastery_mod_reference_rows_meta[idx.row()]
-        return None
 
-    def apply_mastery_mod_reference_cell_edit(self, row: int, column: int, value: Any) -> bool:
-        if column != 2:
-            return False
-        try:
-            amount = self._parse_mastery_mod_optional_amount(value)
-        except Exception:
-            self.statusBar().showMessage("Optional 1607 must be blank/Keep current or a number such as 1023.", 3500)
-            return False
-        try:
-            self.mastery_mod_reference_model.rows[row][column] = self._mastery_mod_optional_amount_display(amount)
-            self.mastery_mod_reference_rows_meta[row]["amount"] = amount
-        except Exception:
-            return False
-        idx = self.mastery_mod_reference_model.index(row, column)
-        self.mastery_mod_reference_model.dataChanged.emit(idx, idx, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
-        if getattr(self, "mastery_mod_reference_table", None) is not None and self.mastery_mod_reference_table.currentIndex().row() == row:
-            self.use_selected_mastery_mod_reference_effect(apply=False)
-            if amount is not None and getattr(self, "mastery_mod_live_check", None) is not None and self.mastery_mod_live_check.isChecked():
-                self.apply_mastery_mod_selected_row_edit(silent=True)
-        return True
 
-    def use_selected_mastery_mod_reference_effect(self, apply: bool = False) -> None:
-        meta = self._selected_mastery_mod_reference_meta()
-        if not meta:
-            return
-        self._mastery_mod_loading = True
-        try:
-            value = int(meta.get("value", 0)) & 0xFFFFFFFF
-            amount = meta.get("amount", None)
-            combo = getattr(self, "mastery_mod_effect_combo", None)
-            if combo is not None:
-                for i in range(combo.count()):
-                    data = combo.itemData(i)
-                    if data is not None and int(data) == value:
-                        combo.setCurrentIndex(i)
-                        break
-            write_check = getattr(self, "mastery_mod_state_write_check", None)
-            if amount is not None:
-                if write_check is not None:
-                    write_check.setChecked(True)
-                if hasattr(self, "mastery_mod_state_spin"):
-                    self.mastery_mod_state_spin.setValue(max(0, min(self.mastery_mod_state_spin.maximum(), int(amount))))
-                amount_text = str(int(amount))
-            else:
-                amount_text = "Use value box / current checkbox setting"
-            if hasattr(self, "mastery_mod_reference_status"):
-                self.mastery_mod_reference_status.setText(
-                    f"Selected {meta.get('name')} · writes 1606 0x{value:08X} · 1607 {amount_text}."
-                )
-        finally:
-            self._mastery_mod_loading = False
-        if apply:
-            self.apply_mastery_mod_selected_row_edit(silent=False)
 
-    def set_mastery_selected_row_value(self, value: int) -> None:
-        """Directly set only the paired mastery value for the selected row."""
-        try:
-            self.mastery_mod_state_spin.setValue(int(value))
-        except Exception:
-            pass
-        self.apply_mastery_selected_row_value_only()
 
     def apply_mastery_selected_row_value_only(self) -> None:
         """Write only FF470600 / field 1607 for the selected concrete row."""
@@ -17272,38 +8849,8 @@ class MainWindow(QMainWindow):
         else:
             self.statusBar().showMessage("Selected row does not have an editable value/1607 record. Try another row.", 5500)
 
-    def set_mastery_current_group_value(self, value: int) -> None:
-        """Set all value/1607 rows for the currently selected character/group."""
-        if not self.save:
-            return
-        char_unit = self._mastery_mod_current_character_unit()
-        value = int(value)
-        if int(char_unit) < 0:
-            # The all-rows view is intentionally concrete: only write rows that
-            # are currently visible/filtered, not every unknown section in the save.
-            changed = checked = 0
-            for meta in getattr(self, "mastery_mod_rows_meta", []) or []:
-                rec = meta.get("state_rec")
-                if rec is None:
-                    continue
-                checked += 1
-                _, did_change = self._set_record_first_value_quiet(rec, value)
-                changed += 1 if did_change else 0
-            label = "visible rows"
-            stats = {"changed": changed, "checked": checked}
-        else:
-            stats = self._apply_mastery_value_preset_to_unit(char_unit, value)
-            label = self.mastery_mod_character_combo.currentText() if hasattr(self, "mastery_mod_character_combo") else f"unit {char_unit}"
-        self._mark_stale_pages(["Mastery", "Characters", "Save Health"])
-        self.refresh_mastery_mod_rows()
-        self.statusBar().showMessage(
-            f"Set mastery values to {value:,} / 0x{value:08X} for {label}: {stats['changed']} changed, {stats['checked']} checked. Save As to test in game.",
-            7500,
-        )
 
 
-    def apply_selected_mastery_mod_reference_effect(self) -> None:
-        self.use_selected_mastery_mod_reference_effect(apply=True)
 
     def _mastery_mod_build_rows_for_character(self, char_unit: int) -> tuple[List[List[Any]], List[Dict[str, Any]]]:
         """Build visible 1606/1607 rows for Mastery.
@@ -17784,14 +9331,6 @@ class MainWindow(QMainWindow):
             self._mastery_mod_abs1607_cache_key = key
         return getattr(self, "_mastery_mod_abs1607_cache", {}) or {}
 
-    def _on_mastery_mod_tab_changed(self, index: int) -> None:
-        # The redesigned Mastery page has only two visible tabs. Keep the
-        # expensive offset table lazy until the Advanced / Database tab is opened.
-        tab = getattr(self, "mastery_mod_tabs", None)
-        label = tab.tabText(index) if tab is not None and 0 <= index < tab.count() else ""
-        if "Advanced" in label or "Database" in label or "SW Offset" in label:
-            self.refresh_mastery_value_rows()
-            self.refresh_mastery_mod_code_rows()
 
     def _set_record_first_value_quiet(self, rec: Optional[UnitRecord], value: Any) -> tuple[bool, bool]:
         """Set only value[0] without opening message boxes.
@@ -18020,17 +9559,6 @@ class MainWindow(QMainWindow):
             self._mastery_mod_anchor_score = score
         return result
 
-    def _mastery_mod_anchor_status(self) -> str:
-        base6 = self._mastery_mod_anchor_base_abs(1606)
-        base7 = self._mastery_mod_anchor_base_abs(1607)
-        if base6 is None:
-            return "No FF460600 SW anchor resolved. Current save rows can still be edited by unit, but exact offset rows will stay unresolved."
-        srcs = getattr(self, "_mastery_mod_anchor_source_by_field", {}) or {}
-        scores = getattr(self, "_mastery_mod_anchor_score_by_field", {}) or {}
-        text = f"1606 anchor 0x{base6:X} ({srcs.get(1606, 'resolved')}; {int(scores.get(1606, 0) or 0)} ID row(s))"
-        if base7 is None:
-            return text + "; no FF470600 value anchor resolved."
-        return text + f"; 1607 anchor 0x{base7:X} ({srcs.get(1607, 'resolved')}; {int(scores.get(1607, 0) or 0)} value row(s))."
 
     def _mastery_mod_record_abs(self, rec: Optional[UnitRecord]) -> Optional[int]:
         if not self.save or rec is None:
@@ -18160,22 +9688,6 @@ class MainWindow(QMainWindow):
                 return rec
         return None
 
-    def _mastery_overmastery_slot_for_rel(self, rel_offset: Optional[int]) -> Optional[tuple[int, int]]:
-        if rel_offset is None:
-            return None
-        try:
-            rel = int(rel_offset)
-        except Exception:
-            return None
-        for base in self._mastery_overmastery_base_rel_candidates():
-            diff = int(base) - rel
-            if diff < 0:
-                continue
-            group = diff // 0x60
-            rem = diff % 0x60
-            if 0 <= group < 0x28 and rem in (0x00, 0x18, 0x30, 0x48):
-                return int(group), int(rem // 0x18)
-        return None
 
     def _mastery_current_overmastery_group_index(self) -> Optional[int]:
         char_unit = self._mastery_mod_current_character_unit()
@@ -18510,104 +10022,9 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-    def _apply_mastery_value_to_all_visible_groups(self, value: int) -> Dict[str, int]:
-        total = {"found": 0, "changed": 0, "checked": 0, "missing": 0}
-        try:
-            choices = self._mastery_character_choices()
-        except Exception:
-            choices = []
-        for choice in choices:
-            try:
-                char_unit = int(choice.get("unit"))
-            except Exception:
-                continue
-            stats = self._apply_mastery_value_preset_to_unit(char_unit, int(value))
-            total["found"] += int(stats.get("checked", 0) or 0)
-            total["checked"] += int(stats.get("checked", 0) or 0)
-            total["changed"] += int(stats.get("changed", 0) or 0)
-            total["missing"] += int(stats.get("missing", 0) or 0)
-        return total
 
-    def _apply_mastery_effect_to_all_visible_groups(self, effect_value: int) -> Dict[str, int]:
-        total = {"found": 0, "changed": 0, "checked": 0, "missing": 0}
-        try:
-            choices = self._mastery_character_choices()
-        except Exception:
-            choices = []
-        for choice in choices:
-            try:
-                char_unit = int(choice.get("unit"))
-            except Exception:
-                continue
-            try:
-                _rows, metas = self._mastery_mod_build_rows_for_character(char_unit)
-            except Exception:
-                metas = []
-            for meta in metas:
-                # Do not let the normal all-effect test overwrite concrete
-                # overmastery stat lanes; those are handled by the four-stat picker.
-                try:
-                    if self._mastery_overmastery_slot_for_unit(int(meta.get("unit_id", 0))) is not None:
-                        continue
-                except Exception:
-                    pass
-                rec = meta.get("mastery_rec")
-                if rec is None:
-                    total["missing"] += 1
-                    continue
-                total["checked"] += 1
-                exists, did_change = self._set_record_first_value_quiet(rec, int(effect_value) & 0xFFFFFFFF)
-                total["found"] += 1 if exists else 0
-                total["changed"] += 1 if did_change else 0
-        return total
 
-    def _apply_overmastery_concrete_value_sweep(self, value: int, label: str = "Overmastery value sweep") -> Dict[str, int]:
-        if not self.save:
-            return {"found": 0, "changed": 0, "checked": 0, "missing": 0}
-        value = self._mastery_sw_normalize_write_value(value)
-        found = changed = missing = checked = 0
-        for group_index in range(0x28):
-            for lane in range(4):
-                checked += 1
-                rec = self._mastery_overmastery_record(group_index, lane, 1607)
-                exists, did_change = self._set_record_first_value_quiet(rec, value)
-                if exists:
-                    found += 1
-                    changed += 1 if did_change else 0
-                else:
-                    missing += 1
-        self._refresh_mastery_after_bulk_write()
-        shown = "Legacy FFFFFFFF sentinel" if int(value) == 0xFFFFFFFF else f"{int(value):,} / 0x{int(value):08X}"
-        msg = f"{label}: wrote {shown}. {changed} changed, {found} found, {missing} missing out of {checked} overmastery value slot(s)."
-        if hasattr(self, "mastery_sw_lab_status"):
-            self.mastery_sw_lab_status.setText(msg)
-        self.statusBar().showMessage(msg + " Save As to test in game.", 9000)
-        return {"found": found, "changed": changed, "checked": checked, "missing": missing}
 
-    def _apply_overmastery_concrete_effect_sweep(self, effects: List[int], label: str = "Overmastery stat sweep") -> Dict[str, int]:
-        if not self.save:
-            return {"found": 0, "changed": 0, "checked": 0, "missing": 0}
-        clean_values = [int(v) & 0xFFFFFFFF for v in (effects or [])]
-        if not clean_values:
-            return {"found": 0, "changed": 0, "checked": 0, "missing": 0}
-        found = changed = missing = checked = 0
-        for group_index in range(0x28):
-            for lane in range(4):
-                checked += 1
-                value = clean_values[lane % len(clean_values)]
-                rec = self._mastery_overmastery_record(group_index, lane, 1606)
-                exists, did_change = self._set_record_first_value_quiet(rec, value)
-                if exists:
-                    found += 1
-                    changed += 1 if did_change else 0
-                else:
-                    missing += 1
-        self._refresh_mastery_after_bulk_write()
-        msg = f"{label}: {changed} changed, {found} found, {missing} missing out of {checked} overmastery stat slot(s)."
-        if hasattr(self, "mastery_sw_lab_status"):
-            self.mastery_sw_lab_status.setText(msg)
-        self.statusBar().showMessage(msg + " Save As to test in game.", 9000)
-        return {"found": found, "changed": changed, "checked": checked, "missing": missing}
 
     def _mastery_sw_value_record_for_relative(self, rel: int) -> Optional[UnitRecord]:
         """Resolve one FF470600/1607 record by Save-Wizard-style relative offset.
@@ -18634,41 +10051,6 @@ class MainWindow(QMainWindow):
             return 0xFFFFFFFF
         return max(0, min(0xFFFFFFFF, ivalue))
 
-    def _apply_mastery_sw_value_sweep(self, start_rel: int, count: int, step: int, value: int, label: str) -> Dict[str, int]:
-        if not self.save:
-            return {"found": 0, "changed": 0, "checked": 0, "missing": 0}
-        value = self._mastery_sw_normalize_write_value(value)
-        found = changed = missing = 0
-        for i in range(max(0, int(count))):
-            rel = int(start_rel) + i * int(step)
-            rec = self._mastery_sw_value_record_for_relative(rel)
-            exists, did_change = self._set_record_first_value_quiet(rec, value)
-            if exists:
-                found += 1
-                changed += 1 if did_change else 0
-            else:
-                missing += 1
-
-        # Reliable fallback: if the Save-Wizard relative scan did not resolve in
-        # this save, use the already-working parsed row pairing from Rows / Edit.
-        fallback_note = ""
-        if found == 0 and int(start_rel) == 0x11 and int(count) == 0x7AB:
-            fallback = self._apply_mastery_value_to_all_visible_groups(value)
-            found = int(fallback.get("found", 0))
-            changed = int(fallback.get("changed", 0))
-            missing = int(fallback.get("missing", 0))
-            fallback_note = " Used parsed-row fallback."
-
-        self._refresh_mastery_after_bulk_write()
-        shown = "Legacy FFFFFFFF sentinel" if int(value) == 0xFFFFFFFF else f"{int(value):,} / 0x{int(value):08X}"
-        msg = (
-            f"{label}: wrote {shown}. "
-            f"{changed} changed, {found} found, {missing} missing out of {int(count)} slot(s).{fallback_note}"
-        )
-        if hasattr(self, "mastery_sw_lab_status"):
-            self.mastery_sw_lab_status.setText(msg)
-        self.statusBar().showMessage(msg + "  Save As to test in game.", 9000)
-        return {"found": found, "changed": changed, "checked": int(count), "missing": missing}
 
     def _mastery_sw_effect_record_for_relative(self, rel: int) -> Optional[UnitRecord]:
         for candidate in (int(rel), int(rel) - 1, int(rel) + 1):
@@ -18677,151 +10059,13 @@ class MainWindow(QMainWindow):
                 return rec
         return None
 
-    def _apply_mastery_sw_effect_sweep(self, start_rel: int, count: int, step: int, values: List[int], label: str) -> Dict[str, int]:
-        if not self.save:
-            return {"found": 0, "changed": 0, "checked": 0, "missing": 0}
-        clean_values = [int(v) & 0xFFFFFFFF for v in (values or [])]
-        if not clean_values:
-            return {"found": 0, "changed": 0, "checked": 0, "missing": 0}
-        found = changed = missing = 0
-        for i in range(max(0, int(count))):
-            rel = int(start_rel) + i * int(step)
-            value = clean_values[i % len(clean_values)]
-            rec = self._mastery_sw_effect_record_for_relative(rel)
-            exists, did_change = self._set_record_first_value_quiet(rec, value)
-            if exists:
-                found += 1
-                changed += 1 if did_change else 0
-            else:
-                missing += 1
 
-        fallback_note = ""
-        if found == 0 and int(start_rel) == 0x11 and int(count) == 0x7AB and len(clean_values) == 1:
-            fallback = self._apply_mastery_effect_to_all_visible_groups(clean_values[0])
-            found = int(fallback.get("found", 0))
-            changed = int(fallback.get("changed", 0))
-            missing = int(fallback.get("missing", 0))
-            fallback_note = " Used parsed-row fallback."
 
-        self._refresh_mastery_after_bulk_write()
-        msg = f"{label}: {changed} changed, {found} found, {missing} missing out of {int(count)} effect slot(s).{fallback_note}"
-        if hasattr(self, "mastery_sw_lab_status"):
-            self.mastery_sw_lab_status.setText(msg)
-        self.statusBar().showMessage(msg + "  Save As to test in game.", 9000)
-        return {"found": found, "changed": changed, "checked": int(count), "missing": missing}
 
-    def apply_mastery_sw_normal_effect_sweep(self, effect_value: int, label: str = "selected effect") -> None:
-        """Turn every normal FF460600 mastery effect row into one effect.
 
-        Debug pattern from the notes:
-            80010005 FF460600
-            00000000 00000000
-            4E000011 XXXXXXXX
-            7AB00018 00000000
-        """
-        self._apply_mastery_sw_effect_sweep(
-            start_rel=0x11,
-            count=0x7AB,
-            step=0x18,
-            values=[int(effect_value)],
-            label=f"SW normal FF460600 effect sweep ({label})",
-        )
 
-    def apply_mastery_sw_overmastery_value_sweep(self, value: int) -> None:
-        """Set all concrete overmastery value lanes.
 
-        The reliable mapping is 40 groups * 4 lanes:
-            unit = 10000000 + group_index * 1000 + lane_index
 
-        This is safer than relying only on Save-Wizard relative offsets, which
-        can shift between save variants.
-        """
-        self._apply_overmastery_concrete_value_sweep(int(value), label="Overmastery FF470600 value sweep")
-
-    def apply_mastery_sw_overmastery_selected_four_stats(self) -> None:
-        """Write the selected four Overmastery stat IDs to every concrete group."""
-        effects = self._selected_overmastery_effect_values()
-        if not effects or len(effects) < 4 or any(v is None for v in effects[:4]):
-            self.statusBar().showMessage("Pick four Overmastery stats first.", 5000)
-            return
-        self._apply_overmastery_concrete_effect_sweep(
-            [int(v) & 0xFFFFFFFF for v in effects[:4]],
-            label="Overmastery FF460600 selected 4-stat sweep",
-        )
-
-    def apply_mastery_sw_normal_value_sweep(self, value: int) -> None:
-        """Apply the FF470600 normal mastery value sweep from the sheet.
-
-        Pattern:
-            80010005 FF470600
-            00000000 00000000
-            4E000011 VVVVVVVV
-            7AB00018 00000000
-        """
-        self._apply_mastery_sw_value_sweep(
-            start_rel=0x11,
-            count=0x7AB,
-            step=0x18,
-            value=int(value),
-            label="SW normal FF470600 sweep",
-        )
-
-    def apply_mastery_sw_actual_stat_240_sweep(self, value: Optional[int] = None) -> None:
-        """Apply the later 240-slot actual-stat block from the Discord notes.
-
-        Pattern:
-            92000000 000B8079
-            93000000 00001668
-            4E000000 VVVVVVVV
-            00F00018 00000000
-
-        Effective start relative is 0x0B8079 + 0x1668. 0xF0 = 240 rows.
-        """
-        if value is None or isinstance(value, bool):
-            try:
-                value = int(getattr(self, "mastery_sw_value_spin").value())
-            except Exception:
-                value = 0x3F8
-        self._apply_mastery_sw_value_sweep(
-            start_rel=0x0B8079 + 0x1668,
-            count=0xF0,
-            step=0x18,
-            value=int(value),
-            label="SW 240 actual-stat FF470600 sweep",
-        )
-
-    def apply_mastery_sw_single_slot_test(self) -> None:
-        """Write one +0x18 slot from the community individual slot test."""
-        if not self.save:
-            return
-        try:
-            slot = int(getattr(self, "mastery_sw_slot_spin").value())
-        except Exception:
-            slot = 1
-        try:
-            value = int(getattr(self, "mastery_sw_value_spin").value())
-        except Exception:
-            value = 0
-        slot = max(1, min(31408, int(slot)))
-        value = self._mastery_sw_normalize_write_value(value)
-        # The individual test says Slot 1 = +0x000000, Slot 2 = +0x18, etc.
-        # The pointer setup in the note uses 92000000 000B8079.
-        rel = 0x0B8079 + (slot - 1) * 0x18
-        rec = self._mastery_sw_value_record_for_relative(rel)
-        exists, did_change = self._set_record_first_value_quiet(rec, value)
-        if exists:
-            self._mark_stale_pages(["Mastery", "Characters", "Save Health"])
-            shown = "Legacy FFFFFFFF sentinel" if int(value) == 0xFFFFFFFF else f"{int(value):,} / 0x{int(value):08X}"
-            msg = f"SW slot test wrote slot {slot} rel 0x{rel:06X} to {shown} ({'changed' if did_change else 'already set'})."
-        else:
-            msg = f"SW slot test could not resolve slot {slot} rel 0x{rel:06X} to an FF470600/1607 row in this save."
-        if hasattr(self, "mastery_sw_lab_status"):
-            self.mastery_sw_lab_status.setText(msg)
-        self.statusBar().showMessage(msg, 9000)
-
-    def apply_mastery_normal_value_sweep(self) -> None:
-        """Compatibility wrapper for the older 0x03F8 community sweep."""
-        self.apply_mastery_sw_normal_value_sweep(0x03F8)
 
     def _parse_mastery_offset_value(self, value: Any) -> Optional[int]:
         text = str(value or "").strip()
@@ -18955,48 +10199,7 @@ class MainWindow(QMainWindow):
             seen.add(rel); deduped.append(entry)
         return deduped
 
-    def _download_and_cache_mastery_offset_pattern_db(self, url: str) -> int:
-        text = load_sheet_csv(url)
-        raw_path = RESOURCE_DIR / "mastery_offset_pattern_sheet_raw.csv"
-        raw_path.write_text(text, encoding="utf-8-sig")
-        rows = self._load_mastery_offset_pattern_from_csv(raw_path, f"Downloaded offset sheet {url}")
-        norm_path = RESOURCE_DIR / "mastery_offset_pattern_downloaded.csv"
-        with norm_path.open("w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=["label", "rel", "value", "count", "stride", "source"])
-            writer.writeheader()
-            for row in rows:
-                writer.writerow({
-                    "label": str(row.get("label", "")),
-                    "rel": f"0x{int(row.get('rel', 0)):06X}",
-                    "value": f"0x{int(row.get('value', 0)) & 0xFFFFFFFF:08X}",
-                    "count": int(row.get("count", 1) or 1),
-                    "stride": f"0x{int(row.get('stride', 0) or 0):X}",
-                    "source": str(row.get("source", "")),
-                })
-        self.mastery_offset_pattern_cache = None
-        self._invalidate_mastery_mod_caches(clear_models=False)
-        return len(rows)
 
-    def download_mastery_offset_pattern_db(self) -> None:
-        url, ok = QInputDialog.getText(
-            self,
-            "Download Mastery Offset Pattern DB",
-            "Google Sheets URL:",
-            text=MASTERY_OFFSET_PATTERN_SHEET_URL,
-        )
-        if not ok or not url.strip():
-            return
-        try:
-            count = self._download_and_cache_mastery_offset_pattern_db(url.strip())
-        except Exception as exc:
-            QMessageBox.warning(
-                self,
-                "Offset DB download failed",
-                f"Could not download/parse the mastery offset pattern sheet from this PC.\n\n{exc}",
-            )
-            return
-        self.refresh_mastery_mod_code_rows()
-        QMessageBox.information(self, "Offset DB downloaded", f"Loaded {count} offset pattern row(s).")
 
     def _mastery_method_pattern_entries(self) -> List[Dict[str, Any]]:
         """Working Method/Skiller Save Wizard pattern, translated to 1606 writes.
@@ -19049,196 +10252,11 @@ class MainWindow(QMainWindow):
         self.mastery_offset_pattern_cache = entries
         return entries
 
-    def refresh_mastery_mod_code_rows(self) -> None:
-        model = getattr(self, "mastery_mod_code_model", None)
-        if model is None:
-            return
-        rows: List[List[Any]] = []
-        metas: List[Dict[str, Any]] = []
-        base = self._mastery_mod_anchor_base_abs()
-        if not self.save or base is None:
-            self.mastery_mod_code_rows_meta = []
-            model.set_rows([])
-            if hasattr(self, "mastery_mod_code_status"):
-                self.mastery_mod_code_status.setText(self._mastery_mod_anchor_status())
-            return
-        resolved = 0
-        already = 0
-        for entry in self._mastery_method_pattern_entries():
-            rel = int(entry["rel"])
-            value = int(entry["value"]) & 0xFFFFFFFF
-            rec = self._mastery_mod_record_by_sw_relative(rel)
-            current = None
-            unit_id = "—"
-            status = "No 1606 row at offset"
-            if rec is not None:
-                resolved += 1
-                unit_id = int(rec.unit_id)
-                try:
-                    current = int(self.save.get_values(rec, 1)[0]) & 0xFFFFFFFF
-                except Exception:
-                    current = None
-                if current == value:
-                    already += 1
-                    status = "Already matches"
-                else:
-                    status = "Ready to write"
-            repeat_text = "—"
-            try:
-                c = int(entry.get("count", 1) or 1)
-                st = int(entry.get("stride", 0) or 0)
-                if c > 1 and st > 0:
-                    repeat_text = f"{c} @ +0x{st:X}"
-            except Exception:
-                pass
-            rows.append([
-                entry["label"],
-                f"0x{rel:06X}",
-                self._mastery_effect_name(value),
-                self._mastery_effect_name(current) if current is not None else "—",
-                self._hash_hex_or_dash(current) if current is not None else "—",
-                unit_id,
-                repeat_text,
-                status,
-            ])
-            metas.append({"rel": rel, "value": value, "record": rec, "current": current, "unit_id": unit_id, "label": entry["label"], "count": entry.get("count", 1), "stride": entry.get("stride", 0)})
-        self.mastery_mod_code_rows_meta = metas
-        model.set_rows(rows)
-        if hasattr(self, "mastery_mod_code_table"):
-            self._set_table_widths(self.mastery_mod_code_table, {0: 270, 1: 120, 2: 260, 3: 260, 4: 130, 5: 120, 6: 120, 7: 160})
-        if hasattr(self, "mastery_mod_code_status"):
-            self.mastery_mod_code_status.setText(f"{self._mastery_mod_anchor_status()} Resolved {resolved}/{len(metas)} pattern rows; {already} already match.")
 
-    def _selected_mastery_mod_code_meta(self) -> Optional[Dict[str, Any]]:
-        table = getattr(self, "mastery_mod_code_table", None)
-        if table is None:
-            return None
-        idx = table.currentIndex()
-        if idx.isValid() and idx.row() < len(getattr(self, "mastery_mod_code_rows_meta", [])):
-            return self.mastery_mod_code_rows_meta[idx.row()]
-        return None
 
-    def apply_selected_mastery_mod_reference_to_code_row(self) -> None:
-        ref = self._selected_mastery_mod_reference_meta()
-        code = self._selected_mastery_mod_code_meta()
-        if not self.save or not ref or not code:
-            self.statusBar().showMessage("Select one Known Effect row and one Method Pattern row first.", 4500)
-            return
-        rec = code.get("record")
-        if rec is None:
-            self.statusBar().showMessage("Selected pattern offset does not resolve to a 1606 record in this save.", 4500)
-            return
-        value = int(ref.get("value", 0)) & 0xFFFFFFFF
-        exists, did_change = self._set_record_first_value_quiet(rec, value)
-        self.refresh_mastery_mod_rows()
-        self._mark_stale_pages(["Mastery", "Save Health"])
-        rel = int(code.get("rel", 0))
-        if did_change:
-            self.statusBar().showMessage(f"Wrote {ref.get('name')} to SW offset 0x{rel:06X} / unit {rec.unit_id}.", 4500)
-        elif exists:
-            self.statusBar().showMessage(f"SW offset 0x{rel:06X} already matches {ref.get('name')}.", 4500)
 
-    def install_mastery_method_pattern_selected(self) -> None:
-        if not self.save:
-            return
-        changed_1606 = 0
-        changed_1607 = 0
-        resolved = 0
-        missing = 0
-        write_1607 = self._mastery_mod_recommended_write_1607_enabled()
-        state_value = self._mastery_mod_recommended_1607_value()
-        for entry in self._mastery_method_pattern_entries():
-            rec = self._mastery_mod_record_by_sw_relative(int(entry["rel"]))
-            if rec is None:
-                missing += 1
-                continue
-            resolved += 1
-            _, did_change = self._set_record_first_value_quiet(rec, int(entry["value"]) & 0xFFFFFFFF)
-            changed_1606 += 1 if did_change else 0
-            if write_1607:
-                state_rec = self._mastery_mod_record_by_sw_relative(int(entry["rel"]), id_type=1607)
-                if state_rec is None:
-                    state_rec = self.save.find_first("int", 1607, int(rec.unit_id)) or self.save.find_first("uint", 1607, int(rec.unit_id))
-                if state_rec is not None:
-                    _, did_state_change = self._set_record_first_value_quiet(state_rec, state_value)
-                    changed_1607 += 1 if did_state_change else 0
-        self.refresh_mastery_mod_rows()
-        self._mark_stale_pages(["Mastery", "Save Health"])
-        changed_total = changed_1606 + changed_1607
-        write_note = f"1606 changed {changed_1606}, 1607 changed {changed_1607}" if write_1607 else f"1606 changed {changed_1606}; 1607 kept unchanged"
-        if changed_total:
-            self._after_editor_patch(f"Installed exact SW mastery pattern ({write_note}, {resolved} resolved, {missing} missing).")
-        else:
-            self.statusBar().showMessage(f"SW pattern checked: {resolved} resolved, {missing} missing, no value changes needed. {write_note}.", 7000)
 
-    def _mastery_mod_effect_unit_candidates(self, char_unit: int, slot_zero: int, socket_zero: int) -> List[int]:
-        """Return possible 1606/1607 unit ids for a user-selected slot/socket.
 
-        The normal SaveDataBinary layout uses zero-based slot/socket units:
-        char_unit * 10000 + slot * 10 + socket.  Some sheet/code notes describe
-        the same fields using one-based wording, so the editor now tries both
-        interpretations before reporting that a target cannot be edited.
-        """
-        cu = int(char_unit)
-        s0 = max(0, int(slot_zero))
-        k0 = max(0, int(socket_zero))
-        candidates = []
-        if 10000 <= cu < 10040 and 0 <= k0 < 4:
-            # Four-stat overmastery lanes are concrete 8-digit units.
-            candidates.append(self._mastery_overmastery_unit_id(cu - 10000, k0))
-            candidates.append(self._mastery_overmastery_unit_id(cu - 10000, s0 if 0 <= s0 < 4 else k0))
-        candidates += [
-            # Normal mastery/collection rows: 10000 -> 100000000, slot * 10 + socket.
-            cu * 10000 + s0 * 10 + k0,
-            cu * 10000 + (s0 + 1) * 10 + k0,
-            cu * 10000 + s0 * 10 + (k0 + 1),
-            cu * 10000 + (s0 + 1) * 10 + (k0 + 1),
-            # Alternate board/container-style rows seen in the hash/code notes.
-            cu * 1000 + s0 * 1000 + k0,
-            cu * 1000 + (s0 + 1) * 1000 + k0,
-            cu * 1000 + s0 * 1000 + (k0 + 1),
-            cu * 1000 + (s0 + 1) * 1000 + (k0 + 1),
-        ]
-        out: List[int] = []
-        for uid in candidates:
-            if uid not in out:
-                out.append(uid)
-        return out
-
-    def _mastery_mod_find_target_records(self, char_unit: int, slot_zero: int, socket_zero: int) -> tuple[Optional[UnitRecord], Optional[UnitRecord], int]:
-        if not self.save:
-            return None, None, 0
-        # First try the row metadata from the visible Current Save Rows table.
-        # This protects manual writes when the displayed row is based on parsed
-        # save data but the typed slot/socket came from the UI controls.
-        for meta in getattr(self, "mastery_mod_rows_meta", []) or []:
-            try:
-                if int(meta.get("char_unit")) == int(char_unit) and int(meta.get("slot")) == int(slot_zero) and int(meta.get("socket")) == int(socket_zero):
-                    effect_rec = meta.get("mastery_rec")
-                    state_rec = meta.get("state_rec")
-                    uid = int(meta.get("unit_id") or 0)
-                    if effect_rec is not None or state_rec is not None:
-                        return effect_rec, state_rec, uid
-            except Exception:
-                continue
-        # Then try exact and one-based-compatible unit id formulas.
-        for uid in self._mastery_mod_effect_unit_candidates(char_unit, slot_zero, socket_zero):
-            effect_rec = self.save.find_first("uint", 1606, uid) or self.save.find_first("int", 1606, uid)
-            state_rec = self.save.find_first("int", 1607, uid) or self.save.find_first("uint", 1607, uid)
-            if effect_rec is not None or state_rec is not None:
-                return effect_rec, state_rec, uid
-        # Final safe fallback: if the user picked a concrete Existing Save Row,
-        # use that row instead of failing with a formula-only target.
-        combo = getattr(self, "mastery_mod_target_combo", None)
-        if combo is not None and combo.currentData() is not None:
-            meta = self._mastery_mod_meta_by_unit(int(combo.currentData()))
-            if meta is not None:
-                effect_rec = meta.get("mastery_rec")
-                state_rec = meta.get("state_rec")
-                uid = int(meta.get("unit_id") or 0)
-                if effect_rec is not None or state_rec is not None:
-                    return effect_rec, state_rec, uid
-        return None, None, self._mastery_mod_effect_unit_candidates(char_unit, slot_zero, socket_zero)[0]
 
     def _update_mastery_mod_visible_row_after_write(self, target_unit: int, effect_value: Optional[int], state_value: Optional[int]) -> None:
         """Update the selected Mastery row without rebuilding all tables."""
@@ -19375,103 +10393,10 @@ class MainWindow(QMainWindow):
                 6500,
             )
 
-    def apply_mastery_mod_manual_edit(self, silent: bool = False) -> None:
-        if not self.save:
-            return
-        char_unit = self._mastery_mod_current_character_unit()
-        # In the raw all-row scan the slot/socket formula is not reliable.
-        # Force manual writes to use the concrete row selected in the dropdown/table.
-        if int(char_unit) < 0:
-            meta = self._selected_mastery_mod_meta() or self._mastery_mod_meta_by_unit(int(getattr(self, "mastery_mod_target_combo").currentData() or 0))
-            if meta is not None:
-                char_unit = int(meta.get("char_unit", -1))
-        slot = int(getattr(self, "mastery_mod_slot_spin").value()) - 1
-        socket = int(getattr(self, "mastery_mod_socket_spin").value()) - 1
-        effect_value = getattr(self, "mastery_mod_effect_combo").currentData()
-        state_value = int(getattr(self, "mastery_mod_state_spin").value())
-        effect_rec, state_rec, target_unit = self._mastery_mod_find_target_records(char_unit, slot, socket)
 
-        write_state = bool(getattr(self, "mastery_mod_state_write_check", None) is not None and self.mastery_mod_state_write_check.isChecked())
-        changed = 0
-        found = 0
-        if effect_value is not None:
-            exists, did_change = self._set_record_first_value_quiet(effect_rec, int(effect_value) & 0xFFFFFFFF)
-            found += 1 if exists else 0
-            changed += 1 if did_change else 0
-        if write_state:
-            exists, did_change = self._set_record_first_value_quiet(state_rec, state_value)
-            found += 1 if exists else 0
-            changed += 1 if did_change else 0
 
-        if changed:
-            self._update_mastery_mod_visible_row_after_write(target_unit, int(effect_value) & 0xFFFFFFFF if effect_value is not None else None, state_value if write_state else None)
-            self._mark_stale_pages(["Mastery", "Characters", "Save Health"])
-            self.statusBar().showMessage(
-                f"Updated mastery row: unit {target_unit}. Value {'written' if write_state else 'kept unchanged'}.",
-                3000,
-            )
-        elif found:
-            if not silent:
-                self.statusBar().showMessage(
-                    f"That mastery row already matches the selected effect{' and value' if write_state else ''}. Target unit: {target_unit}.",
-                    4500,
-                )
-        elif not silent:
-            self.statusBar().showMessage(
-                f"No editable mastery row found for Slot {slot + 1} / Socket {socket + 1}. Pick an existing row from the dropdown, then write again.",
-                6500,
-            )
 
-    def apply_mastery_mod_sigil_slot_restore(self) -> None:
-        if not hasattr(self, "mastery_mod_effect_combo"):
-            return
-        self._mastery_mod_loading = True
-        try:
-            for i in range(self.mastery_mod_effect_combo.count()):
-                data = self.mastery_mod_effect_combo.itemData(i)
-                if data is not None and int(data) == 0x7B727910:
-                    self.mastery_mod_effect_combo.setCurrentIndex(i); break
-            self.mastery_mod_state_spin.setValue(1)
-            self.mastery_mod_slot_key_check.setChecked(True)
-            self.mastery_mod_slot_key_edit.setText("0x280B6CB0")
-        finally:
-            self._mastery_mod_loading = False
-        self.apply_mastery_mod_manual_edit()
 
-    def _apply_13_sigil_slot_restore_to_character_unit(self, char_unit: int) -> int:
-        """Install the observed sigil-slot restore effect into up to 13 logical mastery sockets.
-
-        Max equipped sigil slots are treated as 13. The save exposes these as
-        existing 1606/1607 effect rows plus the matching 1601 board slot key;
-        this does not create or resize records.
-        """
-        if not self.save:
-            return 0
-        changed = 0
-        max_slots = 13
-        for idx in range(max_slots):
-            slot = idx // 3
-            socket = idx % 3
-            board_unit = int(char_unit) * 1000 + slot
-            changed += 1 if self._set_record_first_value(self.save.find_first("uint", 1601, board_unit), 0x280B6CB0, "Sigil Slot Key 1601") else 0
-            changed += 1 if self._set_record_first_value(self._mastery_effect_record(char_unit, slot, socket), 0x7B727910, "Sigil Slot Restore 1606") else 0
-            changed += 1 if self._set_record_first_value(self._mastery_state_record(char_unit, slot, socket), 1, "Sigil Slot Restore State 1607") else 0
-        return changed
-
-    def install_mastery_mod_13_sigil_slots_selected(self) -> None:
-        if not self.save:
-            return
-        char_unit = self._mastery_mod_current_character_unit()
-        changed = self._apply_13_sigil_slot_restore_to_character_unit(char_unit)
-        self.refresh_mastery_mod_rows()
-        self._mark_stale_pages(["Mastery", "Characters", "Save Health"])
-        if changed:
-            self._after_editor_patch(f"Installed up to 13 sigil equip-slot restores for the selected character ({changed} value(s)).")
-        else:
-            self.statusBar().showMessage("No editable sigil-slot restore records were found for the selected character.", 4500)
-
-    def install_mastery_mod_op_selected(self) -> None:
-        self.install_mastery_mod_recommended_preset_selected()
 
     def _mastery_character_choices(self) -> List[Dict[str, Any]]:
         """Return selectable character mastery groups.
@@ -19705,21 +10630,6 @@ class MainWindow(QMainWindow):
             return "Active"
         return f"State {s}"
 
-    def _mastery_slot_units_for_character(self, char_unit: int) -> List[int]:
-        if not self.save:
-            return []
-        cu = int(char_unit)
-        units = set()
-        for rec in self.save.records:
-            uid = int(rec.unit_id)
-            if cu < 0:
-                if rec.id_type in {1601, 1602, 1605, 1606, 1607}:
-                    units.add(uid)
-            elif rec.id_type in {1601, 1602, 1605} and uid // 1000 == cu:
-                units.add(uid)
-            elif rec.id_type in {1606, 1607} and uid // 10000 == cu:
-                units.add(uid)
-        return sorted(units)
 
     def _mastery_current_mode(self) -> str:
         combo = getattr(self, "mastery_mode_combo", None)
@@ -19813,15 +10723,6 @@ class MainWindow(QMainWindow):
             self._set_table_widths(self.mastery_slot_table, {0: 70, 1: 70, 2: 330, 3: 150, 4: 75, 5: 85, 6: 270, 7: 125, 8: 110})
         self.update_mastery_slot_detail()
 
-    def _selected_mastery_slot_meta(self) -> Optional[Dict[str, Any]]:
-        table = getattr(self, "mastery_slot_table", None)
-        if table is None:
-            return None
-        idx = table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(getattr(self, "mastery_slot_rows_meta", [])):
-            QMessageBox.information(self, "No mastery row selected", "Select a mastery row first.")
-            return None
-        return self.mastery_slot_rows_meta[idx.row()]
 
     def update_mastery_slot_detail(self) -> None:
         label = getattr(self, "mastery_slot_detail_label", None)
@@ -19864,201 +10765,17 @@ class MainWindow(QMainWindow):
             f"{missing_text}"
         )
 
-    def apply_mastery_slot_inline_edits(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_mastery_slot_meta()
-        if not meta:
-            return
-        changed = 0
-        slotinfo_text = getattr(self, "mastery_slotinfo_edit", None).text().strip() if hasattr(self, "mastery_slotinfo_edit") else ""
-        mastery_text = getattr(self, "mastery_id_edit", None).text().strip() if hasattr(self, "mastery_id_edit") else ""
-        state_text = getattr(self, "mastery_state_edit", None).text().strip() if hasattr(self, "mastery_state_edit") else ""
-        if slotinfo_text and meta.get("slotinfo_rec") is not None:
-            value = self._resolve_hash_from_text(slotinfo_text)
-            if value is None:
-                QMessageBox.warning(self, "Invalid Slot Key", f"Could not resolve Slot Key value: {slotinfo_text}")
-                return
-            changed += 1 if self._set_record_first_value(meta.get("slotinfo_rec"), value, "Mastery Slot Key 1601") else 0
-        if mastery_text and meta.get("mastery_rec") is not None:
-            value = self._resolve_hash_from_text(mastery_text)
-            if value is None:
-                QMessageBox.warning(self, "Invalid Mastery Effect", f"Could not resolve Mastery Effect value: {mastery_text}")
-                return
-            changed += 1 if self._set_record_first_value(meta.get("mastery_rec"), value, "Mastery Effect 1606") else 0
-        if state_text and meta.get("state_rec") is not None:
-            state_value = self._clamp_i32_value(state_text, minimum=0, maximum=I32_MAX, label="Mastery State 1607")
-            if state_value is None:
-                QMessageBox.warning(self, "Invalid State", f"Could not parse State 1607 value: {state_text}")
-                return
-            changed += 1 if self._set_record_first_value(meta.get("state_rec"), int(state_value), "Mastery State 1607") else 0
-        self.refresh_mastery_slot_rows()
-        if changed:
-            self._after_editor_patch(f"Updated {changed} mastery value(s) in memory.")
-        else:
-            self.statusBar().showMessage("No editable mastery values changed for this row/view.", 3500)
 
-    def install_mastery_slot_test_pair(self) -> None:
-        if not self.save:
-            return
-        meta = self._selected_mastery_slot_meta()
-        if not meta:
-            return
-        changed = 0
-        # The reported test pair is split across the board slot row and the selected effect row.
-        # Board slot key: unit = character_unit * 1000 + slot, id 1601.
-        # Effect: unit = character_unit * 10000 + slot * 10 + socket, ids 1606/1607.
-        slotinfo_rec = meta.get("slotinfo_rec")
-        mastery_rec = meta.get("mastery_rec")
-        state_rec = meta.get("state_rec")
-        if slotinfo_rec is None:
-            board_unit = int(meta.get("char_unit", 10000)) * 1000 + int(meta.get("slot", 0))
-            slotinfo_rec = self.save.find_first("uint", 1601, board_unit)
-        if mastery_rec is None:
-            effect_unit = int(meta.get("char_unit", 10000)) * 10000 + int(meta.get("slot", 0)) * 10 + int(meta.get("socket") or 0)
-            mastery_rec = self.save.find_first("uint", 1606, effect_unit)
-            state_rec = self.save.find_first("int", 1607, effect_unit)
-        changed += 1 if self._set_record_first_value(slotinfo_rec, 0x280B6CB0, "Mastery Slot Key 1601") else 0
-        changed += 1 if self._set_record_first_value(mastery_rec, 0x7B727910, "Mastery Effect 1606") else 0
-        changed += 1 if self._set_record_first_value(state_rec, 1, "Mastery State 1607") else 0
-        self.refresh_mastery_slot_rows()
-        if changed:
-            self._after_editor_patch(f"Installed reported mastery pair on slot {int(meta.get('slot', 0)) + 1} ({changed} values).")
-        else:
-            self.statusBar().showMessage("Could not find editable 1601/1606/1607 records for the selected mastery row.", 4500)
 
-    def _mastery_effect_record(self, char_unit: int, slot: int, socket: int):
-        if not self.save:
-            return None
-        unit = int(char_unit) * 10000 + int(slot) * 10 + int(socket)
-        return self.save.find_first("uint", 1606, unit)
 
-    def _mastery_state_record(self, char_unit: int, slot: int, socket: int):
-        if not self.save:
-            return None
-        unit = int(char_unit) * 10000 + int(slot) * 10 + int(socket)
-        return self.save.find_first("int", 1607, unit) or self.save.find_first("uint", 1607, unit)
 
-    def _mastery_over_record(self, char_unit: int, slot: int):
-        if not self.save:
-            return None
-        unit = int(char_unit) * 1000 + int(slot)
-        return self.save.find_first("uint", 1606, unit)
 
-    def _mastery_over_state_record(self, char_unit: int, slot: int):
-        if not self.save:
-            return None
-        unit = int(char_unit) * 1000 + int(slot)
-        return self.save.find_first("int", 1607, unit) or self.save.find_first("uint", 1607, unit)
 
-    def _apply_skiller_op_to_character_unit(self, char_unit: int) -> int:
-        """Apply the OP mastery pattern from the shared Cheats_Mods sheet/test saves.
 
-        The current mapped save model exposes the editable mastery/effect value at
-        field 1606 and the active/value amount at field 1607. The uploaded
-        before/after saves showed only 1606 changing for the broad OP pattern,
-        while the Save Wizard sheet maps the human-readable IDs used here.
 
-        This only patches existing scalar records. It does not create rows,
-        resize arrays, or rebuild the FlatBuffer.
-        """
-        if not self.save:
-            return 0
-        changed = 0
-        max_value = 0x03FF  # 1023; pasted sheet notes 0x03FF as max / 80%.
 
-        # Four OP overmastery slots seen in the working save/code notes.
-        # Default lanes now match the four-stat picker defaults: Attack Power, Normal Damage Cap,
-        # Skill Damage Cap, Critical Rate. Avoid Sigil Slot Add here because >13 sigil slots breaks the game.
-        over_values = [0xC4925BD7, 0x43B7581D, 0x9C555433, 0x45C65767]
-        for slot, value in enumerate(over_values):
-            changed += 1 if self._set_record_first_value(self._mastery_over_record(char_unit, slot), value, "OP overmastery 1606") else 0
-            changed += 1 if self._set_record_first_value(self._mastery_over_state_record(char_unit, slot), max_value, "OP overmastery state 1607") else 0
 
-        # Exact effect layout observed in Final_change.sav and aligned with the
-        # Cheats_Mods Masteries_SlotINFO ranges. We address the parsed records
-        # by logical slot/socket rather than raw Save Wizard byte offsets.
-        # This OP pattern intentionally does not touch sigil equipment/slot data.
-        pattern_ranges = [
-            (0, 99, 0x9A97C049, max_value),      # Skill Damage Up
-            (100, 299, 0xC4925BD7, max_value),  # Attack Power Up
-            (300, 349, 0x6CB38EF3, max_value),  # Stun Power Up
-            (350, 399, 0x4E42646B, max_value),  # SBA Damage Up
-            (400, 499, 0x45C65767, max_value),  # Critical Rate
-            (500, 599, 0x52A207B5, max_value),  # Health Up
-        ]
-        for start_index, end_index, value, state_value in pattern_ranges:
-            for idx in range(int(start_index), int(end_index) + 1):
-                slot = idx // 3
-                socket = idx % 3
-                rec = self._mastery_effect_record(char_unit, slot, socket)
-                if rec is not None:
-                    changed += 1 if self._set_record_first_value(rec, value, "OP mastery effect 1606") else 0
-                state_rec = self._mastery_state_record(char_unit, slot, socket)
-                if state_rec is not None:
-                    changed += 1 if self._set_record_first_value(state_rec, state_value, "OP mastery effect state 1607") else 0
-        return changed
 
-    def install_mastery_skiller_op_selected(self) -> None:
-        if not self.save:
-            return
-        combo = getattr(self, "mastery_character_combo", None)
-        char_unit = int(combo.currentData()) if combo is not None and combo.currentData() is not None else 10000
-        changed = self._apply_skiller_op_to_character_unit(char_unit)
-        self.refresh_mastery_slot_rows()
-        if changed:
-            self._after_editor_patch(f"Installed experimental OP mastery pattern on {combo.currentText() if combo else 'selected character'} ({changed} values).")
-        else:
-            self.statusBar().showMessage("No editable mastery records were found for the selected character.", 5000)
-
-    def install_mastery_skiller_op_all(self) -> None:
-        if not self.save:
-            return
-        if QMessageBox.question(self, "Install OP preset to all characters", "Install the experimental OP mastery pattern to every detected mastery character group?\n\nUse Save As before testing this in game.") != QMessageBox.StandardButton.Yes:
-            return
-        changed = 0
-        for choice in self._mastery_character_choices():
-            try:
-                changed += self._apply_skiller_op_to_character_unit(int(choice.get("unit", 0)))
-            except Exception:
-                continue
-        self.refresh_mastery_slot_rows()
-        if changed:
-            self._after_editor_patch(f"Installed experimental OP mastery pattern across detected characters ({changed} values).")
-        else:
-            self.statusBar().showMessage("No editable mastery records were found for detected characters.", 5000)
-
-    def copy_selected_mastery_slot_pair(self) -> None:
-        meta = self._selected_mastery_slot_meta()
-        if not meta:
-            return
-        slotinfo = self._record_first_value(meta.get("slotinfo_rec"), meta.get("slotinfo", 0))
-        mastery = self._record_first_value(meta.get("mastery_rec"), meta.get("mastery", 0))
-        state = self._record_first_value(meta.get("state_rec"), meta.get("state", 0))
-        socket = meta.get("socket")
-        socket_text = "" if socket is None else f" Socket {int(socket) + 1}"
-        text = f"CharacterUnit {meta.get('char_unit')} Slot {int(meta.get('slot', 0)) + 1}{socket_text} Unit {meta.get('unit_id')}: 1601=0x{slotinfo & 0xFFFFFFFF:08X}, 1606=0x{mastery & 0xFFFFFFFF:08X}, 1607={state}"
-        QApplication.clipboard().setText(text)
-        self.statusBar().showMessage("Copied mastery values to clipboard.", 3500)
-
-    def use_selected_character_for_mastery_slots(self) -> None:
-        meta = self._selected_meta(self.character_table, self.character_rows_meta)
-        if not meta:
-            return
-        slot = int(meta.get("slot", 0))
-        target_unit = 10000 + slot
-        combo = getattr(self, "mastery_character_combo", None)
-        if combo is None:
-            return
-        for i in range(combo.count()):
-            if int(combo.itemData(i)) == target_unit:
-                combo.setCurrentIndex(i)
-                self.refresh_mastery_slot_rows()
-                return
-        QMessageBox.information(self, "No matching mastery group", f"No Mastery group was found for character unit {target_unit}.")
-
-    def export_mastery_slots_csv(self) -> None:
-        self._export_simple_rows("mastery_slots", self.mastery_slot_model.headers, self.mastery_slot_model.rows)
 
     def _show_sigil_tab(self, index: int) -> None:
         tabs = getattr(self, "sigil_tabs", None)
@@ -20491,51 +11208,9 @@ class MainWindow(QMainWindow):
             self.refresh_sigil_database_rows()
         self.update_sigil_detail()
 
-    def clear_weapon_filters(self) -> None:
-        for name in ("weapon_filter_edit", "weapon_database_filter_edit"):
-            widget = getattr(self, name, None)
-            if widget is not None:
-                widget.clear()
-        for name in ("weapon_known_only_check", "weapon_unknown_only_check", "weapon_show_empty_check"):
-            widget = getattr(self, name, None)
-            if widget is not None:
-                widget.setChecked(False)
-        combo = getattr(self, "weapon_database_filter_combo", None)
-        if combo is not None:
-            combo.setCurrentIndex(0)
-        self.refresh_weapon_rows()
-        if hasattr(self, "weapon_database_model"):
-            self.refresh_weapon_database_rows()
 
-    def _show_weapon_tab(self, index: int) -> None:
-        tabs = getattr(self, "weapon_tabs", None)
-        if tabs is None:
-            return
-        try:
-            tabs.setCurrentIndex(int(index))
-            self._refresh_current_weapon_tab()
-        except Exception:
-            pass
 
-    def _refresh_current_weapon_tab(self) -> None:
-        tabs = getattr(self, "weapon_tabs", None)
-        idx = tabs.currentIndex() if tabs is not None else 0
-        if idx == 0:
-            self.refresh_weapon_rows()
-        elif idx == 1:
-            if hasattr(self, "weapon_cap_trait_weapon_combo"):
-                self._sync_weapon_cap_trait_weapon_combo()
-            self.update_weapon_cap_trait_controls()
-        elif idx == 2:
-            self.refresh_weapon_database_rows()
-        elif idx == 3:
-            self.refresh_weapon_empty_slot_rows()
 
-    def show_empty_weapons_in_current_table(self) -> None:
-        if hasattr(self, "weapon_show_empty_check"):
-            self.weapon_show_empty_check.setChecked(True)
-        self._show_weapon_tab(0)
-        self.refresh_weapon_rows()
 
     def _weapon_existing_hash_counts(self) -> Dict[int, int]:
         counts: Dict[int, int] = {}
@@ -20688,106 +11363,10 @@ class MainWindow(QMainWindow):
         if hasattr(self, "weapon_empty_status"):
             self.weapon_empty_status.setText(f"Empty weapon slots: {self.format_value(len(rows))} reusable slot(s) found.")
 
-    def update_weapon_database_status(self) -> None:
-        if not hasattr(self, "weapon_database_status"):
-            return
-        meta = self._selected_weapon_database_meta(show_status=False)
-        empty_slots = self.count_empty_weapon_slots() if self.save else 0
-        if not meta:
-            self.weapon_database_status.setText(f"Select a weapon to add. Empty slots available: {self.format_value(empty_slots)}.")
-            return
-        self.weapon_database_status.setText(
-            f"Selected: {meta.get('name')} ({meta.get('gbid')}) · {format_hash_value(meta.get('hash'))} · "
-            f"owned {self.format_value(meta.get('owned', 0))} · empty slots {self.format_value(empty_slots)}."
-        )
 
-    def _selected_weapon_database_meta(self, show_status: bool = True) -> Optional[Dict[str, Any]]:
-        table = getattr(self, "weapon_database_table", None)
-        rows_meta = getattr(self, "weapon_database_rows_meta", [])
-        if table is None:
-            return None
-        idx = table.currentIndex()
-        if not idx.isValid() or idx.row() >= len(rows_meta):
-            if show_status:
-                self.statusBar().showMessage("Select a weapon from the database first.", 2500)
-            return None
-        return rows_meta[idx.row()]
 
-    def add_selected_database_weapon_to_empty_slot(self) -> None:
-        meta = self._selected_weapon_database_meta()
-        if not meta:
-            return
-        if not self.save:
-            self.statusBar().showMessage("Open a save before adding weapons.", 3000)
-            return
-        xp = int(self.weapon_database_xp_spin.value()) if hasattr(self, "weapon_database_xp_spin") else WEAPON_XP_MAX
-        result = self._add_weapon_hash_xp_to_empty_slot(int(meta.get("hash", 0)) & 0xFFFFFFFF, xp=xp)
-        if not result:
-            self.statusBar().showMessage("No reusable empty weapon slot was available, or the slot could not be activated.", 5000)
-            return
-        self._after_editor_patch(f"Added weapon from database: {result}", refresh=False)
-        self.refresh_weapon_rows()
-        self.refresh_weapon_database_rows()
-        self.refresh_weapon_empty_slot_rows()
 
-    def add_selected_database_weapon_max_to_empty_slot(self) -> None:
-        if hasattr(self, "weapon_database_xp_spin"):
-            self.weapon_database_xp_spin.setValue(WEAPON_XP_MAX)
-        self.add_selected_database_weapon_to_empty_slot()
 
-    def add_all_missing_database_weapons_to_empty_slots(self) -> None:
-        """Add every currently visible missing database weapon into reusable empty slots.
-
-        Safety rule: NPC/reserved WEP_NP rows are skipped unless the database
-        filter is explicitly set to "NPC / Reserved WEP_NP".
-        """
-        if not self.save:
-            self.statusBar().showMessage("Open a save before adding weapons.", 3000)
-            return
-        if hasattr(self, "weapon_database_model"):
-            self.refresh_weapon_database_rows()
-        rows_meta = list(getattr(self, "weapon_database_rows_meta", []) or [])
-        mode = self.weapon_database_filter_combo.currentText() if hasattr(self, "weapon_database_filter_combo") else "All weapons"
-        empty_slots = self.count_empty_weapon_slots()
-        if empty_slots <= 0:
-            self.statusBar().showMessage("No reusable empty weapon slots are available.", 5000)
-            return
-        candidates: List[Dict[str, Any]] = []
-        skipped_reserved = 0
-        for meta in rows_meta:
-            try:
-                if int(meta.get("owned", 0) or 0) > 0:
-                    continue
-                gbid = str(meta.get("gbid", "") or "").upper()
-                if gbid.startswith("WEP_NP") and mode != "NPC / Reserved WEP_NP":
-                    skipped_reserved += 1
-                    continue
-                candidates.append(meta)
-            except Exception:
-                continue
-        if not candidates:
-            extra = " Reserved/NPC rows are skipped unless that filter is selected." if skipped_reserved else ""
-            self.statusBar().showMessage("No visible missing weapons to add." + extra, 5000)
-            return
-        xp = int(self.weapon_database_xp_spin.value()) if hasattr(self, "weapon_database_xp_spin") else WEAPON_XP_MAX
-        xp = self._clamp_weapon_xp_value(xp)
-        added: List[str] = []
-        for meta in candidates[:empty_slots]:
-            result = self._add_weapon_hash_xp_to_empty_slot(int(meta.get("hash", 0)) & 0xFFFFFFFF, xp=xp)
-            if result:
-                added.append(result)
-            else:
-                break
-        remaining = max(0, len(candidates) - len(added))
-        msg = f"Added {len(added):,} missing weapon(s) at XP {xp:,}."
-        if remaining:
-            msg += f" {remaining:,} still missing because there were not enough empty slots."
-        if skipped_reserved:
-            msg += f" Skipped {skipped_reserved:,} NPC/reserved row(s)."
-        self._after_editor_patch(msg, refresh=False)
-        self.refresh_weapon_rows()
-        self.refresh_weapon_database_rows()
-        self.refresh_weapon_empty_slot_rows()
 
     def refresh_weapon_rows(self) -> None:
         if not self.save:

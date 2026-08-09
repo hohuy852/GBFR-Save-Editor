@@ -1,0 +1,1871 @@
+[
+  {
+    "nhan_vat": "Gran / Djeeta (Captain)",
+    "sigils": [
+      {
+        "ten_sigil": "Fearless Soul+",
+        "trait_1": "Fearless Spirit",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Cooldown V+",
+        "trait_1": "Quick Cooldown",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Combo Booster V+",
+        "trait_1": "Combo Booster",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Katalina",
+    "sigils": [
+      {
+        "ten_sigil": "Guardian's Awakening+",
+        "trait_1": "Guardian's Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Stout Heart V+",
+        "trait_1": "Stout Heart",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Combo Booster V+",
+        "trait_1": "Combo Booster",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Rackam",
+    "sigils": [
+      {
+        "ten_sigil": "Helmsman's Awakening+",
+        "trait_1": "Helmsman's Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Concentrated Fire V+",
+        "trait_1": "Concentrated Fire",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Concentrated Fire V+",
+        "trait_1": "Concentrated Fire",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Io",
+    "sigils": [
+      {
+        "ten_sigil": "Mage's Awakening+",
+        "trait_1": "Mage's Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Concentrated Fire",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Eugen",
+    "sigils": [
+      {
+        "ten_sigil": "Veteran's Awakening+",
+        "trait_1": "Veteran's Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Concentrated Fire V+",
+        "trait_1": "Concentrated Fire",
+        "trait_2": "Quick Charge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Concentrated Fire V+",
+        "trait_1": "Concentrated Fire",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Rosetta",
+    "sigils": [
+      {
+        "ten_sigil": "Rose's Awakening+",
+        "trait_1": "Rose's Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Cooldown V+",
+        "trait_1": "Quick Cooldown",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Cascade V+",
+        "trait_1": "Cascade",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Lancelot",
+    "sigils": [
+      {
+        "ten_sigil": "White Wing's Awakening+",
+        "trait_1": "White Wing's Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Flight over Fight V+",
+        "trait_1": "Flight over Fight",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Combo Booster V+",
+        "trait_1": "Combo Booster",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Vane",
+    "sigils": [
+      {
+        "ten_sigil": "Heros Awakening+",
+        "trait_1": "Heros Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Drain V+",
+        "trait_1": "Drain",
+        "trait_2": "Stout Heart",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Steel Nerve V+",
+        "trait_1": "Steel Nerves",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Percival",
+    "sigils": [
+      {
+        "ten_sigil": "Lords Awakening+",
+        "trait_1": "Lords Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Combo Booster",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Siegfried",
+    "sigils": [
+      {
+        "ten_sigil": "Dragonslayers Awakening+",
+        "trait_1": "Dragonslayers Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Stout Heart V+",
+        "trait_1": "Stout Heart",
+        "trait_2": "Precise Wrath",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Combo Booster V+",
+        "trait_1": "Combo Booster",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Charlotta",
+    "sigils": [
+      {
+        "ten_sigil": "Holy Knights Awakening+",
+        "trait_1": "Holy Knights Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Combo Booster V+",
+        "trait_1": "Combo Booster",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Cooldown V+",
+        "trait_1": "Quick Cooldown",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Yodarha",
+    "sigils": [
+      {
+        "ten_sigil": "Swordmasters Awakening+",
+        "trait_1": "Swordmasters Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Flight over Fight V+",
+        "trait_1": "Flight over Fight",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Cooldown V+",
+        "trait_1": "Quick Cooldown",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Narmaya",
+    "sigils": [
+      {
+        "ten_sigil": "Butterflys Awakening+",
+        "trait_1": "Butterflys Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Zeta",
+    "sigils": [
+      {
+        "ten_sigil": "Crimsons Awakening+",
+        "trait_1": "Crimsons Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Combo Booster V+",
+        "trait_1": "Combo Booster",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Cooldown V+",
+        "trait_1": "Quick Cooldown",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Vaseraga",
+    "sigils": [
+      {
+        "ten_sigil": "Ebonys Awakening+",
+        "trait_1": "Ebonys Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Less is More",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Ferry",
+    "sigils": [
+      {
+        "ten_sigil": "Phantasms Awakening+",
+        "trait_1": "Phantasms Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Cooldown V+",
+        "trait_1": "Quick Cooldown",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Cascade V+",
+        "trait_1": "Cascade",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Ghandagoza",
+    "sigils": [
+      {
+        "ten_sigil": "Eternal Rages Awakening+",
+        "trait_1": "Eternal Rages Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Combo Booster",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Charge V+",
+        "trait_1": "Quick Charge",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Cagliostro",
+    "sigils": [
+      {
+        "ten_sigil": "Founders Awakening+",
+        "trait_1": "Founders Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Cooldown V+",
+        "trait_1": "Quick Cooldown",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Cascade V+",
+        "trait_1": "Cascade",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Seofon (Siete)",
+    "sigils": [
+      {
+        "ten_sigil": "Spirit Edges Awakening+",
+        "trait_1": "Spirit Edges Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Cooldown V+",
+        "trait_1": "Quick Cooldown",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Combo Booster V+",
+        "trait_1": "Combo Booster",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Tweyen (Song)",
+    "sigils": [
+      {
+        "ten_sigil": "Dark Huntresss Awakening+",
+        "trait_1": "Dark Huntresss Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Concentrated Fire V+",
+        "trait_1": "Concentrated Fire",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Concentrated Fire V+",
+        "trait_1": "Concentrated Fire",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  },
+  {
+    "nhan_vat": "Sandalphon",
+    "sigils": [
+      {
+        "ten_sigil": "Supreme Primarchs Awakening+",
+        "trait_1": "Supreme Primarchs Awakening",
+        "trait_2": "Guts",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Supplementary DMG",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Quick Cooldown",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Damage Cap V+",
+        "trait_1": "DMG Cap",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "War Elemental+",
+        "trait_1": "War Elemental",
+        "trait_2": "Critical Hit Rate",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Potion Hoarder",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Nimble Onslaught",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Supplementary Damage V+",
+        "trait_1": "Supplementary DMG",
+        "trait_2": "Steel Nerves",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Berserker Echo+",
+        "trait_1": "Berserker Echo",
+        "trait_2": "ATK",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Quick Cooldown V+",
+        "trait_1": "Quick Cooldown",
+        "trait_2": "Cascade",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      },
+      {
+        "ten_sigil": "Cascade V+",
+        "trait_1": "Cascade",
+        "trait_2": "Improved Dodge",
+        "level_trait_1": 15,
+        "level_trait_2": 15
+      }
+    ]
+  }
+]
